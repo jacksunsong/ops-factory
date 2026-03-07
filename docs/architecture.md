@@ -13,6 +13,7 @@
    - 3.6 [Langfuse（可观测性平台）](#36-langfuse可观测性平台)
    - 3.7 [OnlyOffice（文档预览服务）](#37-onlyoffice文档预览服务)
    - 3.8 [MCP Server（外部工具集成）](#38-mcp-server外部工具集成)
+   - 3.9 [Prometheus Exporter（监控指标导出）](#39-prometheus-exporter监控指标导出)
 4. [Gateway 多用户机制详解](#4-gateway-多用户机制详解)
 5. [数据流与通信协议](#5-数据流与通信协议)
 6. [文件上传与 Vision Pipeline](#6-文件上传与-vision-pipeline)
@@ -701,6 +702,30 @@ if (userInstances.length > 0 && bodyStr) {
   }))
 }
 ```
+
+---
+
+### 3.9 Prometheus Exporter（监控指标导出）
+
+Prometheus Exporter 模块位于 `prometheus-exporter/`，基于 **Spring Boot 2.7.18 + Java 21** 实现，通过拉取 Gateway 的监控 API 暴露标准 Prometheus 指标。
+
+核心接口：
+
+- `GET /metrics`：按需采集并输出 Prometheus 文本格式
+- `GET /health`：健康检查（`{"status":"ok"}`）
+- `GET /`：简易首页（包含 `/metrics` 链接）
+
+核心指标（与历史实现保持兼容）：
+
+- `opsfactory_gateway_up`
+- `opsfactory_gateway_uptime_seconds`
+- `opsfactory_agents_configured_total`
+- `opsfactory_instances_total{status=...}`
+- `opsfactory_instance_idle_seconds{agent_id,user_id}`
+- `opsfactory_instance_info{agent_id,user_id,port,status}`
+- `opsfactory_langfuse_configured`
+
+原 Node.js 版本已保留到 `prometheus-exporter-legacy/`，用于迁移回滚与对照。
 
 ---
 

@@ -1,6 +1,6 @@
 import http from 'node:http'
 import net from 'node:net'
-import { ChildProcess, spawn } from 'node:child_process'
+import { ChildProcess, spawn, execFileSync } from 'node:child_process'
 import { resolve, join } from 'node:path'
 import { writeFileSync, unlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -15,10 +15,13 @@ const SECRET_KEY = 'test-exporter-key'
 // --- Inline mock that mimics gateway /monitoring/* endpoints ---
 
 const MOCK_SYSTEM = {
-  gateway: { host: '127.0.0.1', port: 3000, uptimeMs: 123_456, uptimeFormatted: '2m 3s', startedAt: '2026-03-03T00:00:00Z' },
-  agents: { configured: 3, list: [{ id: 'a1', name: 'Agent1' }, { id: 'a2', name: 'Agent2' }, { id: 'a3', name: 'Agent3' }] },
-  idle: { timeoutMs: 900_000, checkIntervalMs: 60_000 },
-  langfuse: { configured: true, host: 'http://langfuse.local' },
+  gateway: { uptimeMs: 123_456, host: '127.0.0.1', port: 3000 },
+  agents: { configured: 3 },
+  idle: { timeoutMs: 900_000 },
+}
+
+const MOCK_STATUS = {
+  enabled: true,
 }
 
 const MOCK_INSTANCES = {
@@ -26,16 +29,16 @@ const MOCK_INSTANCES = {
   runningInstances: 2,
   byAgent: [
     {
-      agentId: 'a1', agentName: 'Agent1',
+      agentId: 'a1',
       instances: [
-        { agentId: 'a1', userId: 'alice', port: 50001, status: 'running', lastActivity: Date.now() - 5000, runtimeRoot: '/tmp/a1-alice', idleSinceMs: 5000 },
-        { agentId: 'a1', userId: 'bob', port: 50002, status: 'running', lastActivity: Date.now() - 30000, runtimeRoot: '/tmp/a1-bob', idleSinceMs: 30000 },
+        { userId: 'alice', port: 50001, pid: 1001, status: 'running', lastActivity: Date.now() - 5000 },
+        { userId: 'bob', port: 50002, pid: 1002, status: 'running', lastActivity: Date.now() - 30000 },
       ],
     },
     {
-      agentId: 'a2', agentName: 'Agent2',
+      agentId: 'a2',
       instances: [
-        { agentId: 'a2', userId: 'alice', port: 50003, status: 'error', lastActivity: Date.now() - 60000, runtimeRoot: '/tmp/a2-alice', idleSinceMs: 60000 },
+        { userId: 'alice', port: 50003, pid: 1003, status: 'error', lastActivity: Date.now() - 60000 },
       ],
     },
   ],
@@ -78,6 +81,11 @@ async function startMockMonitoringGateway(): Promise<MockGateway> {
       res.end(JSON.stringify(MOCK_INSTANCES))
       return
     }
+    if (url.pathname === '/monitoring/status') {
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify(MOCK_STATUS))
+      return
+    }
     if (url.pathname === '/status') {
       res.writeHead(200); res.end('ok'); return
     }
@@ -102,6 +110,14 @@ interface ExporterHandle {
   stop: () => Promise<void>
 }
 
+function buildExporterJar() {
+  const mvn = process.env.MVN || '/tmp/apache-maven-3.9.6/bin/mvn'
+  execFileSync(mvn, ['-q', '-DskipTests', 'package'], {
+    cwd: EXPORTER_DIR,
+    stdio: 'pipe',
+  })
+}
+
 async function startExporter(gatewayPort: number): Promise<ExporterHandle> {
   const port = await freePort()
 
@@ -115,7 +131,7 @@ async function startExporter(gatewayPort: number): Promise<ExporterHandle> {
   }
   writeFileSync(testConfigPath, stringify(testConfig), 'utf-8')
 
-  const child = spawn('npx', ['tsx', 'src/index.ts'], {
+  const child = spawn('java', ['-Dserver.port=' + String(port), '-jar', 'target/prometheus-exporter.jar'], {
     cwd: EXPORTER_DIR,
     env: {
       ...process.env,
@@ -217,9 +233,10 @@ describe('Prometheus Exporter', () => {
   let exporter: ExporterHandle
 
   beforeAll(async () => {
+    buildExporterJar()
     mockGateway = await startMockMonitoringGateway()
     exporter = await startExporter(mockGateway.port)
-  }, 30_000)
+  }, 120_000)
 
   afterAll(async () => {
     if (exporter) await exporter.stop()
@@ -309,11 +326,15 @@ describe('Prometheus Exporter', () => {
 
     const aliceA1 = idle!.find(m => m.labels.agent_id === 'a1' && m.labels.user_id === 'alice')
     expect(aliceA1).toBeDefined()
-    expect(aliceA1!.value).toBe(5) // 5000ms → 5s
+    // idle is computed from (now - lastActivity), lastActivity was set to Date.now() - 5000
+    // so idle should be roughly >= 5s (plus some elapsed time)
+    expect(aliceA1!.value).toBeGreaterThanOrEqual(4)
+    expect(aliceA1!.value).toBeLessThan(60)
 
     const bobA1 = idle!.find(m => m.labels.agent_id === 'a1' && m.labels.user_id === 'bob')
     expect(bobA1).toBeDefined()
-    expect(bobA1!.value).toBe(30) // 30000ms → 30s
+    expect(bobA1!.value).toBeGreaterThanOrEqual(29)
+    expect(bobA1!.value).toBeLessThan(120)
   })
 
   it('reports instance_info with metadata labels', async () => {

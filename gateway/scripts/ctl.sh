@@ -12,12 +12,63 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_DIR="$(dirname "${SCRIPT_DIR}")"
 ROOT_DIR="$(dirname "${SERVICE_DIR}")"
 
-# --- Configuration (env vars with defaults matching application.yml) ---
+# --- Configuration (env var > config.yaml > default) ---
+yaml_val() {
+    local key="$1" file="${SERVICE_DIR}/config.yaml"
+    [ -f "${file}" ] || return 0
+    awk -F': ' -v k="${key}" '$1==k {print $2}' "${file}" | head -n1 | sed 's/^["'"'"']//;s/["'"'"']$//'
+}
+
+yaml_nested_val() {
+    local section="$1" key="$2" file="${SERVICE_DIR}/config.yaml"
+    [ -f "${file}" ] || return 0
+    awk -F': ' -v section="${section}" -v key="${key}" '
+      $0 ~ "^" section ":" { in_section=1; next }
+      in_section && $0 ~ "^[^[:space:]]" { in_section=0 }
+      in_section && $1 ~ "^[[:space:]]+" key "$" { print $2; exit }
+    ' "${file}" | sed 's/^["'"'"']//;s/["'"'"']$//'
+}
+
+GATEWAY_HOST="${GATEWAY_HOST:-$(yaml_val host)}"
 GATEWAY_HOST="${GATEWAY_HOST:-0.0.0.0}"
+GATEWAY_PORT="${GATEWAY_PORT:-$(yaml_val port)}"
 GATEWAY_PORT="${GATEWAY_PORT:-3000}"
+GATEWAY_SECRET_KEY="${GATEWAY_SECRET_KEY:-$(yaml_val secretKey)}"
 GATEWAY_SECRET_KEY="${GATEWAY_SECRET_KEY:-test}"
+CORS_ORIGIN="${CORS_ORIGIN:-$(yaml_val corsOrigin)}"
+CORS_ORIGIN="${CORS_ORIGIN:-http://127.0.0.1:5173}"
+GOOSED_BIN="${GOOSED_BIN:-$(yaml_val goosedBin)}"
 GOOSED_BIN="${GOOSED_BIN:-goosed}"
+IDLE_TIMEOUT_MINUTES="${IDLE_TIMEOUT_MINUTES:-$(yaml_nested_val idle timeoutMinutes)}"
+IDLE_TIMEOUT_MINUTES="${IDLE_TIMEOUT_MINUTES:-15}"
+IDLE_CHECK_INTERVAL="${IDLE_CHECK_INTERVAL:-$(yaml_nested_val idle checkIntervalMs)}"
+IDLE_CHECK_INTERVAL="${IDLE_CHECK_INTERVAL:-60000}"
+
+UPLOAD_MAX_FILE_SIZE_MB="${MAX_FILE_SIZE_MB:-$(yaml_nested_val upload maxFileSizeMb)}"
+UPLOAD_MAX_FILE_SIZE_MB="${UPLOAD_MAX_FILE_SIZE_MB:-50}"
+UPLOAD_MAX_IMAGE_SIZE_MB="${MAX_IMAGE_SIZE_MB:-$(yaml_nested_val upload maxImageSizeMb)}"
+UPLOAD_MAX_IMAGE_SIZE_MB="${UPLOAD_MAX_IMAGE_SIZE_MB:-20}"
+AGENTS_DIR="${AGENTS_DIR:-$(yaml_nested_val paths agentsDir)}"
+AGENTS_DIR="${AGENTS_DIR:-agents}"
+USERS_DIR="${USERS_DIR:-$(yaml_nested_val paths usersDir)}"
+USERS_DIR="${USERS_DIR:-users}"
 PROJECT_ROOT="${PROJECT_ROOT:-${ROOT_DIR}}"
+
+# Optional nested config sections
+VISION_MODE="${VISION_MODE:-$(yaml_nested_val vision mode)}"
+VISION_PROVIDER="${VISION_PROVIDER:-$(yaml_nested_val vision provider)}"
+VISION_MODEL="${VISION_MODEL:-$(yaml_nested_val vision model)}"
+VISION_API_KEY="${VISION_API_KEY:-$(yaml_nested_val vision apiKey)}"
+VISION_BASE_URL="${VISION_BASE_URL:-$(yaml_nested_val vision baseUrl)}"
+VISION_MAX_TOKENS="${VISION_MAX_TOKENS:-$(yaml_nested_val vision maxTokens)}"
+
+LANGFUSE_HOST="${LANGFUSE_HOST:-$(yaml_nested_val langfuse host)}"
+LANGFUSE_PUBLIC_KEY="${LANGFUSE_PUBLIC_KEY:-$(yaml_nested_val langfuse publicKey)}"
+LANGFUSE_SECRET_KEY="${LANGFUSE_SECRET_KEY:-$(yaml_nested_val langfuse secretKey)}"
+
+OFFICE_PREVIEW_ENABLED="${OFFICE_PREVIEW_ENABLED:-$(yaml_nested_val officePreview enabled)}"
+ONLYOFFICE_URL="${ONLYOFFICE_URL:-$(yaml_nested_val officePreview onlyofficeUrl)}"
+FILE_BASE_URL="${FILE_BASE_URL:-$(yaml_nested_val officePreview fileBaseUrl)}"
 
 # Maven path (auto-detect or use env)
 MVN="${MVN:-mvn}"
@@ -179,16 +230,41 @@ do_startup() {
 
     log_info "Starting gateway at http://${GATEWAY_HOST}:${GATEWAY_PORT}"
 
-    # Build Java command
+    # Build Java command — inject all config as Spring properties
     local java_cmd="java"
     local java_opts=(
         "-Dloader.path=${lib_dir}"
         "-Dserver.port=${GATEWAY_PORT}"
         "-Dserver.address=${GATEWAY_HOST}"
         "-Dgateway.secret-key=${GATEWAY_SECRET_KEY}"
+        "-Dgateway.cors-origin=${CORS_ORIGIN}"
         "-Dgateway.goosed-bin=${GOOSED_BIN}"
         "-Dgateway.paths.project-root=${PROJECT_ROOT}"
+        "-Dgateway.paths.agents-dir=${AGENTS_DIR}"
+        "-Dgateway.paths.users-dir=${USERS_DIR}"
+        "-Dgateway.idle.timeout-minutes=${IDLE_TIMEOUT_MINUTES}"
+        "-Dgateway.idle.check-interval-ms=${IDLE_CHECK_INTERVAL}"
+        "-Dgateway.upload.max-file-size-mb=${UPLOAD_MAX_FILE_SIZE_MB}"
+        "-Dgateway.upload.max-image-size-mb=${UPLOAD_MAX_IMAGE_SIZE_MB}"
     )
+
+    # Optional: vision
+    [ -n "${VISION_MODE}" ]       && java_opts+=("-Dgateway.vision.mode=${VISION_MODE}")
+    [ -n "${VISION_PROVIDER}" ]   && java_opts+=("-Dgateway.vision.provider=${VISION_PROVIDER}")
+    [ -n "${VISION_MODEL}" ]      && java_opts+=("-Dgateway.vision.model=${VISION_MODEL}")
+    [ -n "${VISION_API_KEY}" ]    && java_opts+=("-Dgateway.vision.api-key=${VISION_API_KEY}")
+    [ -n "${VISION_BASE_URL}" ]   && java_opts+=("-Dgateway.vision.base-url=${VISION_BASE_URL}")
+    [ -n "${VISION_MAX_TOKENS}" ] && java_opts+=("-Dgateway.vision.max-tokens=${VISION_MAX_TOKENS}")
+
+    # Optional: langfuse
+    [ -n "${LANGFUSE_HOST}" ]       && java_opts+=("-Dgateway.langfuse.host=${LANGFUSE_HOST}")
+    [ -n "${LANGFUSE_PUBLIC_KEY}" ] && java_opts+=("-Dgateway.langfuse.public-key=${LANGFUSE_PUBLIC_KEY}")
+    [ -n "${LANGFUSE_SECRET_KEY}" ] && java_opts+=("-Dgateway.langfuse.secret-key=${LANGFUSE_SECRET_KEY}")
+
+    # Optional: office preview
+    [ -n "${OFFICE_PREVIEW_ENABLED}" ] && java_opts+=("-Dgateway.office-preview.enabled=${OFFICE_PREVIEW_ENABLED}")
+    [ -n "${ONLYOFFICE_URL}" ]         && java_opts+=("-Dgateway.office-preview.onlyoffice-url=${ONLYOFFICE_URL}")
+    [ -n "${FILE_BASE_URL}" ]          && java_opts+=("-Dgateway.office-preview.file-base-url=${FILE_BASE_URL}")
 
     # Use external log4j2.xml if available
     if [ -f "${log4j_config}" ]; then

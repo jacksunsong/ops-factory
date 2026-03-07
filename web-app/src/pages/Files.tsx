@@ -30,7 +30,8 @@ const FILE_CATEGORIES: { key: FileCategory; labelKey: string; types: string[] }[
     { key: 'html', labelKey: 'files.categories.html', types: ['html', 'htm'] },
 ]
 
-function getFileCategory(type: string): FileCategory {
+function getFileCategory(type: string | undefined): FileCategory {
+    if (!type) return 'others'
     const lowerType = type.toLowerCase()
     for (const cat of FILE_CATEGORIES) {
         if (cat.key !== 'all' && cat.types.includes(lowerType)) {
@@ -197,9 +198,9 @@ export default function Files() {
         if (searchTerm.trim()) {
             const term = searchTerm.toLowerCase()
             result = result.filter(f =>
-                f.name.toLowerCase().includes(term) ||
-                f.agentName.toLowerCase().includes(term) ||
-                f.type.toLowerCase().includes(term)
+                f.name?.toLowerCase().includes(term) ||
+                f.agentName?.toLowerCase().includes(term) ||
+                (f.type || '').toLowerCase().includes(term)
             )
         }
 

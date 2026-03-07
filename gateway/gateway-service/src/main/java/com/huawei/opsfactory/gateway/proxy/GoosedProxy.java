@@ -46,7 +46,7 @@ public class GoosedProxy {
 
         return ready.exchangeToMono(upstream -> {
             response.setStatusCode(upstream.statusCode());
-            response.getHeaders().addAll(upstream.headers().asHttpHeaders());
+            copyUpstreamHeaders(upstream.headers().asHttpHeaders(), response.getHeaders());
             return response.writeWith(upstream.bodyToFlux(DataBuffer.class));
         });
     }
@@ -65,7 +65,7 @@ public class GoosedProxy {
                 .bodyValue(body)
                 .exchangeToMono(upstream -> {
                     response.setStatusCode(upstream.statusCode());
-                    response.getHeaders().addAll(upstream.headers().asHttpHeaders());
+                    copyUpstreamHeaders(upstream.headers().asHttpHeaders(), response.getHeaders());
                     return response.writeWith(upstream.bodyToFlux(DataBuffer.class));
                 });
     }
@@ -94,5 +94,20 @@ public class GoosedProxy {
         target.addAll(source);
         // Inject secret key for goosed auth
         target.set(GatewayConstants.HEADER_SECRET_KEY, properties.getSecretKey());
+    }
+
+    private void copyUpstreamHeaders(HttpHeaders source, HttpHeaders target) {
+        // CORS is handled by gateway filter; do not forward upstream CORS headers.
+        source.forEach((name, values) -> {
+            if (HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN.equalsIgnoreCase(name)
+                    || HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS.equalsIgnoreCase(name)
+                    || HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS.equalsIgnoreCase(name)
+                    || HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS.equalsIgnoreCase(name)
+                    || HttpHeaders.ACCESS_CONTROL_MAX_AGE.equalsIgnoreCase(name)
+                    || HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS.equalsIgnoreCase(name)) {
+                return;
+            }
+            target.put(name, values);
+        });
     }
 }

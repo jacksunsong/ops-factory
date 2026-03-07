@@ -1,9 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
+import { GATEWAY_URL, GATEWAY_SECRET_KEY, isAdminUser } from '../config/runtime'
 
 const STORAGE_KEY = 'opsfactory:userId'
-const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://127.0.0.1:3000'
-const GATEWAY_SECRET_KEY = import.meta.env.VITE_GATEWAY_SECRET_KEY || 'test'
 
 export type UserRole = 'admin' | 'user'
 
@@ -41,10 +40,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 const data = await res.json()
                 setRole(data.role ?? 'user')
             } else {
-                setRole('user')
+                setRole(uid === 'sys' ? 'admin' : 'user')
             }
         } catch {
-            setRole('user')
+            setRole(uid === 'sys' ? 'admin' : 'user')
         }
     }, [])
 
@@ -103,7 +102,7 @@ export function AdminRoute({ children }: { children: ReactNode }) {
         return <Navigate to="/login" replace />
     }
 
-    if (role !== null && role !== 'admin') {
+    if (role !== null && !isAdminUser(userId, role)) {
         return <Navigate to="/" replace />
     }
 

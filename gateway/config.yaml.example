@@ -1,0 +1,48 @@
+# Gateway configuration
+# Priority: environment variable > config.yaml value > default
+# Required fields will cause startup failure if missing from both sources.
+
+port: 3000                              # env: GATEWAY_PORT
+host: "0.0.0.0"                         # env: GATEWAY_HOST
+secretKey: ""                           # env: GATEWAY_SECRET_KEY     [REQUIRED]
+corsOrigin: "http://127.0.0.1:5173"     # env: CORS_ORIGIN
+goosedBin: "goosed"                     # env: GOOSED_BIN
+
+paths:
+  agentsDir: "agents"                   # env: AGENTS_DIR
+  usersDir: "users"                     # env: USERS_DIR
+
+idle:
+  timeoutMinutes: 15                    # env: IDLE_TIMEOUT_MINUTES
+  checkIntervalMs: 60000               # env: IDLE_CHECK_INTERVAL
+
+upload:
+  maxFileSizeMb: 50                     # env: MAX_FILE_SIZE_MB
+  maxImageSizeMb: 20                    # env: MAX_IMAGE_SIZE_MB
+
+agents:
+  - {id: universal-agent, name: Universal Agent}
+  - {id: kb-agent, name: KB Agent}
+  - {id: report-agent, name: Report Agent}
+  - {id: supervisor-agent, name: Supervisor Agent, sysOnly: true}
+
+# Vision (optional)
+# vision:
+#   mode: "off"                         # env: VISION_MODE            (off|passthrough)
+#   provider: ""                        # env: VISION_PROVIDER
+#   model: ""                           # env: VISION_MODEL
+#   apiKey: ""                          # env: VISION_API_KEY
+#   baseUrl: ""                         # env: VISION_BASE_URL
+#   maxTokens: 1024                     # env: VISION_MAX_TOKENS
+
+# Langfuse observability (optional)
+# langfuse:
+#   host: ""                            # env: LANGFUSE_HOST
+#   publicKey: ""                       # env: LANGFUSE_PUBLIC_KEY
+#   secretKey: ""                       # env: LANGFUSE_SECRET_KEY
+
+# OnlyOffice preview (optional)
+# officePreview:
+#   enabled: false                      # env: OFFICE_PREVIEW_ENABLED
+#   onlyofficeUrl: ""                   # env: ONLYOFFICE_URL
+#   fileBaseUrl: ""                     # env: FILE_BASE_URL

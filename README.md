@@ -61,6 +61,8 @@ See [docs/architecture.md](./docs/architecture.md) for the full architecture doc
 | Web App | `web-app/` | 5173 | React frontend for chat, session management, file browsing, and agent configuration |
 | TypeScript SDK | `typescript-sdk/` | — | Client library (`@goosed/sdk`) for programmatic access to the Goose API |
 | Agents | `agents/` | — | Pre-configured AI agents (universal, kb, report) with YAML configs and skills |
+| Prometheus Exporter | `prometheus-exporter/` | 9091 | Spring Boot exporter exposing gateway monitoring metrics for Prometheus |
+| Prometheus Exporter (Legacy) | `prometheus-exporter-legacy/` | 9091 | Legacy Node.js/TypeScript exporter kept for rollback reference |
 | Langfuse | `langfuse/` | 3100 | LLM observability platform (Docker Compose) |
 | OnlyOffice | — | 8080 | Office document preview server (Docker) |
 
@@ -196,6 +198,8 @@ Agent-specific configuration (LLM provider, model, extensions) remains in `gatew
 | `gatewaySecretKey` | `GATEWAY_SECRET_KEY` | — | **Yes** |
 | `collectTimeoutMs` | `COLLECT_TIMEOUT_MS` | `5000` | |
 
+> Legacy implementation has been moved to `prometheus-exporter-legacy/`.
+
 ### Langfuse (`langfuse/config.yaml`)
 
 All fields are optional with defaults for local development. The `ctl.sh` script reads `config.yaml` and generates a `.env` file consumed by Docker Compose.
@@ -233,6 +237,8 @@ ops-factory/
 ├── typescript-sdk/    # @goosed/sdk client library
 ├── agents/            # Agent configurations (YAML + skills)
 ├── langfuse/          # Langfuse Docker Compose
+├── prometheus-exporter/ # Spring Boot Prometheus exporter
+├── prometheus-exporter-legacy/ # Legacy Node.js exporter
 ├── scripts/           # Service management (ctl.sh)
 ├── test/              # Integration and E2E tests
 ├── docs/              # Architecture documentation

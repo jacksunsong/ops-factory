@@ -1,0 +1,11 @@
+server:
+  port: ${EXPORTER_PORT:9091}
+  address: 0.0.0.0
+
+spring:
+  main:
+    banner-mode: off
+
+logging:
+  level:
+    root: INFO

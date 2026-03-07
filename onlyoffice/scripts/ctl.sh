@@ -7,16 +7,21 @@ set -euo pipefail
 # Usage: ./ctl.sh <action>
 #   action: startup | shutdown | status | restart
 #
-# Configuration priority: env var > config.yaml > default
+# Configuration source: config.yaml > default
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_DIR="$(dirname "${SCRIPT_DIR}")"
-ROOT_DIR="$(dirname "${SERVICE_DIR}")"
 
 # --- Configuration ---
 CONTAINER_NAME="onlyoffice"
 COMPOSE_FILE="${SERVICE_DIR}/docker-compose.yml"
+
+yaml_val() {
+    local key="$1" file="${SERVICE_DIR}/config.yaml"
+    [ -f "${file}" ] || return 0
+    awk -F': ' -v k="${key}" '$1==k {print $2}' "${file}" | head -n1 | sed 's/^["'"'"']//;s/["'"'"']$//'
+}
 
 # --- Logging ---
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; NC='\033[0m'
@@ -28,37 +33,30 @@ log_fail()  { echo -e "${RED}[FAIL]${NC}  $1"; }
 
 # --- Generate .env from config.yaml ---
 generate_env_file() {
-    local config_file="${SERVICE_DIR}/config.yaml"
     local env_file="${SERVICE_DIR}/.env"
+    local port jwt_enabled plugins_enabled allow_private_ip allow_meta_ip
 
-    # Use node to parse YAML and generate .env file
-    node -e "
-      const fs = require('fs');
-      const configPath = '${config_file}';
-      if (!fs.existsSync(configPath)) { process.exit(0); }
-      let yaml;
-      try { yaml = require('yaml'); } catch {
-        try { yaml = require('${ROOT_DIR}/gateway/node_modules/yaml'); } catch {
-          try { yaml = require('${ROOT_DIR}/prometheus-exporter/node_modules/yaml'); } catch {
-            process.exit(0);
-          }
-        }
-      }
-      const cfg = yaml.parse(fs.readFileSync(configPath, 'utf-8')) || {};
-      const lines = [];
-      lines.push('ONLYOFFICE_PORT=' + (cfg.port || 8080));
-      lines.push('JWT_ENABLED=' + (cfg.jwtEnabled ?? false));
-      lines.push('PLUGINS_ENABLED=' + (cfg.pluginsEnabled ?? false));
-      lines.push('ALLOW_PRIVATE_IP_ADDRESS=' + (cfg.allowPrivateIpAddress ?? true));
-      lines.push('ALLOW_META_IP_ADDRESS=' + (cfg.allowMetaIpAddress ?? true));
-      console.log(lines.join('\n'));
-    " > "${env_file}" 2>/dev/null || true
+    port="$(yaml_val port)"
+    jwt_enabled="$(yaml_val jwtEnabled)"
+    plugins_enabled="$(yaml_val pluginsEnabled)"
+    allow_private_ip="$(yaml_val allowPrivateIpAddress)"
+    allow_meta_ip="$(yaml_val allowMetaIpAddress)"
 
-    # Read ONLYOFFICE_PORT from generated .env (env var overrides)
-    if [ -f "${env_file}" ]; then
-        ONLYOFFICE_PORT="${ONLYOFFICE_PORT:-$(grep '^ONLYOFFICE_PORT=' "${env_file}" | cut -d= -f2)}"
-    fi
-    ONLYOFFICE_PORT="${ONLYOFFICE_PORT:-8080}"
+    [ -n "${port}" ] || port="8080"
+    [ -n "${jwt_enabled}" ] || jwt_enabled="false"
+    [ -n "${plugins_enabled}" ] || plugins_enabled="false"
+    [ -n "${allow_private_ip}" ] || allow_private_ip="true"
+    [ -n "${allow_meta_ip}" ] || allow_meta_ip="true"
+
+    cat > "${env_file}" <<EOF
+ONLYOFFICE_PORT=${port}
+JWT_ENABLED=${jwt_enabled}
+PLUGINS_ENABLED=${plugins_enabled}
+ALLOW_PRIVATE_IP_ADDRESS=${allow_private_ip}
+ALLOW_META_IP_ADDRESS=${allow_meta_ip}
+EOF
+
+    ONLYOFFICE_PORT="${port}"
 }
 
 # --- Utilities ---
@@ -109,8 +107,9 @@ do_shutdown() {
 }
 
 do_status() {
+    generate_env_file
     if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-        local port="${ONLYOFFICE_PORT:-8080}"
+        local port="${ONLYOFFICE_PORT}"
         if curl -fsS "http://127.0.0.1:${port}/healthcheck" >/dev/null 2>&1 \
            || curl -fsS "http://127.0.0.1:${port}/web-apps/apps/api/documents/api.js" >/dev/null 2>&1; then
             log_ok "OnlyOffice running (http://localhost:${port})"

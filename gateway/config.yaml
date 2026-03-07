@@ -1,0 +1,23 @@
+port: 3000
+host: "0.0.0.0"
+secretKey: "test"
+corsOrigin: "*"
+goosedBin: "goosed"
+
+paths:
+  agentsDir: agents
+  usersDir: users
+
+idle:
+  timeoutMinutes: 15
+  checkIntervalMs: 60000
+
+upload:
+  maxFileSizeMb: 50
+  maxImageSizeMb: 20
+
+agents:
+  - {id: universal-agent, name: Universal Agent}
+  - {id: kb-agent, name: KB Agent}
+  - {id: report-agent, name: Report Agent}
+  - {id: supervisor-agent, name: Supervisor Agent, sysOnly: true}

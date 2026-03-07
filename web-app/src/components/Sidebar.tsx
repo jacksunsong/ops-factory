@@ -6,13 +6,14 @@ import { useUser } from '../contexts/UserContext'
 import { useSidebar } from '../contexts/SidebarContext'
 import { getAvatarForUser } from '../pages/Settings'
 import SettingsModal from '../pages/Settings'
+import { isAdminUser } from '../config/runtime'
 
 export default function Sidebar() {
     const { t } = useTranslation()
     const { unreadCount } = useInbox()
     const { userId, role, logout } = useUser()
     const { isCollapsed, toggleSidebar } = useSidebar()
-    const isAdmin = role === 'admin'
+    const isAdmin = isAdminUser(userId, role)
     const navigate = useNavigate()
     const [settingsOpen, setSettingsOpen] = useState(false)
 

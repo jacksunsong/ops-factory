@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,8 +33,8 @@ public class AgentConfigService {
 
     @PostConstruct
     public void loadRegistry() {
-        Path agentsYaml = getGatewayRoot().resolve("config").resolve("agents.yaml");
-        Map<String, Object> data = YamlLoader.load(agentsYaml);
+        Path configYaml = getGatewayRoot().resolve("config.yaml");
+        Map<String, Object> data = YamlLoader.load(configYaml);
 
         Object agentsObj = data.get("agents");
         if (agentsObj instanceof List<?> agentsList) {
@@ -169,7 +168,7 @@ public class AgentConfigService {
         // Write AGENTS.md
         Files.writeString(agentDir.resolve("AGENTS.md"), "# " + name + "\n");
 
-        // Update agents.yaml on disk
+        // Update config.yaml on disk
         updateAgentsYaml(id, name, false);
 
         // Update in-memory registry
@@ -199,7 +198,7 @@ public class AgentConfigService {
             deleteRecursively(agentDir);
         }
 
-        // Update agents.yaml
+        // Update config.yaml
         updateAgentsYaml(id, null, true);
 
         // Remove from in-memory registry
@@ -207,8 +206,8 @@ public class AgentConfigService {
     }
 
     private void updateAgentsYaml(String id, String name, boolean remove) throws IOException {
-        Path agentsYaml = getGatewayRoot().resolve("config").resolve("agents.yaml");
-        Map<String, Object> data = YamlLoader.load(agentsYaml);
+        Path configYaml = getGatewayRoot().resolve("config.yaml");
+        Map<String, Object> data = YamlLoader.load(configYaml);
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> agents = (List<Map<String, Object>>) data.get("agents");
@@ -227,7 +226,7 @@ public class AgentConfigService {
 
         data.put("agents", agents);
         org.yaml.snakeyaml.Yaml yaml = new org.yaml.snakeyaml.Yaml();
-        Files.writeString(agentsYaml, yaml.dump(data));
+        Files.writeString(configYaml, yaml.dump(data));
     }
 
     private void deleteRecursively(Path path) throws IOException {

@@ -1,9 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, ReactNode } from 'react'
 import { GoosedClient } from '@goosed/sdk'
 import { useUser } from './UserContext'
-
-const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://127.0.0.1:3000'
-const GATEWAY_SECRET_KEY = import.meta.env.VITE_GATEWAY_SECRET_KEY || 'test'
+import { GATEWAY_URL, GATEWAY_SECRET_KEY, isAdminUser } from '../config/runtime'
 
 export interface AgentInfo {
     id: string
@@ -76,9 +74,9 @@ export function GoosedProvider({ children }: { children: ReactNode }) {
     }, [fetchAgents])
 
     const visibleAgents = useMemo(() => {
-        if (role === 'admin') return agents
+        if (isAdminUser(userId, role)) return agents
         return agents.filter(a => !a.sysOnly)
-    }, [agents, role])
+    }, [agents, role, userId])
 
     return (
         <GoosedContext.Provider value={{ getClient, agents: visibleAgents, isConnected, error, refreshAgents: fetchAgents }}>

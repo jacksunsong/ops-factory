@@ -58,12 +58,21 @@ public class MonitoringController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("gateway", Map.of(
                 "uptimeMs", uptimeMs,
+                "uptimeFormatted", formatUptime(uptimeMs),
                 "host", serverHost,
                 "port", serverPort));
         result.put("agents", Map.of(
                 "configured", agentConfigService.getRegistry().size()));
         result.put("idle", Map.of(
-                "timeoutMs", idleTimeoutMs));
+                "timeoutMs", idleTimeoutMs,
+                "checkIntervalMs", gatewayProperties.getIdle().getCheckIntervalMs()));
+
+        Map<String, Object> langfuse = new LinkedHashMap<>();
+        langfuse.put("configured", langfuseService.isConfigured());
+        String langfuseHost = gatewayProperties.getLangfuse().getHost();
+        langfuse.put("host", (langfuseHost != null && !langfuseHost.isEmpty()) ? langfuseHost : null);
+        result.put("langfuse", langfuse);
+
         return Mono.just(result);
     }
 
@@ -134,6 +143,17 @@ public class MonitoringController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "from and to parameters are required");
         }
         return langfuseService.getObservations(from, to);
+    }
+
+    private static String formatUptime(long ms) {
+        long seconds = ms / 1000;
+        long days = seconds / 86400;
+        long hours = (seconds % 86400) / 3600;
+        long minutes = (seconds % 3600) / 60;
+        long secs = seconds % 60;
+        if (days > 0) return days + "d " + hours + "h " + minutes + "m";
+        if (hours > 0) return hours + "h " + minutes + "m";
+        return minutes + "m " + secs + "s";
     }
 
     private void requireAdmin(ServerWebExchange exchange) {

@@ -35,8 +35,8 @@ public class AgentConfigServiceTest {
         Files.createDirectories(gatewayRoot.resolve("agents"));
         Files.createDirectories(gatewayRoot.resolve("users"));
 
-        String agentsYaml = "agents:\n  - id: test-agent\n    name: Test Agent\n  - id: kb-agent\n    name: KB Agent\n    sysOnly: true\n";
-        Files.writeString(gatewayRoot.resolve("config").resolve("agents.yaml"), agentsYaml);
+        String configYaml = "port: 3000\nagents:\n  - id: test-agent\n    name: Test Agent\n  - id: kb-agent\n    name: KB Agent\n    sysOnly: true\n";
+        Files.writeString(gatewayRoot.resolve("config.yaml"), configYaml);
 
         properties = new GatewayProperties();
         GatewayProperties.Paths paths = new GatewayProperties.Paths();
@@ -274,7 +274,7 @@ public class AgentConfigServiceTest {
 
     @Test
     public void testLoadRegistry_emptyAgentsYaml() throws IOException {
-        Files.writeString(gatewayRoot.resolve("config").resolve("agents.yaml"), "");
+        Files.writeString(gatewayRoot.resolve("config.yaml"), "");
         AgentConfigService freshService = new AgentConfigService(properties);
         freshService.loadRegistry();
         assertTrue(freshService.getRegistry().isEmpty());
@@ -282,7 +282,7 @@ public class AgentConfigServiceTest {
 
     @Test
     public void testLoadRegistry_noAgentsKey() throws IOException {
-        Files.writeString(gatewayRoot.resolve("config").resolve("agents.yaml"), "other: value\n");
+        Files.writeString(gatewayRoot.resolve("config.yaml"), "other: value\n");
         AgentConfigService freshService = new AgentConfigService(properties);
         freshService.loadRegistry();
         assertTrue(freshService.getRegistry().isEmpty());

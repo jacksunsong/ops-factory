@@ -7,15 +7,30 @@ set -euo pipefail
 # Usage: ./ctl.sh <action>
 #   action: startup | shutdown | status | restart
 #
-# Configuration priority: env var > config.yaml > default
+# Configuration source: config.yaml > default
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_DIR="$(dirname "${SCRIPT_DIR}")"
-ROOT_DIR="$(dirname "${SERVICE_DIR}")"
 
 # --- Configuration ---
 COMPOSE_FILE="${SERVICE_DIR}/docker-compose.yml"
+
+yaml_val() {
+    local key="$1" file="${SERVICE_DIR}/config.yaml"
+    [ -f "${file}" ] || return 0
+    awk -F': ' -v k="${key}" '$1==k {print $2}' "${file}" | head -n1 | sed 's/^["'"'"']//;s/["'"'"']$//'
+}
+
+yaml_nested_val() {
+    local section="$1" key="$2" file="${SERVICE_DIR}/config.yaml"
+    [ -f "${file}" ] || return 0
+    awk -F': ' -v section="${section}" -v key="${key}" '
+      $0 ~ "^" section ":" { in_section=1; next }
+      in_section && $0 ~ "^[^[:space:]]" { in_section=0 }
+      in_section && $1 ~ "^[[:space:]]+" key "$" { print $2; exit }
+    ' "${file}" | sed 's/^["'"'"']//;s/["'"'"']$//'
+}
 
 # --- Logging ---
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; NC='\033[0m'
@@ -27,51 +42,68 @@ log_fail()  { echo -e "${RED}[FAIL]${NC}  $1"; }
 
 # --- Generate .env from config.yaml ---
 generate_env_file() {
-    local config_file="${SERVICE_DIR}/config.yaml"
     local env_file="${SERVICE_DIR}/.env"
+    local port pg_db pg_user pg_password pg_port nextauth_secret salt telemetry_enabled
+    local init_org_id init_org_name init_project_id init_project_name init_project_public_key init_project_secret_key
+    local init_user_email init_user_name init_user_password
 
-    # Use node to parse YAML and generate .env file
-    node -e "
-      const fs = require('fs');
-      const configPath = '${config_file}';
-      if (!fs.existsSync(configPath)) { process.exit(0); }
-      let yaml;
-      try { yaml = require('yaml'); } catch {
-        try { yaml = require('${ROOT_DIR}/gateway/node_modules/yaml'); } catch {
-          try { yaml = require('${ROOT_DIR}/prometheus-exporter/node_modules/yaml'); } catch {
-            process.exit(0);
-          }
-        }
-      }
-      const cfg = yaml.parse(fs.readFileSync(configPath, 'utf-8')) || {};
-      const pg = cfg.postgres || {};
-      const init = cfg.init || {};
-      const lines = [];
-      lines.push('LANGFUSE_PORT=' + (cfg.port || 3100));
-      lines.push('POSTGRES_DB=' + (pg.db || 'langfuse'));
-      lines.push('POSTGRES_USER=' + (pg.user || 'langfuse'));
-      lines.push('POSTGRES_PASSWORD=' + (pg.password || 'langfuse'));
-      lines.push('POSTGRES_PORT=' + (pg.port || 5432));
-      lines.push('NEXTAUTH_SECRET=' + (cfg.nextauthSecret || 'opsfactory-langfuse-secret-key'));
-      lines.push('SALT=' + (cfg.salt || 'opsfactory-langfuse-salt'));
-      lines.push('TELEMETRY_ENABLED=' + (cfg.telemetryEnabled ?? false));
-      lines.push('LANGFUSE_INIT_ORG_ID=' + (init.orgId || 'opsfactory'));
-      lines.push('LANGFUSE_INIT_ORG_NAME=' + (init.orgName || 'ops-factory'));
-      lines.push('LANGFUSE_INIT_PROJECT_ID=' + (init.projectId || 'opsfactory-agents'));
-      lines.push('LANGFUSE_INIT_PROJECT_NAME=' + (init.projectName || 'ops-factory-agents'));
-      lines.push('LANGFUSE_INIT_PROJECT_PUBLIC_KEY=' + (init.projectPublicKey || 'pk-lf-opsfactory'));
-      lines.push('LANGFUSE_INIT_PROJECT_SECRET_KEY=' + (init.projectSecretKey || 'sk-lf-opsfactory'));
-      lines.push('LANGFUSE_INIT_USER_EMAIL=' + (init.userEmail || 'admin@opsfactory.local'));
-      lines.push('LANGFUSE_INIT_USER_NAME=' + (init.userName || 'admin'));
-      lines.push('LANGFUSE_INIT_USER_PASSWORD=' + (init.userPassword || 'opsfactory'));
-      console.log(lines.join('\n'));
-    " > "${env_file}" 2>/dev/null || true
+    port="$(yaml_val port)"
+    pg_db="$(yaml_nested_val postgres db)"
+    pg_user="$(yaml_nested_val postgres user)"
+    pg_password="$(yaml_nested_val postgres password)"
+    pg_port="$(yaml_nested_val postgres port)"
+    nextauth_secret="$(yaml_val nextauthSecret)"
+    salt="$(yaml_val salt)"
+    telemetry_enabled="$(yaml_val telemetryEnabled)"
+    init_org_id="$(yaml_nested_val init orgId)"
+    init_org_name="$(yaml_nested_val init orgName)"
+    init_project_id="$(yaml_nested_val init projectId)"
+    init_project_name="$(yaml_nested_val init projectName)"
+    init_project_public_key="$(yaml_nested_val init projectPublicKey)"
+    init_project_secret_key="$(yaml_nested_val init projectSecretKey)"
+    init_user_email="$(yaml_nested_val init userEmail)"
+    init_user_name="$(yaml_nested_val init userName)"
+    init_user_password="$(yaml_nested_val init userPassword)"
 
-    # Read LANGFUSE_PORT from generated .env (env var overrides)
-    if [ -f "${env_file}" ]; then
-        LANGFUSE_PORT="${LANGFUSE_PORT:-$(grep '^LANGFUSE_PORT=' "${env_file}" | cut -d= -f2)}"
-    fi
-    LANGFUSE_PORT="${LANGFUSE_PORT:-3100}"
+    [ -n "${port}" ] || port="3100"
+    [ -n "${pg_db}" ] || pg_db="langfuse"
+    [ -n "${pg_user}" ] || pg_user="langfuse"
+    [ -n "${pg_password}" ] || pg_password="langfuse"
+    [ -n "${pg_port}" ] || pg_port="5432"
+    [ -n "${nextauth_secret}" ] || nextauth_secret="opsfactory-langfuse-secret-key"
+    [ -n "${salt}" ] || salt="opsfactory-langfuse-salt"
+    [ -n "${telemetry_enabled}" ] || telemetry_enabled="false"
+    [ -n "${init_org_id}" ] || init_org_id="opsfactory"
+    [ -n "${init_org_name}" ] || init_org_name="ops-factory"
+    [ -n "${init_project_id}" ] || init_project_id="opsfactory-agents"
+    [ -n "${init_project_name}" ] || init_project_name="ops-factory-agents"
+    [ -n "${init_project_public_key}" ] || init_project_public_key="pk-lf-opsfactory"
+    [ -n "${init_project_secret_key}" ] || init_project_secret_key="sk-lf-opsfactory"
+    [ -n "${init_user_email}" ] || init_user_email="admin@opsfactory.local"
+    [ -n "${init_user_name}" ] || init_user_name="admin"
+    [ -n "${init_user_password}" ] || init_user_password="opsfactory"
+
+    cat > "${env_file}" <<EOF
+LANGFUSE_PORT=${port}
+POSTGRES_DB=${pg_db}
+POSTGRES_USER=${pg_user}
+POSTGRES_PASSWORD=${pg_password}
+POSTGRES_PORT=${pg_port}
+NEXTAUTH_SECRET=${nextauth_secret}
+SALT=${salt}
+TELEMETRY_ENABLED=${telemetry_enabled}
+LANGFUSE_INIT_ORG_ID=${init_org_id}
+LANGFUSE_INIT_ORG_NAME=${init_org_name}
+LANGFUSE_INIT_PROJECT_ID=${init_project_id}
+LANGFUSE_INIT_PROJECT_NAME=${init_project_name}
+LANGFUSE_INIT_PROJECT_PUBLIC_KEY=${init_project_public_key}
+LANGFUSE_INIT_PROJECT_SECRET_KEY=${init_project_secret_key}
+LANGFUSE_INIT_USER_EMAIL=${init_user_email}
+LANGFUSE_INIT_USER_NAME=${init_user_name}
+LANGFUSE_INIT_USER_PASSWORD=${init_user_password}
+EOF
+
+    LANGFUSE_PORT="${port}"
 }
 
 # --- Utilities ---
@@ -112,7 +144,8 @@ do_shutdown() {
 }
 
 do_status() {
-    local port="${LANGFUSE_PORT:-3100}"
+    generate_env_file
+    local port="${LANGFUSE_PORT}"
     if docker ps --format '{{.Names}}' | grep -q '^langfuse$'; then
         if curl -fsS "http://127.0.0.1:${port}/api/public/health" >/dev/null 2>&1; then
             log_ok "Langfuse running (http://localhost:${port})"
