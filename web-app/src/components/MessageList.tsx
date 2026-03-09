@@ -5,6 +5,7 @@ import type { ToolResponseMap } from './Message'
 import { ChatState } from '../hooks/useChat'
 import { extractSourceDocuments, type Citation } from '../utils/citationParser'
 import { useUser } from '../contexts/UserContext'
+import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
 
 interface MessageListProps {
     messages: ChatMessage[]
@@ -22,9 +23,6 @@ interface ListedFile {
     type: string
 }
 
-const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://127.0.0.1:3000'
-const GATEWAY_SECRET_KEY = import.meta.env.VITE_GATEWAY_SECRET_KEY || 'test'
-
 export default function MessageList({ messages, isLoading = false, chatState = ChatState.Idle, agentId, onRetry }: MessageListProps) {
     const { t } = useTranslation()
     const { userId } = useUser()
@@ -41,22 +39,20 @@ export default function MessageList({ messages, isLoading = false, chatState = C
         }
     }, [messages])
 
-    // Filter messages based on metadata.userVisible
-    // Only show messages that are visible to the user
-    const visibleMessages = messages.filter(msg => {
-        // If no metadata, default to visible
-        if (!msg.metadata) return true
-        // Check userVisible flag
-        return msg.metadata.userVisible !== false
-    })
+    const visibleMessages = useMemo(
+        () => messages.filter(msg => !msg.metadata || msg.metadata.userVisible !== false),
+        [messages]
+    )
 
-    const hasAssistantText = (msg: ChatMessage): boolean => {
-        if (msg.role !== 'assistant') return false
-        return msg.content.some(c => c.type === 'text' && typeof c.text === 'string' && c.text.trim().length > 0)
-    }
-
-    const finalAssistantTextMessage = [...visibleMessages].reverse().find(hasAssistantText)
-    const finalAssistantTextMessageId = finalAssistantTextMessage?.id
+    const finalAssistantTextMessageId = useMemo(() => {
+        for (let i = visibleMessages.length - 1; i >= 0; i--) {
+            const msg = visibleMessages[i]
+            if (msg.role === 'assistant' && msg.content.some(c => c.type === 'text' && typeof c.text === 'string' && c.text.trim().length > 0)) {
+                return msg.id
+            }
+        }
+        return undefined
+    }, [visibleMessages])
 
     const toolResponses = useMemo<ToolResponseMap>(() => {
         const map: ToolResponseMap = new Map()
@@ -113,9 +109,8 @@ export default function MessageList({ messages, isLoading = false, chatState = C
     useEffect(() => {
         if (!agentId || isLoading) return
         const lastAssistant = [...visibleMessages].reverse().find(msg => msg.role === 'assistant' && msg.id)
-        const targetMessage = finalAssistantTextMessage?.id ? finalAssistantTextMessage : lastAssistant
-        if (!targetMessage?.id) return
-        const assistantId = targetMessage.id
+        const assistantId = finalAssistantTextMessageId || lastAssistant?.id
+        if (!assistantId) return
         if (processedAssistantMsgRef.current === assistantId) return
 
         let cancelled = false
@@ -154,7 +149,7 @@ export default function MessageList({ messages, isLoading = false, chatState = C
 
         updateTurnFiles().catch(() => { /* best-effort file detection */ })
         return () => { cancelled = true }
-    }, [agentId, isLoading, visibleMessages, finalAssistantTextMessage])
+    }, [agentId, isLoading, visibleMessages, finalAssistantTextMessageId])
 
     if (visibleMessages.length === 0 && !isLoading) {
         return (

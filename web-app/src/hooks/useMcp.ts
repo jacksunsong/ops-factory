@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import type {
   McpEntry,
   McpResponse,
@@ -6,9 +6,7 @@ import type {
   CategorizedMcpEntries,
 } from '../types/mcp'
 import { categorizeMcpEntries } from '../types/mcp'
-
-const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://127.0.0.1:3000'
-const GATEWAY_SECRET_KEY = import.meta.env.VITE_GATEWAY_SECRET_KEY || 'test'
+import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
 
 interface UseMcpResult {
   entries: McpEntry[]
@@ -160,9 +158,11 @@ export function useMcp(agentId: string | null): UseMcpResult {
     }
   }, [agentId, fetchMcp])
 
+  const categorized = useMemo(() => categorizeMcpEntries(entries), [entries])
+
   return {
     entries,
-    categorized: categorizeMcpEntries(entries),
+    categorized,
     warnings,
     isLoading,
     error,

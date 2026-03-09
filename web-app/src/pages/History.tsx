@@ -5,6 +5,7 @@ import { useGoosed } from '../contexts/GoosedContext'
 import { useInbox } from '../contexts/InboxContext'
 import SessionList, { type SessionWithAgent } from '../components/SessionList'
 import type { Session } from '@goosed/sdk'
+import { isScheduledSession } from '../config/runtime'
 
 interface AgentSession extends Session {
     agentId: string
@@ -56,14 +57,18 @@ export default function History() {
             setError(null)
 
             try {
-                const allSessions: AgentSession[] = []
-                for (const agent of agents) {
-                    try {
+                const results = await Promise.allSettled(
+                    agents.map(async (agent) => {
                         const client = getClient(agent.id)
                         const agentSessions = await client.listSessions()
-                        allSessions.push(...agentSessions.map((s: Session) => ({ ...s, agentId: agent.id })))
-                    } catch {
-                        // agent might not be running
+                        return agentSessions.map((s: Session) => ({ ...s, agentId: agent.id }))
+                    })
+                )
+
+                const allSessions: AgentSession[] = []
+                for (const result of results) {
+                    if (result.status === 'fulfilled') {
+                        allSessions.push(...result.value)
                     }
                 }
                 // Sort by updated_at descending
@@ -94,7 +99,7 @@ export default function History() {
     const filteredByType = useMemo(() => {
         if (historyFilter === 'all') return sessions
         if (historyFilter === 'scheduled') {
-            return sessions.filter(session => session.session_type === 'scheduled' || !!session.schedule_id)
+            return sessions.filter(session => isScheduledSession(session))
         }
         return sessions.filter(session => (session.session_type || 'user') === 'user' && !session.schedule_id)
     }, [sessions, historyFilter])
@@ -112,14 +117,14 @@ export default function History() {
 
     const handleResumeSession = (session: SessionWithAgent) => {
         const resolvedAgentId = session.agentId || agents[0]?.id || ''
-        if (resolvedAgentId && (session.session_type === 'scheduled' || !!session.schedule_id)) {
+        if (resolvedAgentId && (isScheduledSession(session))) {
             markSessionRead(resolvedAgentId, session.id)
         }
         navigate(`/chat?sessionId=${session.id}&agent=${resolvedAgentId}`)
     }
 
     const handleMarkUnread = (session: SessionWithAgent) => {
-        const isScheduled = session.session_type === 'scheduled' || !!session.schedule_id
+        const isScheduled = isScheduledSession(session)
         if (!isScheduled) return
         const agentId = session.agentId || agents[0]?.id || ''
         if (!agentId) return

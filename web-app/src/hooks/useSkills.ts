@@ -1,8 +1,6 @@
 import { useState, useCallback } from 'react'
 import type { SkillEntry, SkillsResponse } from '../types/skill'
-
-const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://127.0.0.1:3000'
-const GATEWAY_SECRET_KEY = import.meta.env.VITE_GATEWAY_SECRET_KEY || 'test'
+import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
 
 interface UseSkillsResult {
     skills: SkillEntry[]

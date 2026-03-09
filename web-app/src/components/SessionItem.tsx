@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Session } from '@goosed/sdk'
+import { isScheduledSession } from '../config/runtime'
 
 type SessionWithAgent = Session & { agentId?: string }
 
@@ -20,7 +21,7 @@ export default function SessionItem({ session, onResume, onDelete, isDeleting = 
         hour: '2-digit',
         minute: '2-digit'
     })
-    const sessionType = session.session_type === 'scheduled' || session.schedule_id ? 'scheduled' : 'user'
+    const sessionType = isScheduledSession(session) ? 'scheduled' : 'user'
 
     const handleDeleteClick = (e: MouseEvent) => {
         e.preventDefault()

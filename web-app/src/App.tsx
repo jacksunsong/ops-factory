@@ -17,11 +17,13 @@ import { InboxProvider } from './contexts/InboxContext'
 import { SidebarProvider, useSidebar } from './contexts/SidebarContext'
 import { ProtectedRoute, AdminRoute } from './contexts/UserContext'
 
+const IS_EMBED = new URLSearchParams(window.location.search).get('embed') === 'true'
+
 function AppContent() {
     const { previewFile } = usePreview()
     const { isCollapsed } = useSidebar()
     const isPreviewOpen = !!previewFile
-    const isEmbed = new URLSearchParams(window.location.search).get('embed') === 'true'
+    const isEmbed = IS_EMBED
 
     const mainWrapperClass = [
         'main-wrapper',

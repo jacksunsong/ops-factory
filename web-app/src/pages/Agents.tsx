@@ -4,9 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useGoosed } from '../contexts/GoosedContext'
 import { useUser } from '../contexts/UserContext'
 import { useMcp } from '../hooks/useMcp'
-
-const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://127.0.0.1:3000'
-const GATEWAY_SECRET_KEY = import.meta.env.VITE_GATEWAY_SECRET_KEY || 'test'
+import { GATEWAY_URL, gatewayHeaders, slugify } from '../config/runtime'
 
 const DEFAULT_LLM = { provider: 'openai', model: 'qwen/qwen3.5-35b-a3b' }
 
@@ -15,24 +13,6 @@ function formatModel(provider?: string, model?: string, unknownLabel = 'Unknown'
     if (model) return model
     if (provider) return provider
     return unknownLabel
-}
-
-/** Convert a display name to a kebab-case agent ID. */
-function nameToId(name: string): string {
-    return name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-}
-
-/** Build gateway request headers. */
-function gatewayHeaders(userId?: string | null): Record<string, string> {
-    const h: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'x-secret-key': GATEWAY_SECRET_KEY,
-    }
-    if (userId) h['x-user-id'] = userId
-    return h
 }
 
 // Component to fetch and display MCP count for an agent
@@ -59,7 +39,7 @@ function CreateAgentModal({ onClose, onCreated }: { onClose: () => void; onCreat
     const handleNameChange = useCallback((value: string) => {
         setName(value)
         if (!idManuallyEdited) {
-            setId(nameToId(value))
+            setId(slugify(value))
         }
     }, [idManuallyEdited])
 

@@ -2,9 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode 
 import { getPreviewKind, inferFileType, needsTextContent, PreviewKind } from '../utils/filePreview'
 import { parseCsvTable } from '../utils/officePreview'
 import { useUser } from './UserContext'
-
-const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://127.0.0.1:3000'
-const GATEWAY_SECRET_KEY = import.meta.env.VITE_GATEWAY_SECRET_KEY || 'test'
+import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
 
 interface OfficePreviewConfig {
     enabled: boolean

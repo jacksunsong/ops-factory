@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { Session } from '@goosed/sdk'
 import { useGoosed } from './GoosedContext'
 import { useUser } from './UserContext'
+import { isScheduledSession } from '../config/runtime'
 
 interface InboxSession extends Session {
     agentId: string
@@ -72,17 +73,20 @@ export function InboxProvider({ children }: { children: ReactNode }) {
 
         setIsLoading(true)
         try {
-            const allScheduled: InboxSession[] = []
-            for (const agent of agents) {
-                try {
+            const results = await Promise.allSettled(
+                agents.map(async (agent) => {
                     const client = getClient(agent.id)
                     const sessions = await client.listSessions()
-                    const scheduled = sessions
-                        .filter(session => session.session_type === 'scheduled' || !!session.schedule_id)
+                    return sessions
+                        .filter(session => isScheduledSession(session))
                         .map(session => ({ ...session, agentId: agent.id }))
-                    allScheduled.push(...scheduled)
-                } catch {
-                    // Ignore per-agent failures to keep inbox resilient.
+                })
+            )
+
+            const allScheduled: InboxSession[] = []
+            for (const result of results) {
+                if (result.status === 'fulfilled') {
+                    allScheduled.push(...result.value)
                 }
             }
 
@@ -149,7 +153,7 @@ export function InboxProvider({ children }: { children: ReactNode }) {
         [scheduledSessions, readSessionKeys]
     )
 
-    const value: InboxContextValue = {
+    const value = useMemo<InboxContextValue>(() => ({
         unreadCount: unreadSessions.length,
         unreadSessions,
         scheduledSessions,
@@ -159,7 +163,7 @@ export function InboxProvider({ children }: { children: ReactNode }) {
         markSessionRead,
         markSessionUnread,
         markAllRead,
-    }
+    }), [unreadSessions, scheduledSessions, isLoading, refresh, isSessionRead, markSessionRead, markSessionUnread, markAllRead])
 
     return (
         <InboxContext.Provider value={value}>

@@ -6,9 +6,7 @@ import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import { inferFileType } from '../utils/filePreview'
 import OnlyOfficePreview from './OnlyOfficePreview'
-
-const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://127.0.0.1:3000'
-const GATEWAY_SECRET_KEY = import.meta.env.VITE_GATEWAY_SECRET_KEY || 'test'
+import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
 
 // Map file extensions to highlight.js language names
 const HLJS_LANG_MAP: Record<string, string> = {

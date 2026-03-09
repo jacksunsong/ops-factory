@@ -6,6 +6,7 @@ import CitationMark from './CitationMark'
 import ReferenceList from './ReferenceList'
 import { usePreview } from '../contexts/PreviewContext'
 import { parseCitations, type Citation } from '../utils/citationParser'
+import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
 
 export interface MessageContent {
     type: string
@@ -79,8 +80,70 @@ interface ToolCallPair {
     isError: boolean
 }
 
-const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://127.0.0.1:3000'
-const GATEWAY_SECRET_KEY = import.meta.env.VITE_GATEWAY_SECRET_KEY || 'test'
+// Parse todo markdown content into structured task items
+function parseTodoContent(content: string) {
+    const lines = content.split('\n').map(line => line.trim()).filter(Boolean)
+    const tasks: Array<{ done: boolean; text: string }> = []
+    for (const line of lines) {
+        if (line.startsWith('#')) continue
+        const checked = line.match(/^- \[(x|X)\]\s+(.+)$/)
+        if (checked) { tasks.push({ done: true, text: checked[2].trim() }); continue }
+        const unchecked = line.match(/^- \[\s\]\s+(.+)$/)
+        if (unchecked) { tasks.push({ done: false, text: unchecked[1].trim() }) }
+    }
+    return tasks
+}
+
+// File capsule component (hoisted to module scope for stable identity)
+function FileCapsule({ filePath, fileName, fileExt, agentId, userId }: {
+    filePath: string; fileName: string; fileExt: string; agentId?: string; userId?: string | null
+}) {
+    const downloadUrl = `${GATEWAY_URL}/agents/${agentId}/files/${encodeURIComponent(filePath)}?key=${GATEWAY_SECRET_KEY}${userId ? `&uid=${encodeURIComponent(userId)}` : ''}`
+    const { openPreview, isPreviewable } = usePreview()
+    const canPreview = isPreviewable(fileExt, fileName, filePath)
+
+    const handlePreview = (e: React.MouseEvent) => {
+        e.preventDefault()
+        openPreview({
+            name: fileName,
+            path: filePath,
+            type: fileExt,
+            agentId: agentId || '',
+        })
+    }
+
+    return (
+        <div className="file-capsule">
+            <span className="file-capsule-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                </svg>
+            </span>
+            <span className="file-capsule-name">{fileName}</span>
+            <div className="file-capsule-actions">
+                {canPreview && (
+                    <button className="file-capsule-btn" onClick={handlePreview} title="Preview">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                    </button>
+                )}
+                <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className="file-capsule-btn" title="Download">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    )
+}
 
 function MessageInner({
     message,
@@ -94,7 +157,6 @@ function MessageInner({
     showFileCapsules = true
 }: MessageProps) {
     const isUser = message.role === 'user'
-    const { openPreview, isPreviewable } = usePreview()
 
     // Extract text content and tool calls
     const textContent: string[] = []
@@ -138,20 +200,6 @@ function MessageInner({
             isPending: !response && request.status === 'pending',
             isError: response?.isError || request.status === 'error'
         })
-    }
-
-    // Parse todo markdown content into structured task items
-    const parseTodoContent = (content: string) => {
-        const lines = content.split('\n').map(line => line.trim()).filter(Boolean)
-        const tasks: Array<{ done: boolean; text: string }> = []
-        for (const line of lines) {
-            if (line.startsWith('#')) continue
-            const checked = line.match(/^- \[(x|X)\]\s+(.+)$/)
-            if (checked) { tasks.push({ done: true, text: checked[2].trim() }); continue }
-            const unchecked = line.match(/^- \[\s\]\s+(.+)$/)
-            if (unchecked) { tasks.push({ done: false, text: unchecked[1].trim() }) }
-        }
-        return tasks
     }
 
     // Todo card: uses the standard tool-call outer shell, structured checkbox body
@@ -252,54 +300,6 @@ function MessageInner({
             .replace(/```[ \t]*\[CITE_/g, '```\n\n[CITE_')
         : rawDisplayText
 
-    // File capsule component
-    const FileCapsule = ({ filePath, fileName, fileExt }: { filePath: string; fileName: string; fileExt: string }) => {
-        const downloadUrl = `${GATEWAY_URL}/agents/${agentId}/files/${encodeURIComponent(filePath)}?key=${GATEWAY_SECRET_KEY}${userId ? `&uid=${encodeURIComponent(userId)}` : ''}`
-        const canPreview = isPreviewable(fileExt, fileName, filePath)
-
-        const handlePreview = (e: React.MouseEvent) => {
-            e.preventDefault()
-            openPreview({
-                name: fileName,
-                path: filePath,
-                type: fileExt,
-                agentId: agentId || '',
-            })
-        }
-
-        return (
-            <div className="file-capsule">
-                <span className="file-capsule-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                        <line x1="16" y1="13" x2="8" y2="13" />
-                        <line x1="16" y1="17" x2="8" y2="17" />
-                        <polyline points="10 9 9 9 8 9" />
-                    </svg>
-                </span>
-                <span className="file-capsule-name">{fileName}</span>
-                <div className="file-capsule-actions">
-                    {canPreview && (
-                        <button className="file-capsule-btn" onClick={handlePreview} title="Preview">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                <circle cx="12" cy="12" r="3" />
-                            </svg>
-                        </button>
-                    )}
-                    <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className="file-capsule-btn" title="Download">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="7 10 12 15 17 10" />
-                            <line x1="12" y1="15" x2="12" y2="3" />
-                        </svg>
-                    </a>
-                </div>
-            </div>
-        )
-    }
-
     return (
         <div className={`message ${isUser ? 'user' : 'assistant'} animate-slide-in`}>
             <div className="message-avatar">
@@ -377,6 +377,8 @@ function MessageInner({
                                 filePath={file.path}
                                 fileName={file.name}
                                 fileExt={file.ext}
+                                agentId={agentId}
+                                userId={userId}
                             />
                         ))}
                     </div>
@@ -391,6 +393,8 @@ function MessageInner({
                                 filePath={file.path}
                                 fileName={file.name}
                                 fileExt={file.ext}
+                                agentId={agentId}
+                                userId={userId}
                             />
                         ))}
                     </div>

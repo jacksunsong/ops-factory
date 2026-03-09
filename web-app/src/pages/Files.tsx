@@ -2,9 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGoosed } from '../contexts/GoosedContext'
 import { usePreview } from '../contexts/PreviewContext'
-
-const GATEWAY_URL = import.meta.env.VITE_GATEWAY_URL || 'http://127.0.0.1:3000'
-const GATEWAY_SECRET_KEY = import.meta.env.VITE_GATEWAY_SECRET_KEY || 'test'
+import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
 
 interface FileInfo {
     name: string

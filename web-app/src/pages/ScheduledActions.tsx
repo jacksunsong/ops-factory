@@ -6,6 +6,7 @@ import { useGoosed } from '../contexts/GoosedContext'
 import { useToast } from '../contexts/ToastContext'
 import { useInbox } from '../contexts/InboxContext'
 import { useUser } from '../contexts/UserContext'
+import { slugify } from '../config/runtime'
 
 interface FormState {
     name: string
@@ -28,13 +29,6 @@ function getScheduleDraftsKey(userId: string): string {
     return `opsfactory:${userId}:scheduler:drafts:v1`
 }
 
-function slugifyName(value: string): string {
-    return value
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-}
 
 function ensureUniqueId(base: string, existingIds: Set<string>): string {
     if (!existingIds.has(base)) return base
@@ -169,7 +163,7 @@ export default function ScheduledActions() {
             return
         }
 
-        const cleanedName = slugifyName(form.name)
+        const cleanedName = slugify(form.name)
         if (!cleanedName) {
             showToast('warning', 'Name is required')
             return

@@ -9,6 +9,7 @@ import ChatInput from '../components/ChatInput'
 import type { Session, ImageData } from '@goosed/sdk'
 import type { AttachedFile } from '../components/Message'
 import { useAgentConfig } from '../hooks/useAgentConfig'
+import { isScheduledSession } from '../config/runtime'
 
 interface LocationState {
     initialMessage?: string
@@ -45,7 +46,6 @@ export default function Chat() {
     const [initError, setInitError] = useState<string | null>(null)
     const [isCreatingSession, setIsCreatingSession] = useState(false)
     const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null)
-    const [visionMode, setVisionMode] = useState<string>('passthrough')
     const [showStopHint, setShowStopHint] = useState(false)
     const stopHintTimerRef = useRef<number | null>(null)
 
@@ -90,14 +90,7 @@ export default function Chat() {
         }
     }, [selectedAgent, isConnected, fetchAgentConfig])
 
-    // Sync visionMode from agent config
-    useEffect(() => {
-        if (agentConfig?.visionMode) {
-            setVisionMode(agentConfig.visionMode)
-        } else {
-            setVisionMode('passthrough')
-        }
-    }, [agentConfig])
+    const visionMode = agentConfig?.visionMode ?? 'passthrough'
 
     const createSessionWithAgent = useCallback(async (agentId: string) => {
         setIsCreatingSession(true)
@@ -145,7 +138,7 @@ export default function Chat() {
                 setSession(sessionDetails)
 
                 // Auto-mark scheduled sessions as read when viewed
-                if (sessionDetails.session_type === 'scheduled' || sessionDetails.schedule_id) {
+                if (isScheduledSession(sessionDetails)) {
                     const agentId = agentParam || detectAgentFromWorkingDir(sessionDetails.working_dir, agents)
                     markSessionRead(agentId, sessionId)
                 }
