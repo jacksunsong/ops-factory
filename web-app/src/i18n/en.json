@@ -365,6 +365,21 @@
     "resetAllSuccess": "All prompts reset to default",
     "resetAllFailed": "Failed to reset all prompts"
   },
+  "errors": {
+    "networkError": "Network connection failed. Please check your connection.",
+    "serverError": "Service temporarily unavailable. Please try again later.",
+    "unauthorized": "Authentication expired. Please log in again.",
+    "timeout": "Request timed out. Please try again.",
+    "notFound": "The requested resource was not found.",
+    "requestFailed": "Request failed ({{status}}). Please try again.",
+    "unknown": "An unexpected error occurred. Please try again.",
+    "deleteFailed": "Delete failed. Please try again.",
+    "createFailed": "Create failed. Please try again.",
+    "operationFailed": "Operation failed. Please try again.",
+    "copyFailed": "Failed to copy to clipboard.",
+    "voiceError": "Voice input error: {{error}}",
+    "micPermissionDenied": "Microphone access denied. Please allow microphone permission."
+  },
   "configTabs": {
     "overview": "Overview",
     "prompts": "Prompts",

@@ -1,154 +1,186 @@
-# Gateway 测试报告 — Simplify 重构后
+# 方案 A：统一 Toast + 错误分级
 
-**日期**: 2026-03-09
-**测试结果**: **全部通过**
-**总计**: 354 tests | 0 failures | 0 errors | 0 skipped
-**执行时间**: ~6.7s
-**构建工具**: Maven + JUnit 4 + Mockito + Spring Boot Test
+## Context
 
----
+Web App 当前存在 5 种不一致的错误展示模式（内联 div、Toast、alert()、静默吞掉、全屏 ErrorBoundary），导致用户体验碎片化。本次改造目标：统一走 Toast 系统，按严重程度分级展示，消除 `alert()` 和原始错误直露。
 
-## 一、重构背景
+## 错误分级定义
 
-本次测试运行在 `/simplify` 重构之后执行，重构内容包括：
+| 级别       | Toast 类型 | 展示方式                       | 场景                                   |
+| :--------- | :--------- | :----------------------------- | :------------------------------------- |
+| FATAL      | -          | ErrorBoundary 全屏（保持现有） | 组件渲染崩溃                           |
+| ERROR      | `error`    | Toast + 友好文案               | API 失败、网络错误、SSE 断开           |
+| WARNING    | `warning`  | Toast                          | 操作失败（删除、创建等）、校验拦截     |
+| SILENT     | -          | console.error only             | 非关键失败（best-effort 文件 diff 等） |
+| VALIDATION | -          | 内联红色提示（保留现有）       | 表单字段校验                           |
 
-1. **Phase 1 — 关键阻塞 I/O 修复**（WebFlux 响应式合规）
-   - `FileController`: `readAllBytes()` 和 `listFiles()` 包裹到 `Mono.fromCallable().subscribeOn(boundedElastic)`
-   - `AgentController`: `listAgents()` 包裹到响应式调度器
-   - `SessionController`: `cleanupUploads` 改为 fire-and-forget 异步清理
+## 实施步骤
 
-2. **Phase 2 — 逻辑 bug 修复**
-   - `CatchAllProxyController`: 移除死代码（不可达的 else 分支）
-   - `VisionPreprocessHook`: 修复 WebClient 链构建浪费（构建完整 spec 后丢弃）
-   - `SessionService`: 移除死代码 owner cache（`cacheOwner`/`getCachedOwner`/`removeOwner` 从未被调用）
+### 1. ToastProvider 提升到根级
 
-3. **Phase 3 — 代码去重**
-   - 新增 `FileUtil.deleteRecursively()` 共享工具
-   - 新增 `AgentConfigService.getUserAgentDir()` 消除 6 处重复路径构建
-   - `UserContextFilter.requireAdmin()` 静态方法统一 admin 检查
-   - `InstanceManager` 共享 `ObjectMapper` 实例
-   - `McpController` 合并 `fanoutPost`/`fanoutDelete` 为 `fanout()`
-   - `LangfuseService` 提取 `computeP95()` 消除重复计算
+**文件:** `web-app/src/main.tsx`
 
----
+将 `ToastProvider` 从 App.tsx 的 ProtectedRoute 内部移到 main.tsx 根级，使登录页等未认证页面也能使用 Toast。
 
-## 二、重构后测试修复
+```
+ErrorBoundary > BrowserRouter > ToastProvider > UserProvider > GoosedProvider > Routes
+```
 
-| 测试文件 | 问题 | 修复方式 |
-|----------|------|----------|
-| `SessionServiceTest` (4 tests) | 全部测试引用已删除的 `cacheOwner`/`getCachedOwner`/`removeOwner` | 删除测试类（仅测试已移除的死代码） |
-| `FileEndpointE2ETest` | NPE: mock `getUsersDir()` 但控制器已改用 `getUserAgentDir()` | 更新 mock 为 `getUserAgentDir` + `thenAnswer` |
-| `FileEndpointExtendedE2ETest` | 同上 `getUsersDir()` → `getUserAgentDir()` 不匹配 | 同上 |
-| `SessionEndpointE2ETest` | (1) `getUsersDir()` mock 过时 (2) `verify(removeOwner)` 引用已删除方法 | 更新 mock + 移除 verify |
-| `SessionEndpointExtendedE2ETest` | 同上两个问题 | 同上 |
+同步从 `App.tsx` 中移除 ToastProvider。
 
----
+### 2. 新增错误文案映射工具
 
-## 三、测试结果明细
+**新建文件:** `web-app/src/utils/errorMessages.ts`
 
-### gateway-common (41 tests)
+```typescript
+// HTTP 状态码 → 用户友好文案 (i18n key)
+// 提供 getErrorMessage(error: unknown): string 函数
+// 将 HTTP 状态码、网络错误、超时等映射为 i18n key
+```
 
-| 测试类 | 用例数 | 状态 |
-|--------|--------|------|
-| ManagedInstanceTest | 12 | PASS |
-| PathSanitizerTest | 9 | PASS |
-| YamlLoaderTest | 9 | PASS |
-| ProcessUtilTest | 5 | PASS |
-| UserRoleTest | 3 | PASS |
-| AgentRegistryEntryTest | 3 | PASS |
+同步在 `en.json` / `zh.json` 中添加对应的翻译 key：
 
-### gateway-service — 单元测试 (215 tests)
+- `errors.networkError` — 网络连接失败
+- `errors.serverError` — 服务暂时不可用
+- `errors.unauthorized` — 认证失效
+- `errors.timeout` — 请求超时
+- `errors.unknown` — 未知错误
+- `errors.deleteFailed` — 删除失败
+- `errors.createFailed` — 创建失败
+- `errors.operationFailed` — 操作失败
 
-#### Controllers (43 tests)
+### 3. 替换所有 alert() 为 showToast()
 
-| 测试类 | 用例数 | 状态 |
-|--------|--------|------|
-| AgentControllerTest | 17 | PASS |
-| MonitoringControllerTest | 12 | PASS |
-| CatchAllProxyControllerTest | 9 | PASS |
-| StatusControllerTest | 5 | PASS |
+| 文件                | 行                                            | 原代码                                                 | 改为 |
+| :------------------ | :-------------------------------------------- | :----------------------------------------------------- | :--- |
+| `Home.tsx:64`       | alert(t('home.failedToCreateSession'...))     | showToast('error', t('home.failedToCreateSession'...)) |      |
+| `ChatInput.tsx:186` | alert(t('chat.imageUploadNotEnabled'))        | showToast('warning', t('chat.imageUploadNotEnabled'))  |      |
+| `ChatInput.tsx:196` | alert(t('chat.maxImagesAllowed'...))          | showToast('warning', t('chat.maxImagesAllowed'...))    |      |
+| `ChatInput.tsx:199` | alert(t('chat.maxFilesAllowed'...))           | showToast('warning', t('chat.maxFilesAllowed'...))     |      |
+| `ChatInput.tsx:285` | alert(t('chat.imageUploadNotEnabled'))        | showToast('warning', t('chat.imageUploadNotEnabled'))  |      |
+| `ChatInput.tsx:291` | alert(t('chat.maxImagesAllowed'...))          | showToast('warning', t('chat.maxImagesAllowed'...))    |      |
+| `History.tsx:162`   | alert('Failed to delete session: ' + message) | showToast('error', t('errors.deleteFailed'))           |      |
 
-#### Config (29 tests)
+ChatInput 需要新增 `useToast` 导入。Home.tsx 和 History.tsx 同理。
 
-| 测试类 | 用例数 | 状态 |
-|--------|--------|------|
-| CorsFilterTest | 16 | PASS |
-| GatewayPropertiesTest | 8 | PASS |
-| GlobalExceptionHandlerTest | 5 | PASS |
+### 4. 修复 SSE 流错误闭包 bug
 
-#### Proxy (9 tests)
+**文件:** `web-app/src/hooks/useChat.ts`
 
-| 测试类 | 用例数 | 状态 |
-|--------|--------|------|
-| GoosedProxyExtendedTest | 6 | PASS |
-| GoosedProxyTest | 2 | PASS |
-| SseRelayServiceTest | 1 | PASS |
+`sendMessage` 函数中 STREAM_FINISH dispatch (约 line 281) 读取的 `state.error` 来自函数开始时的闭包快照，不会反映流中设置的错误。需要改用 `useRef` 追踪流期间的错误，或在 finally 块中通过 reducer 的当前 state 判断。
 
-#### Services (71 tests)
+### 5. 语音输入错误展示
 
-| 测试类 | 用例数 | 状态 |
-|--------|--------|------|
-| AgentConfigServiceTest | 27 | PASS |
-| FileServiceExtendedTest | 17 | PASS |
-| LangfuseServiceBuildOverviewTest | 15 | PASS |
-| FileServiceTest | 9 | PASS |
-| LangfuseServiceTest | 3 | PASS |
+**文件:** `web-app/src/components/ChatInput.tsx`
 
-#### Filters (10 tests)
+`useVoiceInput` 返回的 `error` 当前未被使用。添加 `useEffect` 监听 `voiceError` 变化，有值时调用 `showToast('error', voiceError)`。
 
-| 测试类 | 用例数 | 状态 |
-|--------|--------|------|
-| AuthWebFilterTest | 6 | PASS |
-| UserContextFilterTest | 4 | PASS |
+### 6. 静默失败改为 Toast（选择性）
 
-#### Hooks (36 tests)
+| 文件                      | 场景                    | 处理                                       |
+| :------------------------ | :---------------------- | :----------------------------------------- |
+| `FilePreview.tsx:128`     | 复制到剪贴板失败        | showToast('error', t('errors.copyFailed')) |
+| `Chat.tsx:80`             | model info 获取失败     | 保持 SILENT（非关键）                      |
+| `PreviewContext.tsx:56`   | Office Preview 配置获取 | 保持 SILENT（非关键）                      |
+| `MessageList.tsx:104,150` | 文件 diff baseline      | 保持 SILENT（best-effort）                 |
 
-| 测试类 | 用例数 | 状态 |
-|--------|--------|------|
-| VisionPreprocessHookTest | 16 | PASS |
-| FileAttachmentHookTest | 10 | PASS |
-| HookPipelineTest | 4 | PASS |
-| BodyLimitHookTest | 3 | PASS |
-| HookContextTest | 3 | PASS |
+### 7. 各 hook 的 HTTP 错误友好化
 
-#### Process (36 tests)
+以下 hooks 目前直接返回 `HTTP ${status}: ${text}` 形式的错误文本给组件展示：
 
-| 测试类 | 用例数 | 状态 |
-|--------|--------|------|
-| InstanceManagerExtendedTest | 11 | PASS |
-| InstanceManagerTest | 8 | PASS |
-| PrewarmServiceTest | 7 | PASS |
-| RuntimePreparerTest | 4 | PASS |
-| IdleReaperTest | 4 | PASS |
-| PortAllocatorTest | 2 | PASS |
+- `useAgentConfig.ts:29` — 改用 `getErrorMessage()`
+- `useMcp.ts:41,86,125,149` — 改用 `getErrorMessage()`
+- `useSkills.ts:27` — 改用 `getErrorMessage()`
+- `GoosedContext.tsx:61` — 改用 `getErrorMessage()`
+- `useMonitoring.ts:76-78` — 改用 `getErrorMessage()`
 
-### gateway-service — E2E 测试 (98 tests)
+各 hook 的 error 设值改为调用 `getErrorMessage(err)` 而非原始 HTTP 错误字符串。
 
-| 测试类 | 用例数 | 状态 |
-|--------|--------|------|
-| AgentEndpointE2ETest | 21 | PASS |
-| MonitoringEndpointE2ETest | 17 | PASS |
-| AuthFilterE2ETest | 13 | PASS |
-| FileEndpointE2ETest | 11 | PASS |
-| SessionEndpointE2ETest | 11 | PASS |
-| MonitoringEndpointExtendedE2ETest | 9 | PASS |
-| ReplyEndpointE2ETest | 9 | PASS |
-| McpEndpointE2ETest | 8 | PASS |
-| CatchAllProxyEndpointE2ETest | 7 | PASS |
-| SessionEndpointExtendedE2ETest | 7 | PASS |
-| StatusEndpointE2ETest | 5 | PASS |
-| FileEndpointExtendedE2ETest | 2 | PASS |
+## 改动文件清单（约 15 个）
 
----
+| 文件                              | 改动                             |
+| :-------------------------------- | :------------------------------- |
+| `main.tsx`                        | 添加 ToastProvider 包裹          |
+| `App.tsx`                         | 移除 ToastProvider               |
+| **新建** `utils/errorMessages.ts` | 错误映射工具函数                 |
+| `i18n/en.json`                    | 添加 errors.* 翻译               |
+| `i18n/zh.json`                    | 添加 errors.* 翻译               |
+| `Home.tsx`                        | alert → showToast                |
+| `ChatInput.tsx`                   | alert → showToast + 语音错误展示 |
+| `History.tsx`                     | alert → showToast                |
+| `useChat.ts`                      | 修复 SSE 闭包 bug                |
+| `FilePreview.tsx`                 | 复制失败 → showToast             |
+| `useAgentConfig.ts`               | 错误友好化                       |
+| `useMcp.ts`                       | 错误友好化                       |
+| `useSkills.ts`                    | 错误友好化                       |
+| `GoosedContext.tsx`               | 错误友好化                       |
+| `useMonitoring.ts`                | 错误友好化                       |
 
-## 四、测试数量变化
+## 验证
 
-- **重构前**: 358 tests (含 SessionServiceTest 4 tests)
-- **重构后**: 354 tests
-- **净变化**: -4 tests（删除了 `SessionServiceTest` 中测试已移除死代码的 4 个用例）
+1. `cd web-app && npm run build` — 确保无 TypeScript 编译错误
+2. 手动测试：
+   - 断网状态下操作 → 应看到友好 Toast 而非原始 HTTP 错误
+   - 删除 session 失败 → Toast 而非 alert()
+   - 文件上传超限 → warning Toast 而非 alert()
+   - SSE 流中断 → 正确展示错误
+   - 复制文件内容失败 → Toast 提示
+   - 登录页异常 → Toast 可用（不再因 provider 缺失而崩溃）
 
----
 
-## 五、总结
 
-所有 354 个 gateway 测试（41 common + 215 单元 + 98 E2E）在 simplify 重构后全部通过。5 个测试文件需要更新以适配重构后的代码（`getUserAgentDir` mock 更新、`removeOwner` 引用移除、`SessionServiceTest` 删除）。
+
+
+
+
+
+
+
+
+## 改动总结
+
+### 基础设施（3 个文件）
+
+| 文件                                                         | 改动                                                      |
+| ------------------------------------------------------------ | --------------------------------------------------------- |
+| [main.tsx](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/main.tsx) | ToastProvider 提升到根级，登录页也可用 Toast              |
+| [App.tsx](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/App.tsx) | 移除原来嵌套在 ProtectedRoute 内的 ToastProvider          |
+| **新建** [errorMessages.ts](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/utils/errorMessages.ts) | `getErrorMessage()` 工具函数，HTTP 状态码 → i18n 友好文案 |
+
+### i18n 翻译（2 个文件）
+
+| 文件                                                         | 改动                                  |
+| ------------------------------------------------------------ | ------------------------------------- |
+| [en.json](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/i18n/en.json) | 新增 `errors.*` 命名空间（13 个 key） |
+| [zh.json](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/i18n/zh.json) | 对应中文翻译                          |
+
+### alert() → Toast（3 个文件，7 处）
+
+| 文件                                                         | 改动                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [Home.tsx](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/pages/Home.tsx) | 创建 session 失败：`alert` → `showToast('error', ...)`       |
+| [History.tsx](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/pages/History.tsx) | 删除 session 失败：`alert` → `showToast('error', t('errors.deleteFailed'))` |
+| [ChatInput.tsx](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/components/ChatInput.tsx) | 6 处 `alert` → `showToast('warning', ...)`                   |
+
+### Bug 修复（1 个文件）
+
+| 文件                                                         | 改动                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [useChat.ts](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/hooks/useChat.ts) | SSE 流错误闭包 bug：用 `streamErrorRef` 替代 `state.error` 闭包快照，移除 `state.error` 依赖 |
+
+### 静默失败改为 Toast（2 个文件）
+
+| 文件                                                         | 改动                                                  |
+| ------------------------------------------------------------ | ----------------------------------------------------- |
+| [ChatInput.tsx](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/components/ChatInput.tsx) | 语音输入错误 → `useEffect` 监听 `voiceError` 并 Toast |
+| [FilePreview.tsx](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/components/FilePreview.tsx) | 剪贴板复制失败 → `showToast('error', ...)`            |
+
+### HTTP 错误友好化（5 个文件）
+
+| 文件                                                         | 改动                                |
+| ------------------------------------------------------------ | ----------------------------------- |
+| [useAgentConfig.ts](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/hooks/useAgentConfig.ts) | `setError(getErrorMessage(err))`    |
+| [useMcp.ts](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/hooks/useMcp.ts) | 4 处 catch → `getErrorMessage(err)` |
+| [useSkills.ts](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/hooks/useSkills.ts) | `setError(getErrorMessage(err))`    |
+| [GoosedContext.tsx](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/contexts/GoosedContext.tsx) | `setError(getErrorMessage(err))`    |
+| [useMonitoring.ts](vscode-webview://1cnkevekpg0mo7p6bltb3kb4kgtvvn73vu16qs4ulmj8st022i44/web-app/src/hooks/useMonitoring.ts) | 2 处 catch → `getErrorMessage(err)` |

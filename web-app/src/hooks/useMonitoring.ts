@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
+import { getErrorMessage } from '../utils/errorMessages'
 
 // ---- Types matching gateway /monitoring/* responses ----
 
@@ -190,7 +191,7 @@ export function useMonitoring(): UseMonitoringResult {
       setAgents(ag.agents || [])
     } catch (err) {
       if (id !== fetchIdRef.current) return
-      setError(err instanceof Error ? err.message : 'Failed to fetch monitoring data')
+      setError(getErrorMessage(err))
     } finally {
       if (id === fetchIdRef.current) setIsLoading(false)
     }
@@ -252,7 +253,7 @@ export function useMonitoringPlatform(): UseMonitoringPlatformResult {
       setAgents(ag.agents || [])
     } catch (err) {
       if (id !== fetchIdRef.current) return
-      setError(err instanceof Error ? err.message : 'Failed to fetch platform data')
+      setError(getErrorMessage(err))
     } finally {
       if (id === fetchIdRef.current) setIsLoading(false)
     }

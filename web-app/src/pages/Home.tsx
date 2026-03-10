@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useGoosed } from '../contexts/GoosedContext'
+import { useToast } from '../contexts/ToastContext'
 import ChatInput from '../components/ChatInput'
 import { PROMPT_TEMPLATES } from '../config/prompts'
 import { PromptTemplate } from '../types/prompt'
@@ -16,6 +17,7 @@ const AGENT_TAB_ORDER = ['all', 'universal-agent', 'kb-agent'] as const
 export default function Home() {
     const { t } = useTranslation()
     const navigate = useNavigate()
+    const { showToast } = useToast()
     const { getClient, agents, isConnected, error: connectionError } = useGoosed()
     const [isCreatingSession, setIsCreatingSession] = useState(false)
     const [selectedAgent, setSelectedAgent] = useState('')
@@ -61,7 +63,7 @@ export default function Home() {
             })
         } catch (err) {
             console.error('Failed to create session:', err)
-            alert(t('home.failedToCreateSession', { error: err instanceof Error ? err.message : 'Unknown error' }))
+            showToast('error', t('home.failedToCreateSession', { error: err instanceof Error ? err.message : 'Unknown error' }))
         } finally {
             setIsCreatingSession(false)
         }
@@ -118,25 +120,13 @@ export default function Home() {
                 </p>
 
                 {connectionError && (
-                    <div style={{
-                        padding: 'var(--spacing-4)',
-                        background: 'rgba(239, 68, 68, 0.2)',
-                        borderRadius: 'var(--radius-lg)',
-                        color: 'var(--color-error)',
-                        marginBottom: 'var(--spacing-6)'
-                    }}>
+                    <div className="conn-banner conn-banner-error">
                         {t('common.connectionError', { error: connectionError })}
                     </div>
                 )}
 
                 {!isConnected && !connectionError && (
-                    <div style={{
-                        padding: 'var(--spacing-4)',
-                        background: 'rgba(245, 158, 11, 0.2)',
-                        borderRadius: 'var(--radius-lg)',
-                        color: 'var(--color-warning)',
-                        marginBottom: 'var(--spacing-6)'
-                    }}>
+                    <div className="conn-banner conn-banner-warning">
                         {t('common.connectingGateway')}
                     </div>
                 )}

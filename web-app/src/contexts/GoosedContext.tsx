@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback, us
 import { GoosedClient } from '@goosed/sdk'
 import { useUser } from './UserContext'
 import { GATEWAY_URL, GATEWAY_SECRET_KEY, isAdminUser } from '../config/runtime'
+import { getErrorMessage } from '../utils/errorMessages'
 
 export interface AgentInfo {
     id: string
@@ -65,7 +66,7 @@ export function GoosedProvider({ children }: { children: ReactNode }) {
             setError(null)
         } catch (err) {
             setIsConnected(false)
-            setError(err instanceof Error ? err.message : 'Failed to connect to gateway')
+            setError(getErrorMessage(err))
         }
     }, [userId])
 

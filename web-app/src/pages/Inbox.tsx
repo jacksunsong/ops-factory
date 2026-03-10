@@ -2,10 +2,12 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useInbox } from '../contexts/InboxContext'
+import { useGoosed } from '../contexts/GoosedContext'
 
 export default function Inbox() {
     const { t } = useTranslation()
     const navigate = useNavigate()
+    const { isConnected, error: connectionError } = useGoosed()
     const { unreadSessions, unreadCount, isLoading, markSessionRead, markAllRead } = useInbox()
 
     const groupedByAgent = useMemo(() => {
@@ -29,6 +31,12 @@ export default function Inbox() {
                 <h1 className="page-title">{t('inbox.title')}</h1>
                 <p className="page-subtitle">{t('inbox.subtitle')}</p>
             </header>
+
+            {(!isConnected && connectionError) && (
+                <div className="conn-banner conn-banner-error">
+                    {t('common.connectionError', { error: connectionError })}
+                </div>
+            )}
 
             <div className="inbox-toolbar">
                 <div className="inbox-count">{t('inbox.unread', { count: unreadCount })}</div>

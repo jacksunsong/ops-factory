@@ -12,7 +12,6 @@ import Inbox from './pages/Inbox'
 import Login from './pages/Login'
 import FilePreview from './components/FilePreview'
 import { PreviewProvider, usePreview } from './contexts/PreviewContext'
-import { ToastProvider } from './contexts/ToastContext'
 import { InboxProvider } from './contexts/InboxContext'
 import { SidebarProvider, useSidebar } from './contexts/SidebarContext'
 import { ProtectedRoute, AdminRoute } from './contexts/UserContext'
@@ -62,13 +61,11 @@ export default function App() {
             <Route path="/*" element={
                 <ProtectedRoute>
                     <SidebarProvider>
-                        <ToastProvider>
-                            <InboxProvider>
-                                <PreviewProvider>
-                                    <AppContent />
-                                </PreviewProvider>
-                            </InboxProvider>
-                        </ToastProvider>
+                        <InboxProvider>
+                            <PreviewProvider>
+                                <AppContent />
+                            </PreviewProvider>
+                        </InboxProvider>
                     </SidebarProvider>
                 </ProtectedRoute>
             } />

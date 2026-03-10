@@ -34,7 +34,7 @@ export default function Chat() {
     const [searchParams] = useSearchParams()
     const location = useLocation()
     const navigate = useNavigate()
-    const { getClient, agents, isConnected } = useGoosed()
+    const { getClient, agents, isConnected, error: goosedError } = useGoosed()
     const { markSessionRead } = useInbox()
 
     const sessionId = searchParams.get('sessionId')
@@ -229,6 +229,27 @@ export default function Chat() {
             }, 2200)
         }
     }, [stopMessage])
+
+    if (isInitializing && !isConnected && goosedError) {
+        return (
+            <div className="chat-container">
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="empty-state">
+                        <svg className="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                        <h3 className="empty-state-title">{t('chat.failedToLoadSession')}</h3>
+                        <p className="empty-state-description">{goosedError}</p>
+                        <button className="btn btn-primary" style={{ marginTop: 'var(--spacing-4)' }} onClick={() => navigate('/')}>
+                            {t('chat.backToHome')}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     if (isInitializing) {
         return (

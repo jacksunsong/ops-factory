@@ -264,10 +264,10 @@ export default function Agents() {
             </div>
 
             {error && (
-                <div className="agents-alert agents-alert-error">{t('common.connectionError', { error })}</div>
+                <div className="conn-banner conn-banner-error">{t('common.connectionError', { error })}</div>
             )}
             {!isConnected && !error && (
-                <div className="agents-alert agents-alert-warning">{t('common.connectingGateway')}</div>
+                <div className="conn-banner conn-banner-warning">{t('common.connectingGateway')}</div>
             )}
 
             {agents.length === 0 ? (

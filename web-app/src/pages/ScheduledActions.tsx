@@ -304,8 +304,8 @@ export default function ScheduledActions() {
                 <p className="page-subtitle">{t('scheduler.subtitle')}</p>
             </div>
 
-            {error && <div className="agents-alert agents-alert-error">{t('common.connectionError', { error })}</div>}
-            {!isConnected && !error && <div className="agents-alert agents-alert-warning">{t('common.connectingGateway')}</div>}
+            {error && <div className="conn-banner conn-banner-error">{t('common.connectionError', { error })}</div>}
+            {!isConnected && !error && <div className="conn-banner conn-banner-warning">{t('common.connectingGateway')}</div>}
 
             <div className="scheduled-toolbar">
                 <label className="scheduled-agent-select-wrap">

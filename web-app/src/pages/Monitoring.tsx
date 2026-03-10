@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useGoosed } from '../contexts/GoosedContext'
 import { useMonitoring, useMonitoringPlatform, type TimeRange, type DailyPoint, type TraceRow, type AgentInfo } from '../hooks/useMonitoring'
 
 // --- Helpers --------------------------------------------------------------
@@ -177,20 +178,22 @@ function MonitoringDisabled({ title, desc }: { title: string; desc: string }) {
 
 function PlatformTab() {
   const { t } = useTranslation()
-  const { system, instances, isLoading, error, refresh } = useMonitoringPlatform()
+  const { error: connectionError } = useGoosed()
+  const { system, instances, isLoading, error } = useMonitoringPlatform()
 
   if (isLoading && !system) {
     return <div className="mon-loading">{t('monitoring.loading')}</div>
   }
 
-  if (error) {
+  if (error && !connectionError) {
     return (
-      <div className="mon-error-banner">
-        <span>{t('monitoring.errorLoading')}: {error}</span>
-        <button onClick={refresh} className="mon-retry-btn">{t('monitoring.retry')}</button>
+      <div className="conn-banner conn-banner-error">
+        {t('monitoring.errorLoading')}: {error}
       </div>
     )
   }
+
+  if (error) return null
 
   return (
     <>
@@ -257,20 +260,22 @@ function PlatformTab() {
 
 function AgentsTab() {
   const { t } = useTranslation()
-  const { instances, agents, isLoading, error, refresh } = useMonitoringPlatform()
+  const { error: connectionError } = useGoosed()
+  const { instances, agents, isLoading, error } = useMonitoringPlatform()
 
   if (isLoading && agents.length === 0) {
     return <div className="mon-loading">{t('monitoring.loading')}</div>
   }
 
-  if (error) {
+  if (error && !connectionError) {
     return (
-      <div className="mon-error-banner">
-        <span>{t('monitoring.errorLoading')}: {error}</span>
-        <button onClick={refresh} className="mon-retry-btn">{t('monitoring.retry')}</button>
+      <div className="conn-banner conn-banner-error">
+        {t('monitoring.errorLoading')}: {error}
       </div>
     )
   }
+
+  if (error) return null
 
   // Build map of agentId -> running instance count
   const instanceCounts: Record<string, number> = {}
@@ -315,7 +320,8 @@ const RANGES: TimeRange[] = ['1h', '24h', '7d', '30d']
 
 function ObservabilityTab() {
   const { t } = useTranslation()
-  const { status, overview, traces, observations, isLoading, error, range, setRange, refresh } = useMonitoring()
+  const { error: connectionError } = useGoosed()
+  const { status, overview, traces, observations, isLoading, error, range, setRange } = useMonitoring()
   const [traceFilter, setTraceFilter] = useState<'all' | 'errors'>('all')
   const filteredTraces = traceFilter === 'errors' ? traces.filter(tr => tr.hasError) : traces
 
@@ -359,11 +365,10 @@ function ObservabilityTab() {
         <div className="mon-loading">{t('monitoring.loading')}</div>
       )}
 
-      {/* Error */}
-      {error && (
-        <div className="mon-error-banner">
-          <span>{t('monitoring.errorLoading')}: {error}</span>
-          <button onClick={refresh} className="mon-retry-btn">{t('monitoring.retry')}</button>
+      {/* Error (only show if no page-level connection error) */}
+      {error && !connectionError && (
+        <div className="conn-banner conn-banner-error">
+          {t('monitoring.errorLoading')}: {error}
         </div>
       )}
 
@@ -466,6 +471,7 @@ type MonitoringTab = 'platform' | 'agents' | 'observability'
 
 export default function Monitoring() {
   const { t } = useTranslation()
+  const { isConnected, error: connectionError } = useGoosed()
   const [activeTab, setActiveTab] = useState<MonitoringTab>('platform')
 
   const tabs: { key: MonitoringTab; label: string }[] = [
@@ -482,6 +488,15 @@ export default function Monitoring() {
           <h1 className="page-title" style={{ marginBottom: 0 }}>{t('monitoring.title')}</h1>
         </div>
       </div>
+
+      {connectionError && (
+        <div className="conn-banner conn-banner-error">
+          {t('common.connectionError', { error: connectionError })}
+        </div>
+      )}
+      {!isConnected && !connectionError && (
+        <div className="conn-banner conn-banner-warning">{t('common.connectingGateway')}</div>
+      )}
 
       {/* Tab Navigation */}
       <div className="config-tabs">

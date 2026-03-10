@@ -150,6 +150,7 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
     const messagesRef = useRef<ChatMessage[]>([])
     const isStreamingRef = useRef(false)
     const abortControllerRef = useRef<AbortController | null>(null)
+    const streamErrorRef = useRef<string | null>(null)
 
     // Track mounted state
     const isMountedRef = useRef(true)
@@ -173,6 +174,7 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
 
         dispatch({ type: 'START_STREAMING' })
         isStreamingRef.current = true
+        streamErrorRef.current = null
 
         // Create an AbortController so we can cancel the HTTP connection
         const controller = new AbortController()
@@ -261,7 +263,9 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
                     }
 
                     case 'Error': {
-                        dispatch({ type: 'SET_ERROR', payload: event.error || 'Unknown error occurred' })
+                        const errorMsg = event.error || 'Unknown error occurred'
+                        streamErrorRef.current = errorMsg
+                        dispatch({ type: 'SET_ERROR', payload: errorMsg })
                         break
                     }
 
@@ -274,17 +278,18 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
             }
         } catch (err) {
             if (isMountedRef.current && !(err instanceof DOMException && err.name === 'AbortError')) {
-                dispatch({ type: 'SET_ERROR', payload: err instanceof Error ? err.message : 'Failed to send message' })
+                const errorMsg = err instanceof Error ? err.message : 'Failed to send message'
+                streamErrorRef.current = errorMsg
+                dispatch({ type: 'SET_ERROR', payload: errorMsg })
             }
         } finally {
             if (isMountedRef.current) {
-                const hadError = state.error !== null
-                dispatch({ type: 'STREAM_FINISH', error: hadError ? state.error ?? undefined : undefined })
+                dispatch({ type: 'STREAM_FINISH', error: streamErrorRef.current ?? undefined })
                 isStreamingRef.current = false
                 abortControllerRef.current = null
             }
         }
-    }, [client, sessionId, state.error])
+    }, [client, sessionId])
 
     const stopMessage = useCallback(async (): Promise<boolean> => {
         if (!sessionId || !isStreamingRef.current) return false

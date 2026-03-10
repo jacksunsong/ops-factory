@@ -114,7 +114,7 @@ function getDownloadUrl(file: AgentFile): string {
 
 export default function Files() {
     const { t } = useTranslation()
-    const { agents, isConnected } = useGoosed()
+    const { agents, isConnected, error: connectionError } = useGoosed()
     const { openPreview, isPreviewable } = usePreview()
     const [files, setFiles] = useState<AgentFile[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -124,7 +124,10 @@ export default function Files() {
 
     useEffect(() => {
         const loadFiles = async () => {
-            if (!isConnected || agents.length === 0) return
+            if (!isConnected || agents.length === 0) {
+                setIsLoading(false)
+                return
+            }
 
             setIsLoading(true)
             setError(null)
@@ -214,6 +217,12 @@ export default function Files() {
                 </p>
             </header>
 
+            {(error || (!isConnected && connectionError)) && (
+                <div className="conn-banner conn-banner-error">
+                    {error || t('common.connectionError', { error: connectionError })}
+                </div>
+            )}
+
             <div className="search-container">
                 <div className="search-input-wrapper">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -262,18 +271,6 @@ export default function Files() {
                     </button>
                 ))}
             </div>
-
-            {error && (
-                <div style={{
-                    padding: 'var(--spacing-4)',
-                    background: 'rgba(239, 68, 68, 0.2)',
-                    borderRadius: 'var(--radius-lg)',
-                    color: 'var(--color-error)',
-                    marginBottom: 'var(--spacing-6)'
-                }}>
-                    {error}
-                </div>
-            )}
 
             {isLoading && (
                 <div style={{

@@ -4,6 +4,7 @@ import type { TokenState, ImageData } from '@goosed/sdk'
 import AgentSelector from './AgentSelector'
 import { compressImageDataUrl, isImageFile, parseDataUrl, readFileAsDataUrl } from '../utils/imageUtils'
 import { useVoiceInput } from '../hooks/useVoiceInput'
+import { useToast } from '../contexts/ToastContext'
 import type { AttachedFile } from './Message'
 
 // File handling constants
@@ -78,6 +79,7 @@ export default function ChatInput({
     visionMode = 'passthrough',
 }: ChatInputProps) {
     const { t, i18n } = useTranslation()
+    const { showToast } = useToast()
     const [value, setValue] = useState('')
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
     const [isDragging, setIsDragging] = useState(false)
@@ -85,11 +87,21 @@ export default function ChatInput({
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    const { state: voiceState, isSupported: voiceSupported, startListening, stopListening } = useVoiceInput({
+    const { state: voiceState, isSupported: voiceSupported, startListening, stopListening, error: voiceError } = useVoiceInput({
         onTranscript: (text) => setValue(text),
         lang: i18n.language.startsWith('zh') ? 'zh-CN' : 'en-US',
     })
     const isListening = voiceState === 'listening'
+
+    // Show voice input errors as toast
+    useEffect(() => {
+        if (!voiceError) return
+        if (voiceError === 'mic-permission-denied') {
+            showToast('error', t('errors.micPermissionDenied'))
+        } else {
+            showToast('error', t('errors.voiceError', { error: voiceError }))
+        }
+    }, [voiceError, showToast, t])
 
     // Auto-resize textarea
     useEffect(() => {
@@ -183,7 +195,7 @@ export default function ChatInput({
 
         // Check image limits
         if (imageFiles.length > 0 && !imagesAllowed) {
-            alert(t('chat.imageUploadNotEnabled'))
+            showToast('warning', t('chat.imageUploadNotEnabled'))
             if (nonImageFiles.length === 0) return
         }
 
@@ -193,10 +205,10 @@ export default function ChatInput({
         const allowedFiles = nonImageFiles.slice(0, MAX_FILES_PER_MESSAGE - currentFileCount)
 
         if (allowedImages.length < imageFiles.length && imagesAllowed) {
-            alert(t('chat.maxImagesAllowed', { max: MAX_IMAGES_PER_MESSAGE }))
+            showToast('warning', t('chat.maxImagesAllowed', { max: MAX_IMAGES_PER_MESSAGE }))
         }
         if (allowedFiles.length < nonImageFiles.length) {
-            alert(t('chat.maxFilesAllowed', { max: MAX_FILES_PER_MESSAGE }))
+            showToast('warning', t('chat.maxFilesAllowed', { max: MAX_FILES_PER_MESSAGE }))
         }
 
         const allFiles = [...allowedImages, ...allowedFiles]
@@ -282,13 +294,13 @@ export default function ChatInput({
         e.preventDefault()
 
         if (!imagesAllowed) {
-            alert(t('chat.imageUploadNotEnabled'))
+            showToast('warning', t('chat.imageUploadNotEnabled'))
             return
         }
 
         const remaining = MAX_IMAGES_PER_MESSAGE - currentImageCount
         if (remaining <= 0) {
-            alert(t('chat.maxImagesAllowed', { max: MAX_IMAGES_PER_MESSAGE }))
+            showToast('warning', t('chat.maxImagesAllowed', { max: MAX_IMAGES_PER_MESSAGE }))
             return
         }
 

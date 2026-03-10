@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { usePreview } from '../contexts/PreviewContext'
+import { useToast } from '../contexts/ToastContext'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import hljs from 'highlight.js'
@@ -108,6 +110,8 @@ function decodeFileName(name: string): string {
 }
 
 export default function FilePreview() {
+    const { t } = useTranslation()
+    const { showToast } = useToast()
     const { previewFile, isLoading, error, closePreview } = usePreview()
     const [copied, setCopied] = useState(false)
     const [showSource, setShowSource] = useState(false)
@@ -126,8 +130,9 @@ export default function FilePreview() {
             setTimeout(() => setCopied(false), 2000)
         } catch (err) {
             console.error('Failed to copy:', err)
+            showToast('error', t('errors.copyFailed'))
         }
-    }, [previewFile?.content])
+    }, [previewFile?.content, showToast, t])
 
     const getDownloadUrl = useCallback(() => {
         if (!previewFile) return ''

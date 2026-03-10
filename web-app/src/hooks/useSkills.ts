@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { SkillEntry, SkillsResponse } from '../types/skill'
 import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
+import { getErrorMessage } from '../utils/errorMessages'
 
 interface UseSkillsResult {
     skills: SkillEntry[]
@@ -31,7 +32,7 @@ export function useSkills(): UseSkillsResult {
             const data: SkillsResponse = await res.json()
             setSkills(data.skills || [])
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to fetch skills')
+            setError(getErrorMessage(err))
         } finally {
             setIsLoading(false)
         }

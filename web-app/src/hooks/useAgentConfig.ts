@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { AgentConfig, UpdateAgentConfigRequest, UpdateAgentConfigResponse } from '../types/agentConfig'
 import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
+import { getErrorMessage } from '../utils/errorMessages'
 
 interface UseAgentConfigResult {
     config: AgentConfig | null
@@ -32,7 +33,7 @@ export function useAgentConfig(): UseAgentConfigResult {
             const data: AgentConfig = await res.json()
             setConfig(data)
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to fetch config')
+            setError(getErrorMessage(err))
         } finally {
             setIsLoading(false)
         }
@@ -63,7 +64,7 @@ export function useAgentConfig(): UseAgentConfigResult {
 
             return data
         } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'Failed to update config'
+            const errorMsg = getErrorMessage(err)
             setError(errorMsg)
             return { success: false, error: errorMsg }
         }

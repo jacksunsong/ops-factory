@@ -482,7 +482,8 @@ textarea {
     max-width: 1100px;
 }
 
-.agents-alert {
+/* Shared connection/error banner — used across all pages */
+.conn-banner {
     padding: var(--spacing-3) var(--spacing-4);
     border-radius: var(--radius-lg);
     margin-bottom: var(--spacing-6);
@@ -490,17 +491,22 @@ textarea {
     border: 1px solid transparent;
 }
 
-.agents-alert-error {
+.conn-banner-error {
     color: var(--color-error);
     background: rgba(239, 68, 68, 0.08);
     border-color: rgba(239, 68, 68, 0.2);
 }
 
-.agents-alert-warning {
+.conn-banner-warning {
     color: var(--color-warning);
     background: rgba(245, 158, 11, 0.1);
     border-color: rgba(245, 158, 11, 0.2);
 }
+
+/* Aliases for backward compat */
+.agents-alert { padding: var(--spacing-3) var(--spacing-4); border-radius: var(--radius-lg); margin-bottom: var(--spacing-6); font-size: var(--font-size-sm); border: 1px solid transparent; }
+.agents-alert-error { color: var(--color-error); background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.2); }
+.agents-alert-warning { color: var(--color-warning); background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.2); }
 
 .agents-grid {
     display: grid;

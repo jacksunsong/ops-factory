@@ -7,6 +7,7 @@ import type {
 } from '../types/mcp'
 import { categorizeMcpEntries } from '../types/mcp'
 import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
+import { getErrorMessage } from '../utils/errorMessages'
 
 interface UseMcpResult {
   entries: McpEntry[]
@@ -46,7 +47,7 @@ export function useMcp(agentId: string | null): UseMcpResult {
       setEntries(data.extensions || [])
       setWarnings(data.warnings || [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch MCP config')
+      setError(getErrorMessage(err))
     } finally {
       setIsLoading(false)
     }
@@ -93,7 +94,7 @@ export function useMcp(agentId: string | null): UseMcpResult {
         )
       )
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to toggle MCP')
+      setError(getErrorMessage(err))
       // Refresh to get actual state
       await fetchMcp()
     }
@@ -128,7 +129,7 @@ export function useMcp(agentId: string | null): UseMcpResult {
       // Refresh to get updated list
       await fetchMcp()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add MCP')
+      setError(getErrorMessage(err))
       throw err
     }
   }, [agentId, fetchMcp])
@@ -152,7 +153,7 @@ export function useMcp(agentId: string | null): UseMcpResult {
       // Remove from local state
       setEntries(prev => prev.filter(e => e.name !== name))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete MCP')
+      setError(getErrorMessage(err))
       // Refresh to get actual state
       await fetchMcp()
     }

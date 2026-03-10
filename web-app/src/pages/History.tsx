@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useGoosed } from '../contexts/GoosedContext'
 import { useInbox } from '../contexts/InboxContext'
+import { useToast } from '../contexts/ToastContext'
 import SessionList, { type SessionWithAgent } from '../components/SessionList'
 import type { Session } from '@goosed/sdk'
 import { isScheduledSession } from '../config/runtime'
@@ -21,6 +22,7 @@ function parseHistoryFilter(raw: string | null): HistoryFilter {
 export default function History() {
     const { t } = useTranslation()
     const navigate = useNavigate()
+    const { showToast } = useToast()
     const [searchParams, setSearchParams] = useSearchParams()
     const { getClient, agents, isConnected } = useGoosed()
     const { markSessionRead, markSessionUnread } = useInbox()
@@ -48,10 +50,15 @@ export default function History() {
         `${session.agentId || 'unknown'}:${session.id}`
 
     // Load all sessions from all agents
+    const { error: connectionError } = useGoosed()
+
     useEffect(() => {
         let cancelled = false
         const loadSessions = async () => {
-            if (!isConnected || agents.length === 0) return
+            if (!isConnected || agents.length === 0) {
+                if (!cancelled) setIsLoading(false)
+                return
+            }
 
             setIsLoading(true)
             setError(null)
@@ -159,7 +166,7 @@ export default function History() {
                 setLastDeletedAt(Date.now())
                 return
             }
-            alert('Failed to delete session: ' + message)
+            showToast('error', t('errors.deleteFailed'))
         } finally {
             setDeletingSessionKeys(prev => {
                 const next = new Set(prev)
@@ -177,6 +184,12 @@ export default function History() {
                     {t('history.subtitle')}
                 </p>
             </header>
+
+            {(error || (!isConnected && connectionError)) && (
+                <div className="conn-banner conn-banner-error">
+                    {error || t('common.connectionError', { error: connectionError })}
+                </div>
+            )}
 
             <div className="search-container">
                 <div className="search-input-wrapper">
@@ -235,18 +248,6 @@ export default function History() {
                     {t('history.filterAll')}
                 </button>
             </div>
-
-            {error && (
-                <div style={{
-                    padding: 'var(--spacing-4)',
-                    background: 'rgba(239, 68, 68, 0.2)',
-                    borderRadius: 'var(--radius-lg)',
-                    color: 'var(--color-error)',
-                    marginBottom: 'var(--spacing-6)'
-                }}>
-                    ⚠️ {error}
-                </div>
-            )}
 
             {lastDeletedSessionId && lastDeletedAt && (
                 <div style={{
