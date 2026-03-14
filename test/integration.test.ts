@@ -75,21 +75,6 @@ function collectAssistantTextFromSse(events: Array<Record<string, any>>): string
     .join('')
 }
 
-const AGENT_CONFIG_PATH = join(PROJECT_ROOT, 'gateway', 'agents', AGENT_ID, 'config', 'config.yaml')
-
-/** Update vision.mode in agent config.yaml. Returns the original file content for restore. */
-function setVisionMode(mode: string): string {
-  const original = readFileSync(AGENT_CONFIG_PATH, 'utf-8')
-  // Match the indented mode line under the vision: section (2-space indent)
-  // Handles both quoted (`mode: "off"`) and unquoted (`mode: off`) formats
-  const updated = original.replace(/(  mode: )"?[a-z]+"?/, `$1"${mode}"`)
-  if (updated === original && !original.includes(`mode: "${mode}"`) && !original.includes(`mode: ${mode}`)) {
-    throw new Error(`setVisionMode: failed to change mode to "${mode}" — regex did not match in:\n${original.substring(0, 500)}`)
-  }
-  writeFileSync(AGENT_CONFIG_PATH, updated, 'utf-8')
-  return original
-}
-
 /** Create a minimal valid PNG image (1x1 red pixel) */
 function createTestPng(): Buffer {
   // Minimal 1x1 red PNG (68 bytes)
@@ -258,16 +243,13 @@ describe('Agent listing & config', () => {
     expect(ua).not.toHaveProperty('port')
   })
 
-  it('GET /agents/:id/config returns full config including visionMode', async () => {
+  it('GET /agents/:id/config returns full config', async () => {
     const res = await gw.fetch(`/agents/${AGENT_ID}/config`)
     const data = await res.json()
     expect(data.id).toBe(AGENT_ID)
     expect(data).toHaveProperty('agentsMd')
     expect(data).toHaveProperty('workingDir')
     expect(data).not.toHaveProperty('port')
-    // visionMode should be present (from config.yaml vision.mode)
-    expect(data).toHaveProperty('visionMode')
-    expect(data.visionMode).toBe('passthrough')
     expect(data.provider).toBe('openai')
     expect(data.model).toBe('qwen/qwen3.5-35b-a3b')
   })
@@ -754,185 +736,7 @@ describe('Catch-all proxy & error handling', () => {
 })
 
 // =====================================================
-// 12. Vision Pipeline — mode=off
-// =====================================================
-describe('Vision pipeline — mode=off', () => {
-  let sessionId: string
-  let originalConfig: string
-
-  beforeAll(() => {
-    originalConfig = setVisionMode('off')
-  })
-
-  afterAll(() => {
-    writeFileSync(AGENT_CONFIG_PATH, originalConfig, 'utf-8')
-  })
-
-  it('rejects image messages with 400', async () => {
-    const startRes = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/agent/start`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    })
-    const { id } = await startRes.json()
-    sessionId = id
-
-    await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/agent/resume`, {
-      method: 'POST',
-      body: JSON.stringify({ session_id: sessionId, load_model_and_extensions: true }),
-    })
-
-    const png = createTestPng()
-    const imageB64 = png.toString('base64')
-
-    const res = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/agent/reply`, {
-      method: 'POST',
-      body: JSON.stringify({
-        session_id: sessionId,
-        user_message: makeImageMessage('What is this?', imageB64),
-      }),
-    })
-    expect(res.status).toBe(400)
-    const data = await res.json()
-    expect(data.error).toContain('not enabled')
-  }, 60_000)
-
-  it('text-only messages still work', async () => {
-    const body = await sendReplyAndWait(gw, USER_ALICE, AGENT_ID, sessionId, 'Reply with only "ok". Do not use any tools.')
-    expect(body).toContain('data:')
-    expect(body.length).toBeGreaterThan(0)
-  }, 60_000)
-})
-
-// =====================================================
-// 13. Vision Pipeline — mode=passthrough
-// =====================================================
-describe('Vision pipeline — mode=passthrough', () => {
-  let originalConfig: string
-
-  beforeAll(() => {
-    originalConfig = setVisionMode('passthrough')
-  })
-
-  afterAll(() => {
-    writeFileSync(AGENT_CONFIG_PATH, originalConfig, 'utf-8')
-  })
-
-  it('forwards images to LLM without gateway-side rejection', async () => {
-    // Verify config is set correctly
-    const configContent = readFileSync(AGENT_CONFIG_PATH, 'utf-8')
-    expect(configContent).toContain('mode: "passthrough"')
-
-    const startRes = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/agent/start`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    })
-    expect(startRes.ok).toBe(true)
-    const { id: sessionId } = await startRes.json()
-
-    const resumeRes = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/agent/resume`, {
-      method: 'POST',
-      body: JSON.stringify({ session_id: sessionId, load_model_and_extensions: true }),
-    })
-    expect(resumeRes.ok).toBe(true)
-
-    const png = createTestPng()
-    const imageB64 = png.toString('base64')
-
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 60_000)
-    try {
-      const res = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/agent/reply`, {
-        method: 'POST',
-        body: JSON.stringify({
-          session_id: sessionId,
-          user_message: makeImageMessage('Describe this image in 10 words or less. Do not use any tools.', imageB64),
-        }),
-        signal: controller.signal,
-      })
-      if (!res.ok) {
-        const errBody = await res.text()
-        throw new Error(`Reply failed (${res.status}): ${errBody}`)
-      }
-
-      const body = await res.text()
-      const events = parseSseEvents(body)
-      expect(events.some(event => event.type === 'Finish')).toBe(true)
-
-      const { data } = await getSession(gw, USER_ALICE, AGENT_ID, sessionId)
-      const userMsg = data.conversation.findLast((m: any) => m.role === 'user')
-      expect(userMsg).toBeDefined()
-      expect(userMsg.content.some((c: any) => c.type === 'image')).toBe(true)
-    } finally {
-      clearTimeout(timer)
-    }
-  }, 90_000)
-})
-
-// =====================================================
-// 14. Vision Pipeline — mode=preprocess
-// =====================================================
-describe('Vision pipeline — mode=preprocess', () => {
-  let originalConfig: string
-
-  beforeAll(() => {
-    originalConfig = setVisionMode('preprocess')
-  })
-
-  afterAll(() => {
-    writeFileSync(AGENT_CONFIG_PATH, originalConfig, 'utf-8')
-  })
-
-  it('preprocesses images via vision API and forwards text description', async () => {
-    // Verify config is set correctly
-    const configContent = readFileSync(AGENT_CONFIG_PATH, 'utf-8')
-    expect(configContent).toContain('mode: "preprocess"')
-
-    const startRes = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/agent/start`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    })
-    expect(startRes.ok).toBe(true)
-    const { id: sessionId } = await startRes.json()
-
-    const resumeRes = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/agent/resume`, {
-      method: 'POST',
-      body: JSON.stringify({ session_id: sessionId, load_model_and_extensions: true }),
-    })
-    expect(resumeRes.ok).toBe(true)
-
-    const png = createTestPng()
-    const imageB64 = png.toString('base64')
-
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 90_000)
-    try {
-      const res = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/agent/reply`, {
-        method: 'POST',
-        body: JSON.stringify({
-          session_id: sessionId,
-          user_message: makeImageMessage('What was in the image analysis? Reply in 10 words. Do not use any tools.', imageB64),
-        }),
-        signal: controller.signal,
-      })
-      if (!res.ok) {
-        const errBody = await res.text()
-        throw new Error(`Reply failed (${res.status}): ${errBody}`)
-      }
-
-      const body = await res.text()
-      const events = parseSseEvents(body)
-      expect(events.some(event => event.type === 'Finish')).toBe(true)
-
-      const assistantText = collectAssistantTextFromSse(events)
-      expect(assistantText.length).toBeGreaterThan(0)
-    } finally {
-      clearTimeout(timer)
-    }
-  }, 120_000)
-})
-
-// =====================================================
-// 15. File Upload
+// 12. File Upload
 // =====================================================
 describe('File upload', () => {
   let sessionId: string

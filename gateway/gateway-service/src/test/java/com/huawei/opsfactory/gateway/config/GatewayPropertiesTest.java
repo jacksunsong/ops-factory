@@ -40,14 +40,6 @@ public class GatewayPropertiesTest {
     }
 
     @Test
-    public void testVisionDefaults() {
-        GatewayProperties.Vision vision = new GatewayProperties.Vision();
-        assertEquals("off", vision.getMode());
-        assertEquals("", vision.getProvider());
-        assertEquals(1024, vision.getMaxTokens());
-    }
-
-    @Test
     public void testOfficePreviewDefaults() {
         GatewayProperties.OfficePreview op = new GatewayProperties.OfficePreview();
         assertFalse(op.isEnabled());
@@ -77,16 +69,16 @@ public class GatewayPropertiesTest {
     // ====================== TLS properties ======================
 
     @Test
-    public void testGoosedTlsDefaultTrue() {
+    public void testGoosedTlsDefaultFalse() {
         GatewayProperties props = new GatewayProperties();
-        assertTrue(props.isGoosedTls());
+        assertFalse(props.isGoosedTls());
     }
 
     @Test
-    public void testGoosedTlsSetFalse() {
+    public void testGoosedTlsSetTrue() {
         GatewayProperties props = new GatewayProperties();
-        props.setGoosedTls(false);
-        assertFalse(props.isGoosedTls());
+        props.setGoosedTls(true);
+        assertTrue(props.isGoosedTls());
     }
 
     @Test

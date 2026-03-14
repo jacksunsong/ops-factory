@@ -51,6 +51,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/monitoring/system")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -80,6 +81,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/monitoring/instances")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -100,6 +102,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/monitoring/status")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -132,6 +135,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/monitoring/instances")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -150,6 +154,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/monitoring/instances")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -164,6 +169,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/monitoring/status")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -184,6 +190,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/monitoring/overview?from=2024-01-01&to=2024-01-02")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -212,6 +219,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/monitoring/system")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()

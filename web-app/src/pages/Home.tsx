@@ -56,7 +56,6 @@ export default function Home() {
         try {
             const client = getClient(selectedAgent)
             const session = await client.startSession()
-            await client.resumeSession(session.id)
 
             navigate(`/chat?sessionId=${session.id}&agent=${selectedAgent}`, {
                 state: { initialMessage: message }

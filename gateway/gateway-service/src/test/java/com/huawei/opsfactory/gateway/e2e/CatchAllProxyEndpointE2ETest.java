@@ -26,7 +26,7 @@ public class CatchAllProxyEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/agents/test-agent/schedules/list")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                // no x-user-id → defaults to sys/ADMIN
+                .header(HEADER_USER_ID, "sys")
                 .exchange()
                 .expectStatus().isOk();
 
@@ -103,6 +103,7 @@ public class CatchAllProxyEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/agents/test-agent/schedules/list?limit=5")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
+                .header(HEADER_USER_ID, "sys")
                 .exchange()
                 .expectStatus().isOk();
 

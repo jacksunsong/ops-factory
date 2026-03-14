@@ -10,7 +10,7 @@ public class GatewayProperties {
     private String secretKey = "test";
     private String corsOrigin = "http://127.0.0.1:5173";
     private String goosedBin = "goosed";
-    private boolean goosedTls = true;
+    private boolean goosedTls = false;
 
     private Paths paths = new Paths();
     private Idle idle = new Idle();
@@ -18,7 +18,6 @@ public class GatewayProperties {
     private Limits limits = new Limits();
     private Prewarm prewarm = new Prewarm();
     private Sse sse = new Sse();
-    private Vision vision = new Vision();
     private Langfuse langfuse = new Langfuse();
     private OfficePreview officePreview = new OfficePreview();
 
@@ -82,14 +81,6 @@ public class GatewayProperties {
 
     public void setUpload(Upload upload) {
         this.upload = upload;
-    }
-
-    public Vision getVision() {
-        return vision;
-    }
-
-    public void setVision(Vision vision) {
-        this.vision = vision;
     }
 
     public Langfuse getLangfuse() {
@@ -167,28 +158,6 @@ public class GatewayProperties {
         public void setMaxImageSizeMb(int maxImageSizeMb) { this.maxImageSizeMb = maxImageSizeMb; }
     }
 
-    public static class Vision {
-        private String mode = "off";
-        private String provider = "";
-        private String model = "";
-        private String apiKey = "";
-        private String baseUrl = "";
-        private int maxTokens = 1024;
-
-        public String getMode() { return mode; }
-        public void setMode(String mode) { this.mode = mode; }
-        public String getProvider() { return provider; }
-        public void setProvider(String provider) { this.provider = provider; }
-        public String getModel() { return model; }
-        public void setModel(String model) { this.model = model; }
-        public String getApiKey() { return apiKey; }
-        public void setApiKey(String apiKey) { this.apiKey = apiKey; }
-        public String getBaseUrl() { return baseUrl; }
-        public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
-        public int getMaxTokens() { return maxTokens; }
-        public void setMaxTokens(int maxTokens) { this.maxTokens = maxTokens; }
-    }
-
     public static class Langfuse {
         private String host = "";
         private String publicKey = "";
@@ -213,8 +182,8 @@ public class GatewayProperties {
     }
 
     public static class Sse {
-        private int firstByteTimeoutSec = 30;
-        private int idleTimeoutSec = 30;
+        private int firstByteTimeoutSec = 120;
+        private int idleTimeoutSec = 300;
         private int maxDurationSec = 600;
 
         public int getFirstByteTimeoutSec() { return firstByteTimeoutSec; }

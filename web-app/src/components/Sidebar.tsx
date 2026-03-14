@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useGoosed } from '../contexts/GoosedContext'
 import { useInbox } from '../contexts/InboxContext'
+import { useToast } from '../contexts/ToastContext'
 import { useUser } from '../contexts/UserContext'
 import { useSidebar } from '../contexts/SidebarContext'
 import { getAvatarForUser } from '../pages/Settings'
@@ -10,18 +12,37 @@ import { isAdminUser } from '../config/runtime'
 
 export default function Sidebar() {
     const { t } = useTranslation()
+    const { getClient, agents } = useGoosed()
+    const { showToast } = useToast()
     const { unreadCount } = useInbox()
     const { userId, role, logout } = useUser()
     const { isCollapsed, toggleSidebar } = useSidebar()
     const isAdmin = isAdminUser(userId, role)
     const navigate = useNavigate()
     const [settingsOpen, setSettingsOpen] = useState(false)
+    const [isCreatingSession, setIsCreatingSession] = useState(false)
 
     const avatar = userId ? getAvatarForUser(userId) : '🦆'
 
     const handleLogout = () => {
         logout()
         navigate('/login', { replace: true })
+    }
+
+    const handleNewChat = async () => {
+        const defaultAgent = agents[0]?.id
+        if (!defaultAgent || isCreatingSession) return
+
+        setIsCreatingSession(true)
+        try {
+            const session = await getClient(defaultAgent).startSession()
+            navigate(`/chat?sessionId=${session.id}&agent=${defaultAgent}`)
+        } catch (err) {
+            console.error('Failed to create session:', err)
+            showToast('error', t('home.failedToCreateSession', { error: err instanceof Error ? err.message : 'Unknown error' }))
+        } finally {
+            setIsCreatingSession(false)
+        }
     }
 
     return (
@@ -67,17 +88,19 @@ export default function Sidebar() {
                     <span className="nav-label">{t('sidebar.home')}</span>
                 </NavLink>
 
-                <NavLink
-                    to="/chat"
+                <button
+                    type="button"
                     className="nav-link new-chat-nav"
                     title={isCollapsed ? t('sidebar.newChat') : undefined}
+                    onClick={handleNewChat}
+                    disabled={isCreatingSession}
                 >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <line x1="12" y1="5" x2="12" y2="19" />
                         <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
                     <span className="nav-label">{t('sidebar.newChat')}</span>
-                </NavLink>
+                </button>
 
                 <NavLink
                     to="/history"

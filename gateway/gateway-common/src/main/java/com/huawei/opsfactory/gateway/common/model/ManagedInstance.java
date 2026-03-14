@@ -1,5 +1,8 @@
 package com.huawei.opsfactory.gateway.common.model;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class ManagedInstance {
 
     public enum Status {
@@ -13,6 +16,8 @@ public class ManagedInstance {
     private volatile Status status;
     private volatile long lastActivity;
     private transient Process process;
+    /** Sessions that have been resumed (provider+extensions loaded) on this instance. */
+    private final Set<String> resumedSessions = ConcurrentHashMap.newKeySet();
 
     public ManagedInstance(String agentId, String userId, int port, long pid, Process process) {
         this.agentId = agentId;
@@ -58,6 +63,16 @@ public class ManagedInstance {
 
     public Process getProcess() {
         return process;
+    }
+
+    /** Mark a session as resumed (provider+extensions loaded) on this instance. */
+    public void markSessionResumed(String sessionId) {
+        resumedSessions.add(sessionId);
+    }
+
+    /** Check whether a session has been resumed on this instance. */
+    public boolean isSessionResumed(String sessionId) {
+        return sessionId != null && resumedSessions.contains(sessionId);
     }
 
     public String getKey() {

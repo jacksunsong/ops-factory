@@ -34,18 +34,19 @@ public class StatusControllerTest {
     }
 
     @Test
-    public void testMe_defaultSysUser() {
+    public void testMe_noUserIdHeader_returnsUnknown() {
+        // /me is excluded from UserContextFilter, so no user attributes are set.
         webTestClient.get().uri("/me")
                 .header("x-secret-key", "test")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.userId").isEqualTo("sys")
-                .jsonPath("$.role").isEqualTo("admin");
+                .jsonPath("$.userId").isEqualTo("unknown")
+                .jsonPath("$.role").isEqualTo("user");
     }
 
     @Test
-    public void testMe_regularUser() {
+    public void testMe_withUserIdHeader_returnsUser() {
         webTestClient.get().uri("/me")
                 .header("x-secret-key", "test")
                 .header("x-user-id", "user123")

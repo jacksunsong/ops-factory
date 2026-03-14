@@ -49,7 +49,7 @@
     "submit": "Enter"
   },
   "chat": {
-    "loadingSession": "Loading session...",
+    "loadingSession": "Loading conversation...",
     "failedToLoadSession": "Failed to load session",
     "backToHome": "Back to Home",
     "generationStopped": "Generation stopped",
@@ -62,7 +62,6 @@
     "attachFiles": "Attach files ({{current}}/{{max}})",
     "removeFile": "Remove file",
     "fileUploadNotAvailable": "File upload not available",
-    "imageUploadNotEnabled": "Image upload is not enabled for this agent.",
     "maxImagesAllowed": "Maximum {{max}} images allowed per message.",
     "maxFilesAllowed": "Maximum {{max}} files allowed per message.",
     "unsupportedFileType": "Unsupported file type.",
@@ -74,7 +73,10 @@
     "thinking": "Thinking...",
     "compactingContext": "Compacting context...",
     "voiceInput": "Voice input",
-    "stopRecording": "Stop recording"
+    "stopRecording": "Stop recording",
+    "agentNoResponse": "Agent did not respond, please try again",
+    "agentIdleTimeout": "Agent stopped responding, please try again",
+    "agentConnectionLost": "Agent connection lost, please try again"
   },
   "newSession": {
     "title": "New Chat Session",
@@ -342,6 +344,7 @@
     "timeout": "Timeout (seconds)",
     "adding": "Adding...",
     "saveChanges": "Save Changes",
+    "configUpdatedRestarting": "Extension configuration updated. Agent instances are restarting to apply the change.",
     "updateFailed": "Failed to update MCP server",
     "addFailed": "Failed to add MCP server"
   },

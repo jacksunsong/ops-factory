@@ -58,7 +58,6 @@ interface ChatInputProps {
     tokenState?: TokenState | null
     presetMessage?: string
     presetToken?: number
-    visionMode?: string  // 'off' | 'passthrough' | 'preprocess'
 }
 
 export default function ChatInput({
@@ -76,7 +75,6 @@ export default function ChatInput({
     tokenState,
     presetMessage,
     presetToken,
-    visionMode = 'passthrough',
 }: ChatInputProps) {
     const { t, i18n } = useTranslation()
     const { showToast } = useToast()
@@ -135,8 +133,6 @@ export default function ChatInput({
         return () => window.clearTimeout(timer)
     }, [presetToken, presetMessage])
 
-    const imagesAllowed = visionMode !== 'off'
-
     const isFileTypeSupported = (file: File): boolean => {
         const extension = '.' + file.name.split('.').pop()?.toLowerCase()
         return SUPPORTED_FILE_TYPES.includes(extension) || file.name === 'Dockerfile' || file.name === 'Makefile'
@@ -193,18 +189,10 @@ export default function ChatInput({
         const imageFiles = incoming.filter(f => isImageFile(f))
         const nonImageFiles = incoming.filter(f => !isImageFile(f))
 
-        // Check image limits
-        if (imageFiles.length > 0 && !imagesAllowed) {
-            showToast('warning', t('chat.imageUploadNotEnabled'))
-            if (nonImageFiles.length === 0) return
-        }
-
-        const allowedImages = imagesAllowed
-            ? imageFiles.slice(0, MAX_IMAGES_PER_MESSAGE - currentImageCount)
-            : []
+        const allowedImages = imageFiles.slice(0, MAX_IMAGES_PER_MESSAGE - currentImageCount)
         const allowedFiles = nonImageFiles.slice(0, MAX_FILES_PER_MESSAGE - currentFileCount)
 
-        if (allowedImages.length < imageFiles.length && imagesAllowed) {
+        if (allowedImages.length < imageFiles.length) {
             showToast('warning', t('chat.maxImagesAllowed', { max: MAX_IMAGES_PER_MESSAGE }))
         }
         if (allowedFiles.length < nonImageFiles.length) {
@@ -292,11 +280,6 @@ export default function ChatInput({
         if (imageFiles.length === 0) return
 
         e.preventDefault()
-
-        if (!imagesAllowed) {
-            showToast('warning', t('chat.imageUploadNotEnabled'))
-            return
-        }
 
         const remaining = MAX_IMAGES_PER_MESSAGE - currentImageCount
         if (remaining <= 0) {

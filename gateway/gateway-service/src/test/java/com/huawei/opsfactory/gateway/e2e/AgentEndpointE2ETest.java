@@ -39,6 +39,7 @@ public class AgentEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/agents")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
+                .header(HEADER_USER_ID, "alice")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -61,6 +62,7 @@ public class AgentEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/agents")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
+                .header(HEADER_USER_ID, "alice")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()

@@ -158,10 +158,6 @@ describe('gateway ctl.sh parses config.yaml correctly', () => {
   it('yaml_nested_val extracts nested values', async () => {
     const tmpConfig = join(TMP_DIR, 'gw-yaml-nested.yaml')
     await writeFile(tmpConfig, [
-      'vision:',
-      '  mode: passthrough',
-      '  provider: openai',
-      '  model: gpt-4',
       'langfuse:',
       '  host: "http://localhost:3100"',
       '  publicKey: "pk-test"',
@@ -180,8 +176,6 @@ describe('gateway ctl.sh parses config.yaml correctly', () => {
           in_section && $1 ~ "^[[:space:]]+" key "$" { print $2; exit }
         ' "\${file}" | sed "s/^[\\"']//;s/[\\"']$//"
       }
-      echo "vision.mode=$(yaml_nested_val vision mode)"
-      echo "vision.provider=$(yaml_nested_val vision provider)"
       echo "langfuse.host=$(yaml_nested_val langfuse host)"
       echo "langfuse.publicKey=$(yaml_nested_val langfuse publicKey)"
       echo "officePreview.enabled=$(yaml_nested_val officePreview enabled)"
@@ -189,8 +183,6 @@ describe('gateway ctl.sh parses config.yaml correctly', () => {
     `
     const { stdout, code } = await run('bash', ['-c', script])
     expect(code).toBe(0)
-    expect(stdout).toContain('vision.mode=passthrough')
-    expect(stdout).toContain('vision.provider=openai')
     expect(stdout).toContain('langfuse.host=http://localhost:3100')
     expect(stdout).toContain('langfuse.publicKey=pk-test')
     expect(stdout).toContain('officePreview.enabled=true')

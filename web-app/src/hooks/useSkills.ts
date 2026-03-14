@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react'
 import type { SkillEntry, SkillsResponse } from '../types/skill'
-import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
+import { GATEWAY_URL, gatewayHeaders } from '../config/runtime'
 import { getErrorMessage } from '../utils/errorMessages'
+import { useUser } from '../contexts/UserContext'
 
 interface UseSkillsResult {
     skills: SkillEntry[]
@@ -11,6 +12,7 @@ interface UseSkillsResult {
 }
 
 export function useSkills(): UseSkillsResult {
+    const { userId } = useUser()
     const [skills, setSkills] = useState<SkillEntry[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -21,7 +23,7 @@ export function useSkills(): UseSkillsResult {
 
         try {
             const res = await fetch(`${GATEWAY_URL}/agents/${agentId}/skills`, {
-                headers: { 'x-secret-key': GATEWAY_SECRET_KEY },
+                headers: gatewayHeaders(userId),
                 signal: AbortSignal.timeout(10000),
             })
 
@@ -36,7 +38,7 @@ export function useSkills(): UseSkillsResult {
         } finally {
             setIsLoading(false)
         }
-    }, [])
+    }, [userId])
 
     return {
         skills,

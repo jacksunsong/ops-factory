@@ -7,6 +7,7 @@ host: "0.0.0.0"                         # env: GATEWAY_HOST
 secretKey: ""                           # env: GATEWAY_SECRET_KEY     [REQUIRED]
 corsOrigin: "http://127.0.0.1:5173"     # env: CORS_ORIGIN
 goosedBin: "goosed"                     # env: GOOSED_BIN
+goosedTls: false                        # env: GOOSED_TLS  (gateway↔goosed TLS)
 
 paths:
   agentsDir: "agents"                   # env: AGENTS_DIR
@@ -15,6 +16,11 @@ paths:
 idle:
   timeoutMinutes: 15                    # env: IDLE_TIMEOUT_MINUTES
   checkIntervalMs: 60000               # env: IDLE_CHECK_INTERVAL
+
+sse:
+  firstByteTimeoutSec: 120             # env: SSE_FIRST_BYTE_TIMEOUT  (no data at all → recycle)
+  idleTimeoutSec: 300                  # env: SSE_IDLE_TIMEOUT        (no content but pings OK → error only)
+  maxDurationSec: 600                  # env: SSE_MAX_DURATION        (hard ceiling)
 
 upload:
   maxFileSizeMb: 50                     # env: MAX_FILE_SIZE_MB
@@ -33,15 +39,6 @@ agents:
   - {id: kb-agent, name: KB Agent}
   - {id: report-agent, name: Report Agent}
   - {id: supervisor-agent, name: Supervisor Agent, sysOnly: true}
-
-# Vision (optional)
-# vision:
-#   mode: "off"                         # env: VISION_MODE            (off|passthrough)
-#   provider: ""                        # env: VISION_PROVIDER
-#   model: ""                           # env: VISION_MODEL
-#   apiKey: ""                          # env: VISION_API_KEY
-#   baseUrl: ""                         # env: VISION_BASE_URL
-#   maxTokens: 1024                     # env: VISION_MAX_TOKENS
 
 # Langfuse observability (optional)
 # langfuse:

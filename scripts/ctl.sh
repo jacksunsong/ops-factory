@@ -4,16 +4,19 @@ set -euo pipefail
 # ==============================================================================
 # ops-factory unified service orchestrator
 #
-# Usage: ./ctl.sh <action> [component]
+# Usage: ./ctl.sh <action> [component ...]
 #
 #   action:    startup | shutdown | status | restart
 #   component: onlyoffice | langfuse | gateway | exporter | webapp | all (default)
+#              Multiple components can be specified.
 #
 # Examples:
-#   ./ctl.sh startup            # start all services
-#   ./ctl.sh shutdown webapp    # stop webapp only
-#   ./ctl.sh status             # check all services
-#   ./ctl.sh restart gateway    # restart gateway
+#   ./ctl.sh startup                    # start all services
+#   ./ctl.sh startup gateway webapp     # start gateway and webapp only
+#   ./ctl.sh shutdown webapp            # stop webapp only
+#   ./ctl.sh status                     # check all services
+#   ./ctl.sh restart gateway            # restart gateway
+#   ./ctl.sh shutdown gateway exporter  # stop gateway and exporter
 #
 # Service toggles (env vars):
 #   ENABLE_ONLYOFFICE=false ./ctl.sh startup   # skip OnlyOffice
@@ -71,111 +74,170 @@ cleanup() {
     done
 }
 
-# === Orchestration ===
-do_startup() {
-    local component="${1:-all}"
+# === Component validation ===
+VALID_COMPONENTS="onlyoffice langfuse gateway exporter webapp"
 
-    case "${component}" in
-        all)
-            # Shutdown everything first
-            do_shutdown all
+validate_component() {
+    local comp="$1"
+    for valid in ${VALID_COMPONENTS}; do
+        [[ "${comp}" == "${valid}" ]] && return 0
+    done
+    log_error "Unknown component: ${comp}"
+    usage
+}
 
-            log_info "Starting all services..."
-            trap cleanup EXIT INT TERM
-
-            # 1. OnlyOffice (optional)
-            run_if_enabled "${ENABLE_ONLYOFFICE}" "OnlyOffice" "${CTL_ONLYOFFICE}" startup
-
-            # 2. Langfuse (optional)
-            run_if_enabled "${ENABLE_LANGFUSE}" "Langfuse" "${CTL_LANGFUSE}" startup
-
-            # 3. Gateway (mandatory, background)
-            "${CTL_GATEWAY}" startup --background
-
-            # 4. Exporter (optional, background)
-            run_if_enabled "${ENABLE_EXPORTER}" "Exporter" "${CTL_EXPORTER}" startup --background
-
-            # 5. Webapp (mandatory, foreground — blocking)
-            "${CTL_WEBAPP}" startup
-            ;;
-        onlyoffice) "${CTL_ONLYOFFICE}" startup ;;
-        langfuse)   "${CTL_LANGFUSE}" startup ;;
-        gateway)    "${CTL_GATEWAY}" startup ;;
-        exporter)   "${CTL_EXPORTER}" startup ;;
-        webapp)     "${CTL_WEBAPP}" startup ;;
-        *) usage ;;
+# === Single-component action helpers ===
+# Usage: startup_one <component> [--background]
+startup_one() {
+    local comp="$1"
+    local bg_flag="${2:-}"
+    case "${comp}" in
+        onlyoffice) run_if_enabled "${ENABLE_ONLYOFFICE}" "OnlyOffice" "${CTL_ONLYOFFICE}" startup ${bg_flag} ;;
+        langfuse)   run_if_enabled "${ENABLE_LANGFUSE}" "Langfuse" "${CTL_LANGFUSE}" startup ${bg_flag} ;;
+        gateway)    "${CTL_GATEWAY}" startup ${bg_flag} ;;
+        exporter)   run_if_enabled "${ENABLE_EXPORTER}" "Exporter" "${CTL_EXPORTER}" startup ${bg_flag} ;;
+        webapp)     "${CTL_WEBAPP}" startup ${bg_flag} ;;
     esac
 }
 
-do_shutdown() {
-    local component="${1:-all}"
-
-    case "${component}" in
-        all)
-            "${CTL_EXPORTER}" shutdown
-            "${CTL_WEBAPP}" shutdown
-            "${CTL_GATEWAY}" shutdown
-            "${CTL_LANGFUSE}" shutdown
-            "${CTL_ONLYOFFICE}" shutdown
-            log_info "All services stopped"
-            ;;
+shutdown_one() {
+    case "$1" in
         onlyoffice) "${CTL_ONLYOFFICE}" shutdown ;;
         langfuse)   "${CTL_LANGFUSE}" shutdown ;;
         gateway)    "${CTL_GATEWAY}" shutdown ;;
         exporter)   "${CTL_EXPORTER}" shutdown ;;
         webapp)     "${CTL_WEBAPP}" shutdown ;;
-        *) usage ;;
     esac
 }
 
+status_one() {
+    case "$1" in
+        onlyoffice)
+            if [ "${ENABLE_ONLYOFFICE}" = "true" ]; then
+                "${CTL_ONLYOFFICE}" status || return 1
+            fi ;;
+        langfuse)
+            if [ "${ENABLE_LANGFUSE}" = "true" ]; then
+                "${CTL_LANGFUSE}" status || return 1
+            fi ;;
+        gateway)  "${CTL_GATEWAY}" status  || return 1 ;;
+        exporter)
+            if [ "${ENABLE_EXPORTER}" = "true" ]; then
+                "${CTL_EXPORTER}" status || return 1
+            fi ;;
+        webapp)   "${CTL_WEBAPP}" status   || return 1 ;;
+    esac
+}
+
+# === Orchestration ===
+do_startup() {
+    local components=("$@")
+
+    if [[ ${#components[@]} -eq 0 || "${components[0]}" == "all" ]]; then
+        # Shutdown everything first
+        do_shutdown all
+
+        log_info "Starting all services..."
+        trap cleanup EXIT INT TERM
+
+        # 1. OnlyOffice (optional)
+        run_if_enabled "${ENABLE_ONLYOFFICE}" "OnlyOffice" "${CTL_ONLYOFFICE}" startup
+
+        # 2. Langfuse (optional)
+        run_if_enabled "${ENABLE_LANGFUSE}" "Langfuse" "${CTL_LANGFUSE}" startup
+
+        # 3. Gateway (mandatory, background)
+        "${CTL_GATEWAY}" startup --background
+
+        # 4. Exporter (optional, background)
+        run_if_enabled "${ENABLE_EXPORTER}" "Exporter" "${CTL_EXPORTER}" startup --background
+
+        # 5. Webapp (mandatory, foreground — blocking)
+        "${CTL_WEBAPP}" startup
+    else
+        for comp in "${components[@]}"; do
+            validate_component "${comp}"
+        done
+        # Shutdown selected components first
+        for comp in "${components[@]}"; do
+            shutdown_one "${comp}"
+        done
+        log_info "Starting: ${components[*]}..."
+        trap cleanup EXIT INT TERM
+        local last_idx=$(( ${#components[@]} - 1 ))
+        for i in "${!components[@]}"; do
+            if [[ $i -lt $last_idx ]]; then
+                startup_one "${components[$i]}" --background
+            else
+                # Last component runs in foreground (blocking)
+                startup_one "${components[$i]}"
+            fi
+        done
+    fi
+}
+
+do_shutdown() {
+    local components=("$@")
+
+    if [[ ${#components[@]} -eq 0 || "${components[0]}" == "all" ]]; then
+        "${CTL_EXPORTER}" shutdown
+        "${CTL_WEBAPP}" shutdown
+        "${CTL_GATEWAY}" shutdown
+        "${CTL_LANGFUSE}" shutdown
+        "${CTL_ONLYOFFICE}" shutdown
+        log_info "All services stopped"
+    else
+        for comp in "${components[@]}"; do
+            validate_component "${comp}"
+        done
+        for comp in "${components[@]}"; do
+            shutdown_one "${comp}"
+        done
+        log_info "Stopped: ${components[*]}"
+    fi
+}
+
 do_status() {
-    local component="${1:-all}"
+    local components=("$@")
     local has_fail=0
 
     echo "Service status:"
     echo "--------------"
 
-    case "${component}" in
-        all)
-            if [ "${ENABLE_ONLYOFFICE}" = "true" ]; then
-                "${CTL_ONLYOFFICE}" status || has_fail=1
-            fi
-            if [ "${ENABLE_LANGFUSE}" = "true" ]; then
-                "${CTL_LANGFUSE}" status || has_fail=1
-            fi
-            "${CTL_GATEWAY}" status || has_fail=1
-            if [ "${ENABLE_EXPORTER}" = "true" ]; then
-                "${CTL_EXPORTER}" status || has_fail=1
-            fi
-            "${CTL_WEBAPP}" status || has_fail=1
-            echo
-            if [ "${has_fail}" -eq 0 ]; then
-                log_ok "All services are up"
-            else
-                log_fail "One or more services are down"
-            fi
-            ;;
-        onlyoffice) "${CTL_ONLYOFFICE}" status || has_fail=1 ;;
-        langfuse)   "${CTL_LANGFUSE}" status   || has_fail=1 ;;
-        gateway)    "${CTL_GATEWAY}" status     || has_fail=1 ;;
-        exporter)   "${CTL_EXPORTER}" status    || has_fail=1 ;;
-        webapp)     "${CTL_WEBAPP}" status      || has_fail=1 ;;
-        *) usage ;;
-    esac
+    if [[ ${#components[@]} -eq 0 || "${components[0]}" == "all" ]]; then
+        status_one onlyoffice || has_fail=1
+        status_one langfuse   || has_fail=1
+        status_one gateway    || has_fail=1
+        status_one exporter   || has_fail=1
+        status_one webapp     || has_fail=1
+        echo
+        if [ "${has_fail}" -eq 0 ]; then
+            log_ok "All services are up"
+        else
+            log_fail "One or more services are down"
+        fi
+    else
+        for comp in "${components[@]}"; do
+            validate_component "${comp}"
+        done
+        for comp in "${components[@]}"; do
+            status_one "${comp}" || has_fail=1
+        done
+    fi
 
     return "${has_fail}"
 }
 
 do_restart() {
-    local component="${1:-all}"
-    do_shutdown "${component}"
-    do_startup "${component}"
+    local components=("$@")
+    do_shutdown "${components[@]}"
+    do_startup "${components[@]}"
 }
 
 # === Usage & Main ===
 usage() {
     cat <<'EOF'
-Usage: ctl.sh <action> [component]
+Usage: ctl.sh <action> [component ...]
 
 Actions:
   startup     Start service(s)
@@ -183,13 +245,19 @@ Actions:
   status      Check service status
   restart     Restart service(s)
 
-Components:
+Components (multiple allowed):
   all         All services (default)
   onlyoffice  OnlyOffice Document Server (Docker)     [optional]
   langfuse    Langfuse observability platform (Docker) [optional]
   gateway     Gateway + goosed agents                  [mandatory]
   exporter    Prometheus metrics exporter              [optional]
   webapp      Web application (Vite dev server)        [mandatory]
+
+Examples:
+  ctl.sh startup                    Start all services
+  ctl.sh startup gateway webapp     Start gateway and webapp only
+  ctl.sh shutdown gateway exporter  Stop gateway and exporter
+  ctl.sh status webapp              Check webapp status
 
 Service toggles (env vars):
   ENABLE_ONLYOFFICE=true|false  (default: true)
@@ -200,15 +268,21 @@ EOF
 }
 
 ACTION="${1:-}"
-COMPONENT="${2:-all}"
-
 [ -z "${ACTION}" ] && usage
+shift
+
+# Remaining args are components (default: all)
+if [[ $# -eq 0 ]]; then
+    COMPONENTS=("all")
+else
+    COMPONENTS=("$@")
+fi
 
 case "${ACTION}" in
-    startup)  do_startup  "${COMPONENT}" ;;
-    shutdown) do_shutdown "${COMPONENT}" ;;
-    status)   do_status   "${COMPONENT}" ;;
-    restart)  do_restart  "${COMPONENT}" ;;
+    startup)  do_startup  "${COMPONENTS[@]}" ;;
+    shutdown) do_shutdown "${COMPONENTS[@]}" ;;
+    status)   do_status   "${COMPONENTS[@]}" ;;
+    restart)  do_restart  "${COMPONENTS[@]}" ;;
     -h|--help|help) usage ;;
     *) log_error "Unknown action: ${ACTION}"; usage ;;
 esac

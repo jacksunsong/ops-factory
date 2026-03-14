@@ -1,23 +1,14 @@
-GOOSE_PROVIDER: openai
-GOOSE_MODEL: qwen/qwen3.5-35b-a3b
-OPENAI_HOST: https://openrouter.ai/api
+GOOSE_PROVIDER: custom_opsagentllm
+GOOSE_MODEL: kimi-k2-turbo-preview
 GOOSE_MODE: auto
 GOOSE_DISABLE_KEYRING: '1'
-GOOSE_TELEMETRY_ENABLED: true
+GOOSE_TELEMETRY_ENABLED: false
 GOOSE_CONTEXT_LIMIT: '32768'
 GOOSE_MAX_TOKENS: '4096'
 GOOSE_TEMPERATURE: '0.2'
 GOOSE_CONTEXT_STRATEGY: summarize
 GOOSE_AUTO_COMPACT_THRESHOLD: '0.8'
 GOOSE_MAX_TURNS: '50'
-vision:
-  mode: passthrough
-  provider: openai
-  model: qwen/qwen3.5-35b-a3b
-  baseUrl: https://openrouter.ai/api
-LANGFUSE_INIT_PROJECT_PUBLIC_KEY: pk-lf-opsfactory
-LANGFUSE_INIT_PROJECT_SECRET_KEY: sk-lf-opsfactory
-LANGFUSE_URL: http://localhost:3100
 extensions:
   extensionmanager:
     enabled: false
@@ -140,18 +131,10 @@ extensions:
     bundled: true
     available_tools: []
   analyze:
-    enabled: true
+    enabled: false
     type: platform
     name: analyze
     description: 'Analyze code structure with tree-sitter: directory overviews, file details, symbol call graphs'
     display_name: Analyze
-    bundled: true
-    available_tools: []
-  summarize:
-    enabled: false
-    type: platform
-    name: summarize
-    description: Load files/directories and get an LLM summary in a single call
-    display_name: Summarize
     bundled: true
     available_tools: []

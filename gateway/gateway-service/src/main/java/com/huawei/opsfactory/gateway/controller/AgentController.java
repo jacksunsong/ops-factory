@@ -122,16 +122,6 @@ public class AgentController {
         result.put("agentsMd", agentConfigService.readAgentsMd(id));
         result.put("provider", config.getOrDefault("GOOSE_PROVIDER", ""));
         result.put("model", config.getOrDefault("GOOSE_MODEL", ""));
-        // Extract visionMode from nested vision.mode in config
-        Object visionObj = config.get("vision");
-        String visionMode = "off";
-        if (visionObj instanceof Map<?, ?> visionMap) {
-            Object modeObj = visionMap.get("mode");
-            if (modeObj != null) {
-                visionMode = modeObj.toString();
-            }
-        }
-        result.put("visionMode", visionMode);
         result.put("workingDir", agentConfigService.getAgentsDir().resolve(id).toString());
         return Mono.just(ResponseEntity.ok(result));
     }

@@ -21,7 +21,7 @@ public class StatusEndpointE2ETest extends BaseE2ETest {
     // ====================== GET /me ======================
 
     @Test
-    public void getMe_adminUser_returnsAdminRole() {
+    public void getMe_sysUser_returnsSys() {
         webClient.get().uri("/me")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
                 .header(HEADER_USER_ID, "sys")
@@ -33,7 +33,7 @@ public class StatusEndpointE2ETest extends BaseE2ETest {
     }
 
     @Test
-    public void getMe_regularUser_returnsUserRole() {
+    public void getMe_regularUser_returnsUser() {
         webClient.get().uri("/me")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
                 .header(HEADER_USER_ID, "user-123")

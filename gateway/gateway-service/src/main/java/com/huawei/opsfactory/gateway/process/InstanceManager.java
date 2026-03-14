@@ -280,11 +280,14 @@ public class InstanceManager {
                         agentId, userId, existing.getPort());
                 stopInstance(existing);
             } else {
+                log.debug("Reusing existing instance {}:{} port={} pid={}", agentId, userId,
+                        existing.getPort(), existing.getPid());
                 existing.touch();
                 return Mono.just(existing);
             }
         }
 
+        log.info("No running instance for {}:{}, spawning new one", agentId, userId);
         return Mono.fromCallable(() -> doSpawn(agentId, userId))
                 .subscribeOn(Schedulers.boundedElastic());
     }
@@ -328,6 +331,22 @@ public class InstanceManager {
             log.info("Spawning goosed for {}:{} on port {}", agentId, userId, port);
             Process process = pb.start();
             long pid = ProcessUtil.getPid(process);
+
+            // Drain stdout/stderr to prevent pipe buffer full → goosed write() blocks → tokio deadlock.
+            // goosed's tracing subscriber writes every log to both file and stderr; if the pipe buffer
+            // (~64KB) fills up, the write() syscall blocks a tokio worker thread, freezing the runtime.
+            Thread drainThread = new Thread(() -> {
+                try (var in = process.getInputStream()) {
+                    byte[] buf = new byte[8192];
+                    while (in.read(buf) != -1) {
+                        // discard
+                    }
+                } catch (java.io.IOException ignored) {
+                    // Process ended
+                }
+            }, "goosed-drain-" + agentId + "-" + userId);
+            drainThread.setDaemon(true);
+            drainThread.start();
 
             ManagedInstance instance = new ManagedInstance(agentId, userId, port, pid, process);
             instances.put(key, instance);
@@ -406,8 +425,13 @@ public class InstanceManager {
         env.put("GOOSE_DISABLE_KEYRING", "1");
         env.put("GOOSE_TLS", String.valueOf(properties.isGoosedTls()));
 
-        // Diagnostic: verbose logging for agent internals to trace hang points
-        env.put("RUST_LOG", "goose::agents=trace,goose::providers=debug,goosed::routes=debug,goose::session=debug,rmcp=debug,goose::agents::extension_manager=trace,goose::agents::mcp_client=trace");
+        // Enable debug logging for goose internals, but keep rustls/hyper at info
+        // to avoid tracing_log deadlock in TLS handshake (rustls debug logs go through
+        // tracing_log bridge which can deadlock the tokio runtime)
+        env.put("RUST_LOG", "info,goose=debug,goosed=debug,rmcp=debug");
+        env.put("GOOSE_DEBUG", "1");
+        log.debug("goosed env for {}:{}: RUST_LOG={}, GOOSE_DEBUG=1, GOOSE_PORT={}, GOOSE_TLS={}",
+                agentId, userId, env.get("RUST_LOG"), port, env.get("GOOSE_TLS"));
 
         // Gateway self-URL for MCP extensions that call back to the gateway
         String gatewayScheme = serverSslEnabled ? "https" : "http";

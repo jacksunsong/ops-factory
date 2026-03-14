@@ -59,6 +59,7 @@ public class AgentControllerTest {
 
         webTestClient.get().uri("/agents")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "alice")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -79,6 +80,7 @@ public class AgentControllerTest {
 
         webTestClient.get().uri("/agents")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "alice")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -96,7 +98,7 @@ public class AgentControllerTest {
 
         webTestClient.post().uri("/agents")
                 .header("x-secret-key", "test")
-                // sys user = admin by default
+                .header("x-user-id", "sys")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"id\": \"new-agent\", \"name\": \"New Agent\"}")
                 .exchange()
@@ -121,6 +123,7 @@ public class AgentControllerTest {
     public void testCreateAgent_missingId() {
         webTestClient.post().uri("/agents")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"name\": \"New Agent\"}")
                 .exchange()
@@ -134,6 +137,7 @@ public class AgentControllerTest {
 
         webTestClient.delete().uri("/agents/agent1")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -157,6 +161,7 @@ public class AgentControllerTest {
 
         webTestClient.get().uri("/agents/agent1/skills")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -179,6 +184,7 @@ public class AgentControllerTest {
 
         webTestClient.get().uri("/agents/agent1/config")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -195,6 +201,7 @@ public class AgentControllerTest {
 
         webTestClient.put().uri("/agents/agent1/config")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"agentsMd\": \"# Updated\\n\"}")
                 .exchange()
@@ -218,6 +225,7 @@ public class AgentControllerTest {
     public void testCreateAgent_missingName() {
         webTestClient.post().uri("/agents")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"id\": \"new-agent\"}")
                 .exchange()
@@ -228,6 +236,7 @@ public class AgentControllerTest {
     public void testCreateAgent_blankId() {
         webTestClient.post().uri("/agents")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"id\": \"   \", \"name\": \"New Agent\"}")
                 .exchange()
@@ -241,6 +250,7 @@ public class AgentControllerTest {
 
         webTestClient.post().uri("/agents")
                 .header("x-secret-key", "test")
+                .header("x-user-id", "sys")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"id\": \"dup-agent\", \"name\": \"Dup Agent\"}")
                 .exchange()

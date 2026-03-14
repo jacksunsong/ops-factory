@@ -43,12 +43,13 @@ public class SessionEndpointE2ETest extends BaseE2ETest {
     // ====================== POST /agents/{agentId}/agent/start ======================
 
     @Test
-    public void startSession_authenticated_proxiesToGoosed() {
+    public void startSession_authenticated_callsStartThenResume() {
         when(instanceManager.getOrSpawn("test-agent", "alice"))
                 .thenReturn(Mono.just(runningInstance));
-        when(goosedProxy.proxyWithBody(any(), eq(9999), eq("/agent/start"),
-                eq(HttpMethod.POST), anyString()))
-                .thenReturn(Mono.empty());
+        when(goosedProxy.fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/start"), anyString()))
+                .thenReturn(Mono.just("{\"id\":\"session-123\"}"));
+        when(goosedProxy.fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/resume"), anyString()))
+                .thenReturn(Mono.just("{\"session\":{\"id\":\"session-123\"},\"extension_results\":[]}"));
 
         webClient.post().uri("/agents/test-agent/agent/start")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
@@ -56,9 +57,78 @@ public class SessionEndpointE2ETest extends BaseE2ETest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"session_name\":\"test-session\"}")
                 .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.id").isEqualTo("session-123");
+
+        // Verify canonical flow: start → resume(load_model_and_extensions=true)
+        verify(goosedProxy).fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/start"), anyString());
+        verify(goosedProxy).fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/resume"),
+                org.mockito.ArgumentMatchers.contains("\"load_model_and_extensions\":true"));
+    }
+
+    @Test
+    public void startSession_resumeFails_propagatesError() {
+        when(instanceManager.getOrSpawn("test-agent", "alice"))
+                .thenReturn(Mono.just(runningInstance));
+        when(goosedProxy.fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/start"), anyString()))
+                .thenReturn(Mono.just("{\"id\":\"session-123\"}"));
+        when(goosedProxy.fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/resume"), anyString()))
+                .thenReturn(Mono.error(new RuntimeException("Extension loading failed")));
+
+        webClient.post().uri("/agents/test-agent/agent/start")
+                .header(HEADER_SECRET_KEY, SECRET_KEY)
+                .header(HEADER_USER_ID, "alice")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{}")
+                .exchange()
+                .expectStatus().is5xxServerError();
+    }
+
+    @Test
+    public void startSession_resumeReceivesCorrectSessionId() {
+        when(instanceManager.getOrSpawn("test-agent", "alice"))
+                .thenReturn(Mono.just(runningInstance));
+        when(goosedProxy.fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/start"), anyString()))
+                .thenReturn(Mono.just("{\"id\":\"abc-def-456\",\"name\":\"New Chat\"}"));
+        when(goosedProxy.fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/resume"), anyString()))
+                .thenReturn(Mono.just("{\"session\":{\"id\":\"abc-def-456\"},\"extension_results\":[]}"));
+
+        webClient.post().uri("/agents/test-agent/agent/start")
+                .header(HEADER_SECRET_KEY, SECRET_KEY)
+                .header(HEADER_USER_ID, "alice")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{}")
+                .exchange()
                 .expectStatus().isOk();
 
-        verify(instanceManager).getOrSpawn("test-agent", "alice");
+        // Verify resume is called with the correct session ID from start response
+        verify(goosedProxy).fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/resume"),
+                org.mockito.ArgumentMatchers.contains("\"session_id\":\"abc-def-456\""));
+    }
+
+    @Test
+    public void startSession_returnsStartResponse_notResumeResponse() {
+        when(instanceManager.getOrSpawn("test-agent", "alice"))
+                .thenReturn(Mono.just(runningInstance));
+        String startResponse = "{\"id\":\"session-123\",\"name\":\"New Chat\",\"working_dir\":\"/tmp\"}";
+        when(goosedProxy.fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/start"), anyString()))
+                .thenReturn(Mono.just(startResponse));
+        when(goosedProxy.fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/resume"), anyString()))
+                .thenReturn(Mono.just("{\"session\":{\"id\":\"session-123\"},\"extension_results\":[{\"name\":\"developer\",\"success\":true}]}"));
+
+        webClient.post().uri("/agents/test-agent/agent/start")
+                .header(HEADER_SECRET_KEY, SECRET_KEY)
+                .header(HEADER_USER_ID, "alice")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                // Should return the original start response (Session JSON), not the resume response
+                .jsonPath("$.id").isEqualTo("session-123")
+                .jsonPath("$.name").isEqualTo("New Chat")
+                .jsonPath("$.extension_results").doesNotExist();
     }
 
     @Test

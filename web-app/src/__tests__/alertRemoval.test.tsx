@@ -53,7 +53,6 @@ describe('showToast replacement correctness', () => {
 
     it('ChatInput.tsx uses showToast("warning", ...) for image upload limits', () => {
         const src = readSource('components/ChatInput.tsx')
-        expect(src).toContain("showToast('warning', t('chat.imageUploadNotEnabled'))")
         expect(src).toContain("showToast('warning', t('chat.maxImagesAllowed'")
         expect(src).toContain("showToast('warning', t('chat.maxFilesAllowed'")
     })

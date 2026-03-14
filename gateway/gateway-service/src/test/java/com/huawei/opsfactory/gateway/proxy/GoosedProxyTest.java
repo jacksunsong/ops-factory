@@ -10,19 +10,19 @@ import static org.junit.Assert.assertNotNull;
 public class GoosedProxyTest {
 
     private GoosedProxy proxy;
-    private GoosedProxy proxyNoTls;
+    private GoosedProxy proxyTls;
 
     @Before
     public void setUp() {
         GatewayProperties properties = new GatewayProperties();
         properties.setSecretKey("test-key");
-        // Default: goosedTls = true
+        // Default: goosedTls = false
         proxy = new GoosedProxy(properties);
 
-        GatewayProperties noTlsProps = new GatewayProperties();
-        noTlsProps.setSecretKey("test-key");
-        noTlsProps.setGoosedTls(false);
-        proxyNoTls = new GoosedProxy(noTlsProps);
+        GatewayProperties tlsProps = new GatewayProperties();
+        tlsProps.setSecretKey("test-key");
+        tlsProps.setGoosedTls(true);
+        proxyTls = new GoosedProxy(tlsProps);
     }
 
     @Test
@@ -38,17 +38,17 @@ public class GoosedProxyTest {
     // ====================== TLS tests ======================
 
     @Test
-    public void testGoosedBaseUrl_tlsEnabled_usesHttps() {
-        assertEquals("https://127.0.0.1:9999", proxy.goosedBaseUrl(9999));
-    }
-
-    @Test
     public void testGoosedBaseUrl_tlsDisabled_usesHttp() {
-        assertEquals("http://127.0.0.1:9999", proxyNoTls.goosedBaseUrl(9999));
+        assertEquals("http://127.0.0.1:9999", proxy.goosedBaseUrl(9999));
     }
 
     @Test
-    public void testWebClientNotNull_tlsDisabled() {
-        assertNotNull(proxyNoTls.getWebClient());
+    public void testGoosedBaseUrl_tlsEnabled_usesHttps() {
+        assertEquals("https://127.0.0.1:9999", proxyTls.goosedBaseUrl(9999));
+    }
+
+    @Test
+    public void testWebClientNotNull_tlsEnabled() {
+        assertNotNull(proxyTls.getWebClient());
     }
 }

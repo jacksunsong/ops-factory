@@ -65,18 +65,20 @@ public class AuthFilterE2ETest extends BaseE2ETest {
     // ====================== UserContextFilter Tests ======================
 
     @Test
-    public void meEndpoint_noUserIdHeader_defaultsToSys() {
+    public void meEndpoint_noUserIdHeader_returnsUnknown() {
+        // /me is excluded from UserContextFilter's user-id requirement;
+        // without the filter setting attributes, the controller returns defaults.
         webClient.get().uri("/me")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.userId").isEqualTo("sys")
-                .jsonPath("$.role").isEqualTo("admin");
+                .jsonPath("$.userId").isEqualTo("unknown")
+                .jsonPath("$.role").isEqualTo("user");
     }
 
     @Test
-    public void meEndpoint_sysUser_isAdmin() {
+    public void meEndpoint_sysUser_returnsSys() {
         webClient.get().uri("/me")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
                 .header(HEADER_USER_ID, "sys")
@@ -88,7 +90,7 @@ public class AuthFilterE2ETest extends BaseE2ETest {
     }
 
     @Test
-    public void meEndpoint_regularUser_isUser() {
+    public void meEndpoint_regularUser_returnsUser() {
         webClient.get().uri("/me")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
                 .header(HEADER_USER_ID, "alice")
@@ -100,15 +102,16 @@ public class AuthFilterE2ETest extends BaseE2ETest {
     }
 
     @Test
-    public void meEndpoint_blankUserIdHeader_defaultsToSys() {
+    public void meEndpoint_blankUserIdHeader_returnsUnknown() {
+        // /me is a system endpoint: blank x-user-id does not reject, falls back to unknown
         webClient.get().uri("/me")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
                 .header(HEADER_USER_ID, "  ")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.userId").isEqualTo("sys")
-                .jsonPath("$.role").isEqualTo("admin");
+                .jsonPath("$.userId").isEqualTo("unknown")
+                .jsonPath("$.role").isEqualTo("user");
     }
 
     // ====================== Cross-Cutting Auth + Admin Tests ======================

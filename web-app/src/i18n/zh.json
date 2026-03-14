@@ -49,7 +49,7 @@
     "submit": "进入"
   },
   "chat": {
-    "loadingSession": "正在加载会话...",
+    "loadingSession": "正在加载对话...",
     "failedToLoadSession": "加载会话失败",
     "backToHome": "返回首页",
     "generationStopped": "生成已停止",
@@ -62,7 +62,6 @@
     "attachFiles": "附加文件 ({{current}}/{{max}})",
     "removeFile": "移除文件",
     "fileUploadNotAvailable": "文件上传不可用",
-    "imageUploadNotEnabled": "此智能体未启用图片上传。",
     "maxImagesAllowed": "每条消息最多允许 {{max}} 张图片。",
     "maxFilesAllowed": "每条消息最多允许 {{max}} 个文件。",
     "unsupportedFileType": "不支持的文件类型。",
@@ -74,7 +73,10 @@
     "thinking": "思考中...",
     "compactingContext": "正在压缩上下文...",
     "voiceInput": "语音输入",
-    "stopRecording": "停止录音"
+    "stopRecording": "停止录音",
+    "agentNoResponse": "智能体未响应，请重试",
+    "agentIdleTimeout": "智能体停止响应，请重试",
+    "agentConnectionLost": "智能体连接断开，请重试"
   },
   "newSession": {
     "title": "新建对话",
@@ -342,6 +344,7 @@
     "timeout": "超时时间（秒）",
     "adding": "添加中...",
     "saveChanges": "保存更改",
+    "configUpdatedRestarting": "扩展配置已更新，智能体实例正在重启以应用更改",
     "updateFailed": "更新 MCP 服务器失败",
     "addFailed": "添加 MCP 服务器失败"
   },

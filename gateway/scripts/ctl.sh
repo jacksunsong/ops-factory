@@ -45,7 +45,7 @@ case "${GOOSED_BIN}" in
     *)  [ -f "${SERVICE_DIR}/${GOOSED_BIN}" ] && GOOSED_BIN="${SERVICE_DIR}/${GOOSED_BIN}" ;;
 esac
 GOOSED_TLS="${GOOSED_TLS:-$(yaml_val goosedTls)}"
-GOOSED_TLS="${GOOSED_TLS:-true}"
+GOOSED_TLS="${GOOSED_TLS:-false}"
 GATEWAY_TLS="${GATEWAY_TLS:-$(yaml_val gatewayTls)}"
 GATEWAY_TLS="${GATEWAY_TLS:-true}"
 GATEWAY_KEY_STORE="${GATEWAY_KEY_STORE:-$(yaml_val gatewayKeyStore)}"
@@ -64,6 +64,14 @@ IDLE_TIMEOUT_MINUTES="${IDLE_TIMEOUT_MINUTES:-$(yaml_nested_val idle timeoutMinu
 IDLE_TIMEOUT_MINUTES="${IDLE_TIMEOUT_MINUTES:-15}"
 IDLE_CHECK_INTERVAL="${IDLE_CHECK_INTERVAL:-$(yaml_nested_val idle checkIntervalMs)}"
 IDLE_CHECK_INTERVAL="${IDLE_CHECK_INTERVAL:-60000}"
+
+# SSE relay timeouts
+SSE_FIRST_BYTE_TIMEOUT="${SSE_FIRST_BYTE_TIMEOUT:-$(yaml_nested_val sse firstByteTimeoutSec)}"
+SSE_FIRST_BYTE_TIMEOUT="${SSE_FIRST_BYTE_TIMEOUT:-120}"
+SSE_IDLE_TIMEOUT="${SSE_IDLE_TIMEOUT:-$(yaml_nested_val sse idleTimeoutSec)}"
+SSE_IDLE_TIMEOUT="${SSE_IDLE_TIMEOUT:-300}"
+SSE_MAX_DURATION="${SSE_MAX_DURATION:-$(yaml_nested_val sse maxDurationSec)}"
+SSE_MAX_DURATION="${SSE_MAX_DURATION:-600}"
 
 UPLOAD_MAX_FILE_SIZE_MB="${MAX_FILE_SIZE_MB:-$(yaml_nested_val upload maxFileSizeMb)}"
 UPLOAD_MAX_FILE_SIZE_MB="${UPLOAD_MAX_FILE_SIZE_MB:-50}"
@@ -86,14 +94,6 @@ PREWARM_ENABLED="${PREWARM_ENABLED:-$(yaml_nested_val prewarm enabled)}"
 PREWARM_ENABLED="${PREWARM_ENABLED:-true}"
 PREWARM_DEFAULT_AGENT_ID="${PREWARM_DEFAULT_AGENT_ID:-$(yaml_nested_val prewarm defaultAgentId)}"
 PREWARM_DEFAULT_AGENT_ID="${PREWARM_DEFAULT_AGENT_ID:-universal-agent}"
-
-# Optional nested config sections
-VISION_MODE="${VISION_MODE:-$(yaml_nested_val vision mode)}"
-VISION_PROVIDER="${VISION_PROVIDER:-$(yaml_nested_val vision provider)}"
-VISION_MODEL="${VISION_MODEL:-$(yaml_nested_val vision model)}"
-VISION_API_KEY="${VISION_API_KEY:-$(yaml_nested_val vision apiKey)}"
-VISION_BASE_URL="${VISION_BASE_URL:-$(yaml_nested_val vision baseUrl)}"
-VISION_MAX_TOKENS="${VISION_MAX_TOKENS:-$(yaml_nested_val vision maxTokens)}"
 
 LANGFUSE_HOST="${LANGFUSE_HOST:-$(yaml_nested_val langfuse host)}"
 LANGFUSE_PUBLIC_KEY="${LANGFUSE_PUBLIC_KEY:-$(yaml_nested_val langfuse publicKey)}"
@@ -201,7 +201,7 @@ shutdown_agents() {
 check_agents_configured() {
     local agents_json
     agents_json="$(curl -fsS ${CURL_TLS_OPTS} "${GATEWAY_SCHEME}://127.0.0.1:${GATEWAY_PORT}/agents" \
-        -H "x-secret-key: ${GATEWAY_SECRET_KEY}" 2>/dev/null || true)"
+        -H "x-secret-key: ${GATEWAY_SECRET_KEY}" -H "x-user-id: sys" 2>/dev/null || true)"
     [ -z "${agents_json}" ] && { log_error "Failed to query agents"; return 1; }
 
     # Parse with lightweight approach (no node dependency)
@@ -222,7 +222,7 @@ status_agents() {
 
     if [ -n "${base_url}" ]; then
         local agents_json
-        agents_json="$(curl -fsS ${CURL_TLS_OPTS} "${base_url}/agents" -H "x-secret-key: ${GATEWAY_SECRET_KEY}" 2>/dev/null || true)"
+        agents_json="$(curl -fsS ${CURL_TLS_OPTS} "${base_url}/agents" -H "x-secret-key: ${GATEWAY_SECRET_KEY}" -H "x-user-id: sys" 2>/dev/null || true)"
         if [ -n "${agents_json}" ]; then
             local count
             count="$(echo "${agents_json}" | python3 -c "import sys,json;d=json.load(sys.stdin);print(len(d.get('agents',d) if isinstance(d,dict) else d))" 2>/dev/null || echo "0")"
@@ -314,6 +314,9 @@ do_startup() {
         "-Dgateway.paths.users-dir=${USERS_DIR}"
         "-Dgateway.idle.timeout-minutes=${IDLE_TIMEOUT_MINUTES}"
         "-Dgateway.idle.check-interval-ms=${IDLE_CHECK_INTERVAL}"
+        "-Dgateway.sse.first-byte-timeout-sec=${SSE_FIRST_BYTE_TIMEOUT}"
+        "-Dgateway.sse.idle-timeout-sec=${SSE_IDLE_TIMEOUT}"
+        "-Dgateway.sse.max-duration-sec=${SSE_MAX_DURATION}"
         "-Dgateway.upload.max-file-size-mb=${UPLOAD_MAX_FILE_SIZE_MB}"
         "-Dgateway.upload.max-image-size-mb=${UPLOAD_MAX_IMAGE_SIZE_MB}"
         "-Dgateway.limits.max-instances-per-user=${MAX_INSTANCES_PER_USER}"
@@ -334,14 +337,6 @@ do_startup() {
             java_opts+=("-Dserver.ssl.key-alias=${gateway_key_alias}")
         fi
     fi
-
-    # Optional: vision
-    [ -n "${VISION_MODE}" ]       && java_opts+=("-Dgateway.vision.mode=${VISION_MODE}")
-    [ -n "${VISION_PROVIDER}" ]   && java_opts+=("-Dgateway.vision.provider=${VISION_PROVIDER}")
-    [ -n "${VISION_MODEL}" ]      && java_opts+=("-Dgateway.vision.model=${VISION_MODEL}")
-    [ -n "${VISION_API_KEY}" ]    && java_opts+=("-Dgateway.vision.api-key=${VISION_API_KEY}")
-    [ -n "${VISION_BASE_URL}" ]   && java_opts+=("-Dgateway.vision.base-url=${VISION_BASE_URL}")
-    [ -n "${VISION_MAX_TOKENS}" ] && java_opts+=("-Dgateway.vision.max-tokens=${VISION_MAX_TOKENS}")
 
     # Optional: langfuse
     [ -n "${LANGFUSE_HOST}" ]       && java_opts+=("-Dgateway.langfuse.host=${LANGFUSE_HOST}")

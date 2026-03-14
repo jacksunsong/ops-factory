@@ -22,7 +22,7 @@
     </Appenders>
 
     <Loggers>
-        <Logger name="com.huawei.opsfactory.gateway" level="INFO" />
+        <Logger name="com.huawei.opsfactory.gateway" level="DEBUG" />
         <Logger name="org.springframework" level="WARN" />
         <Logger name="reactor" level="WARN" />
         <Logger name="io.netty" level="WARN" />

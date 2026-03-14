@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import type {
   McpEntry,
   McpResponse,
@@ -6,8 +7,10 @@ import type {
   CategorizedMcpEntries,
 } from '../types/mcp'
 import { categorizeMcpEntries } from '../types/mcp'
-import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
+import { GATEWAY_URL, gatewayHeaders } from '../config/runtime'
 import { getErrorMessage } from '../utils/errorMessages'
+import { useToast } from '../contexts/ToastContext'
+import { useUser } from '../contexts/UserContext'
 
 interface UseMcpResult {
   entries: McpEntry[]
@@ -22,6 +25,9 @@ interface UseMcpResult {
 }
 
 export function useMcp(agentId: string | null): UseMcpResult {
+  const { t } = useTranslation()
+  const { showToast } = useToast()
+  const { userId } = useUser()
   const [entries, setEntries] = useState<McpEntry[]>([])
   const [warnings, setWarnings] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -35,7 +41,7 @@ export function useMcp(agentId: string | null): UseMcpResult {
 
     try {
       const res = await fetch(`${GATEWAY_URL}/agents/${agentId}/mcp`, {
-        headers: { 'x-secret-key': GATEWAY_SECRET_KEY },
+        headers: gatewayHeaders(userId),
         signal: AbortSignal.timeout(10000),
       })
 
@@ -51,7 +57,7 @@ export function useMcp(agentId: string | null): UseMcpResult {
     } finally {
       setIsLoading(false)
     }
-  }, [agentId])
+  }, [agentId, userId])
 
   const toggleMcp = useCallback(async (name: string, enabled: boolean) => {
     if (!agentId) return
@@ -71,10 +77,7 @@ export function useMcp(agentId: string | null): UseMcpResult {
 
       const res = await fetch(`${GATEWAY_URL}/agents/${agentId}/mcp`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-secret-key': GATEWAY_SECRET_KEY,
-        },
+        headers: gatewayHeaders(userId),
         body: JSON.stringify({
           name: entry.name,
           enabled,
@@ -93,12 +96,13 @@ export function useMcp(agentId: string | null): UseMcpResult {
           e.name === name ? { ...e, enabled } : e
         )
       )
+      showToast('success', t('mcp.configUpdatedRestarting'))
     } catch (err) {
       setError(getErrorMessage(err))
       // Refresh to get actual state
       await fetchMcp()
     }
-  }, [agentId, entries, fetchMcp])
+  }, [agentId, userId, entries, fetchMcp])
 
   const addMcp = useCallback(async (request: McpAddRequest) => {
     if (!agentId) return
@@ -110,10 +114,7 @@ export function useMcp(agentId: string | null): UseMcpResult {
 
       const res = await fetch(`${GATEWAY_URL}/agents/${agentId}/mcp`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-secret-key': GATEWAY_SECRET_KEY,
-        },
+        headers: gatewayHeaders(userId),
         body: JSON.stringify({
           name: request.name,
           enabled,
@@ -128,11 +129,12 @@ export function useMcp(agentId: string | null): UseMcpResult {
 
       // Refresh to get updated list
       await fetchMcp()
+      showToast('success', t('mcp.configUpdatedRestarting'))
     } catch (err) {
       setError(getErrorMessage(err))
       throw err
     }
-  }, [agentId, fetchMcp])
+  }, [agentId, userId, fetchMcp])
 
   const deleteMcp = useCallback(async (name: string) => {
     if (!agentId) return
@@ -142,7 +144,7 @@ export function useMcp(agentId: string | null): UseMcpResult {
     try {
       const res = await fetch(`${GATEWAY_URL}/agents/${agentId}/mcp/${encodeURIComponent(name)}`, {
         method: 'DELETE',
-        headers: { 'x-secret-key': GATEWAY_SECRET_KEY },
+        headers: gatewayHeaders(userId),
         signal: AbortSignal.timeout(10000),
       })
 
@@ -152,12 +154,13 @@ export function useMcp(agentId: string | null): UseMcpResult {
 
       // Remove from local state
       setEntries(prev => prev.filter(e => e.name !== name))
+      showToast('success', t('mcp.configUpdatedRestarting'))
     } catch (err) {
       setError(getErrorMessage(err))
       // Refresh to get actual state
       await fetchMcp()
     }
-  }, [agentId, fetchMcp])
+  }, [agentId, userId, fetchMcp])
 
   const categorized = useMemo(() => categorizeMcpEntries(entries), [entries])
 

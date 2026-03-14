@@ -6,7 +6,7 @@ gateway:
   secret-key: ${GATEWAY_SECRET_KEY:test}
   cors-origin: ${CORS_ORIGIN:http://127.0.0.1:5173}
   goosed-bin: ${GOOSED_BIN:goosed}
-  goosed-tls: ${GOOSED_TLS:true}
+  goosed-tls: ${GOOSED_TLS:false}
 
   paths:
     project-root: ${PROJECT_ROOT:..}
@@ -26,21 +26,13 @@ gateway:
     max-instances-global: ${MAX_INSTANCES_GLOBAL:50}
 
   sse:
-    first-byte-timeout-sec: ${SSE_FIRST_BYTE_TIMEOUT:30}
-    idle-timeout-sec: ${SSE_IDLE_TIMEOUT:30}
+    first-byte-timeout-sec: ${SSE_FIRST_BYTE_TIMEOUT:120}
+    idle-timeout-sec: ${SSE_IDLE_TIMEOUT:300}
     max-duration-sec: ${SSE_MAX_DURATION:600}
 
   prewarm:
     enabled: ${PREWARM_ENABLED:true}
     default-agent-id: ${PREWARM_DEFAULT_AGENT_ID:universal-agent}
-
-  vision:
-    mode: ${VISION_MODE:off}
-    provider: ${VISION_PROVIDER:}
-    model: ${VISION_MODEL:}
-    api-key: ${VISION_API_KEY:}
-    base-url: ${VISION_BASE_URL:}
-    max-tokens: ${VISION_MAX_TOKENS:1024}
 
   langfuse:
     host: ${LANGFUSE_HOST:}

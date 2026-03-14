@@ -11,6 +11,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 
 public class UserContextFilterTest {
@@ -39,7 +40,7 @@ public class UserContextFilterTest {
     }
 
     @Test
-    public void testDefaultsToSysUser() {
+    public void testRejects400WhenNoUserIdHeader() {
         MockServerHttpRequest request = MockServerHttpRequest.get("/test").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
@@ -47,8 +48,9 @@ public class UserContextFilterTest {
         StepVerifier.create(filter.filter(exchange, chain))
                 .verifyComplete();
 
-        assertEquals("sys", exchange.getAttribute(UserContextFilter.USER_ID_ATTR));
-        assertEquals(UserRole.ADMIN, exchange.getAttribute(UserContextFilter.USER_ROLE_ATTR));
+        assertEquals(org.springframework.http.HttpStatus.BAD_REQUEST,
+                exchange.getResponse().getStatusCode());
+        assertNull(exchange.getAttribute(UserContextFilter.USER_ID_ATTR));
     }
 
     @Test
@@ -66,7 +68,7 @@ public class UserContextFilterTest {
     }
 
     @Test
-    public void testEmptyUserIdDefaultsToSys() {
+    public void testEmptyUserIdReturns400() {
         MockServerHttpRequest request = MockServerHttpRequest.get("/test")
                 .header("x-user-id", "")
                 .build();
@@ -76,6 +78,8 @@ public class UserContextFilterTest {
         StepVerifier.create(filter.filter(exchange, chain))
                 .verifyComplete();
 
-        assertEquals("sys", exchange.getAttribute(UserContextFilter.USER_ID_ATTR));
+        assertEquals(org.springframework.http.HttpStatus.BAD_REQUEST,
+                exchange.getResponse().getStatusCode());
+        assertNull(exchange.getAttribute(UserContextFilter.USER_ID_ATTR));
     }
 }

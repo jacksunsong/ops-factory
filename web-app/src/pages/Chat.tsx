@@ -3,12 +3,12 @@ import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useGoosed } from '../contexts/GoosedContext'
 import { useInbox } from '../contexts/InboxContext'
+import { useToast } from '../contexts/ToastContext'
 import { useChat, convertBackendMessage } from '../hooks/useChat'
 import MessageList from '../components/MessageList'
 import ChatInput from '../components/ChatInput'
 import type { Session, ImageData } from '@goosed/sdk'
 import type { AttachedFile } from '../components/Message'
-import { useAgentConfig } from '../hooks/useAgentConfig'
 import { isScheduledSession } from '../config/runtime'
 
 interface LocationState {
@@ -36,6 +36,7 @@ export default function Chat() {
     const navigate = useNavigate()
     const { getClient, agents, isConnected, error: goosedError } = useGoosed()
     const { markSessionRead } = useInbox()
+    const { showToast } = useToast()
 
     const sessionId = searchParams.get('sessionId')
     const agentParam = searchParams.get('agent')
@@ -50,12 +51,26 @@ export default function Chat() {
     const stopHintTimerRef = useRef<number | null>(null)
 
     const client = selectedAgent ? getClient(selectedAgent) : null
-    const { config: agentConfig, fetchConfig: fetchAgentConfig } = useAgentConfig()
 
     const { messages, chatState, isLoading, error, tokenState, sendMessage, stopMessage, clearMessages, setInitialMessages } = useChat({
         sessionId,
         client: client!,
     })
+
+    useEffect(() => {
+        if (error) {
+            // Map gateway timeout/connection errors to localized warning toasts
+            if (/No response from agent/i.test(error)) {
+                showToast('warning', t('chat.agentNoResponse'))
+            } else if (/Agent stopped responding/i.test(error)) {
+                showToast('warning', t('chat.agentIdleTimeout'))
+            } else if (/Agent connection (failed|lost)/i.test(error)) {
+                showToast('warning', t('chat.agentConnectionLost'))
+            } else {
+                showToast('error', error)
+            }
+        }
+    }, [error, showToast, t])
 
     useEffect(() => {
         if (agentParam) {
@@ -83,21 +98,11 @@ export default function Chat() {
         fetchModelInfo()
     }, [client, isConnected])
 
-    // Fetch agent config (for visionMode) when agent changes
-    useEffect(() => {
-        if (selectedAgent && isConnected) {
-            fetchAgentConfig(selectedAgent)
-        }
-    }, [selectedAgent, isConnected, fetchAgentConfig])
-
-    const visionMode = agentConfig?.visionMode ?? 'passthrough'
-
     const createSessionWithAgent = useCallback(async (agentId: string) => {
         setIsCreatingSession(true)
         try {
             const agentClient = getClient(agentId)
             const newSession = await agentClient.startSession()
-            await agentClient.resumeSession(newSession.id)
             setSession(newSession)
             setSelectedAgent(agentId)
             clearMessages()
@@ -122,9 +127,11 @@ export default function Chat() {
             if (!isConnected || !selectedAgent) return
 
             if (!sessionId) {
-                setIsInitializing(true)
-                await createSessionWithAgent(selectedAgent)
+                clearMessages()
+                setSession(null)
+                setInitError(null)
                 setIsInitializing(false)
+                navigate('/', { replace: true })
                 return
             }
 
@@ -132,31 +139,29 @@ export default function Chat() {
             setInitError(null)
 
             try {
-                let actualAgent = selectedAgent
-                const agentClient = getClient(selectedAgent)
-                const sessionDetails = await agentClient.getSession(sessionId)
-                setSession(sessionDetails)
+                const initialClient = getClient(selectedAgent)
+                let resumeResult = await initialClient.resumeSession(sessionId)
+                let resumedSession = resumeResult.session
 
-                // Auto-mark scheduled sessions as read when viewed
-                if (isScheduledSession(sessionDetails)) {
-                    const agentId = agentParam || detectAgentFromWorkingDir(sessionDetails.working_dir, agents)
-                    markSessionRead(agentId, sessionId)
-                }
-
-                if (!agentParam && sessionDetails.working_dir) {
-                    const detected = detectAgentFromWorkingDir(sessionDetails.working_dir, agents)
+                if (!agentParam && resumedSession.working_dir) {
+                    const detected = detectAgentFromWorkingDir(resumedSession.working_dir, agents)
                     if (detected !== selectedAgent) {
-                        actualAgent = detected
                         setSelectedAgent(detected)
+                        resumeResult = await getClient(detected).resumeSession(sessionId)
+                        resumedSession = resumeResult.session
                     }
                 }
 
-                // Use the correct agent's client (may differ from initial agentClient after detection)
-                const resumeClient = actualAgent !== selectedAgent ? getClient(actualAgent) : agentClient
-                await resumeClient.resumeSession(sessionId)
+                setSession(resumedSession)
 
-                if (sessionDetails.conversation && Array.isArray(sessionDetails.conversation)) {
-                    const historyMessages = sessionDetails.conversation.map(msg =>
+                // Auto-mark scheduled sessions as read when viewed
+                if (isScheduledSession(resumedSession)) {
+                    const agentId = agentParam || detectAgentFromWorkingDir(resumedSession.working_dir, agents)
+                    markSessionRead(agentId, sessionId)
+                }
+
+                if (resumedSession.conversation && Array.isArray(resumedSession.conversation)) {
+                    const historyMessages = resumedSession.conversation.map(msg =>
                         convertBackendMessage(msg as Record<string, unknown>)
                     )
                     setInitialMessages(historyMessages)
@@ -169,7 +174,7 @@ export default function Chat() {
             }
         }
         initSession()
-    }, [getClient, isConnected, sessionId, selectedAgent, agentParam, agents, setInitialMessages, createSessionWithAgent])
+    }, [getClient, isConnected, sessionId, selectedAgent, agentParam, agents, setInitialMessages, clearMessages, navigate])
 
     useEffect(() => {
         if (initialMessage && sessionId && !isInitializing && messages.length === 0) {
@@ -301,13 +306,6 @@ export default function Chat() {
                 </div>
             </div>
 
-            {/* Error display */}
-            {error && (
-                <div className="chat-error">
-                    {error}
-                </div>
-            )}
-
             {/* Input at bottom - floating */}
             <div className="chat-input-area-bottom">
                 <div className="chat-input-area-inner">
@@ -327,7 +325,6 @@ export default function Chat() {
                         showAgentSelector={true}
                         modelInfo={modelInfo}
                         tokenState={tokenState}
-                        visionMode={visionMode}
                     />
                 </div>
             </div>

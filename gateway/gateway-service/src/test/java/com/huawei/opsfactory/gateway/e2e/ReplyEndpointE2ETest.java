@@ -69,28 +69,16 @@ public class ReplyEndpointE2ETest extends BaseE2ETest {
     }
 
     @Test
-    public void reply_defaultUser_usesSysUser() {
-        ManagedInstance sysInstance = new ManagedInstance("test-agent", "sys", 8888, 11111L, null);
-        sysInstance.setStatus(ManagedInstance.Status.RUNNING);
-
-        when(instanceManager.getOrSpawn("test-agent", "sys"))
-                .thenReturn(Mono.just(sysInstance));
-
-        DataBuffer buffer = new DefaultDataBufferFactory()
-                .wrap("data: ok\n\n".getBytes(StandardCharsets.UTF_8));
-        when(sseRelayService.relay(eq(8888), eq("/reply"), anyString(), eq("test-agent"), eq("sys")))
-                .thenReturn(Flux.just(buffer));
-
+    public void reply_noUserIdHeader_returns400() {
+        // Without x-user-id header, UserContextFilter now rejects with 400
         webClient.post().uri("/agents/test-agent/reply")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                // No x-user-id header -> defaults to "sys"
+                // No x-user-id header → rejected by UserContextFilter
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"message\":\"test\"}")
                 .accept(MediaType.TEXT_EVENT_STREAM)
                 .exchange()
-                .expectStatus().isOk();
-
-        verify(instanceManager).getOrSpawn("test-agent", "sys");
+                .expectStatus().isBadRequest();
     }
 
     // ====================== POST /agents/{agentId}/resume ======================
@@ -99,9 +87,8 @@ public class ReplyEndpointE2ETest extends BaseE2ETest {
     public void resume_authenticatedUser_proxiesToGoosed() {
         when(instanceManager.getOrSpawn("test-agent", "alice"))
                 .thenReturn(Mono.just(mockInstance));
-        when(goosedProxy.proxyWithBody(any(), eq(9999), eq("/agent/resume"),
-                eq(HttpMethod.POST), anyString()))
-                .thenReturn(Mono.empty());
+        when(goosedProxy.fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/resume"), anyString()))
+                .thenReturn(Mono.just("{\"session\":{\"id\":\"session-123\"},\"extension_results\":[]}"));
 
         webClient.post().uri("/agents/test-agent/resume")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
@@ -109,10 +96,11 @@ public class ReplyEndpointE2ETest extends BaseE2ETest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{}")
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.session.id").isEqualTo("session-123");
 
-        verify(goosedProxy).proxyWithBody(any(), eq(9999), eq("/agent/resume"),
-                eq(HttpMethod.POST), anyString());
+        verify(goosedProxy).fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/resume"), anyString());
     }
 
     @Test

@@ -26,13 +26,23 @@ public class UserContextFilter implements WebFilter {
         this.prewarmService = prewarmService;
     }
 
+    private static boolean isSystemEndpoint(String path) {
+        return path.equals("/status") || path.equals("/me") || path.equals("/config");
+    }
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
+        String path = request.getPath().value();
 
         String userId = request.getHeaders().getFirst(GatewayConstants.HEADER_USER_ID);
         if (userId == null || userId.isBlank()) {
-            userId = GatewayConstants.SYS_USER;
+            // System endpoints don't require user context
+            if (isSystemEndpoint(path)) {
+                return chain.filter(exchange);
+            }
+            exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);
+            return exchange.getResponse().setComplete();
         }
 
         UserRole role = UserRole.fromUserId(userId);

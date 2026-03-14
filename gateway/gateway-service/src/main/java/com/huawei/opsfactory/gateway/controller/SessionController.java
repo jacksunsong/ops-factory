@@ -47,7 +47,6 @@ public class SessionController {
     private final SessionService sessionService;
     private final GoosedProxy goosedProxy;
     private final AgentConfigService agentConfigService;
-
     public SessionController(InstanceManager instanceManager,
                              SessionService sessionService,
                              GoosedProxy goosedProxy,
@@ -58,10 +57,10 @@ public class SessionController {
         this.agentConfigService = agentConfigService;
     }
 
-    @PostMapping("/agents/{agentId}/agent/start")
-    public Mono<Void> startSession(@PathVariable String agentId,
-                                    @RequestBody String body,
-                                    ServerWebExchange exchange) {
+    @PostMapping(value = "/agents/{agentId}/agent/start", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<String> startSession(@PathVariable String agentId,
+                                     @RequestBody String body,
+                                     ServerWebExchange exchange) {
         String userId = exchange.getAttribute(UserContextFilter.USER_ID_ATTR);
         // Inject working_dir into the request body (override any client-supplied value)
         String workingDir = agentConfigService.getUserAgentDir(userId, agentId)
@@ -78,9 +77,34 @@ public class SessionController {
         }
         String finalBody = modifiedBody;
         return instanceManager.getOrSpawn(agentId, userId)
-                .flatMap(instance -> goosedProxy.proxyWithBody(
-                        exchange.getResponse(), instance.getPort(), "/agent/start",
-                        HttpMethod.POST, finalBody));
+                .flatMap(instance -> goosedProxy.fetchJson(
+                        instance.getPort(), HttpMethod.POST, "/agent/start", finalBody, 120)
+                        .flatMap(startResponse -> {
+                            // Follow goosed canonical flow: start → resume(load_model_and_extensions=true)
+                            // Extensions must be loaded before the session is returned to the client.
+                            // This matches Node.js legacy and Goose Desktop behavior.
+                            String sessionId = extractSessionId(startResponse);
+                            String resumeBody = "{\"session_id\":\"" + sessionId
+                                    + "\",\"load_model_and_extensions\":true}";
+                            return goosedProxy.fetchJson(
+                                    instance.getPort(), HttpMethod.POST, "/agent/resume", resumeBody, 120)
+                                    .doOnNext(r -> {
+                                        instance.markSessionResumed(sessionId);
+                                        log.info("Extensions loaded for session {}", sessionId);
+                                    })
+                                    .thenReturn(startResponse);
+                        }));
+    }
+
+    private String extractSessionId(String startResponse) {
+        try {
+            Map<String, Object> map = MAPPER.readValue(startResponse,
+                    new TypeReference<Map<String, Object>>() {});
+            Object id = map.get("id");
+            return id != null ? id.toString() : null;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse session ID from start response", e);
+        }
     }
 
     @GetMapping(value = "/sessions", produces = MediaType.APPLICATION_JSON_VALUE)

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAgentConfig } from '../hooks/useAgentConfig'
+import { useGoosed } from '../contexts/GoosedContext'
 import { useToast } from '../contexts/ToastContext'
 import { McpSection } from '../components/mcp'
 import { SkillSection } from '../components/skill'
@@ -14,6 +15,7 @@ export default function AgentConfigure() {
     const { agentId } = useParams<{ agentId: string }>()
     const navigate = useNavigate()
     const { config, isLoading, error, fetchConfig, updateConfig } = useAgentConfig()
+    const { agents } = useGoosed()
     const { showToast } = useToast()
 
     // Tab state
@@ -71,11 +73,14 @@ export default function AgentConfigure() {
         )
     }
 
+    const agentInfo = agents.find(a => a.id === agentId)
+    const hasSkills = agentInfo && agentInfo.skills && agentInfo.skills.length > 0
+
     const tabs: { key: ConfigTab; label: string }[] = [
         { key: 'overview', label: t('configTabs.overview') },
         { key: 'prompts', label: t('configTabs.prompts') },
         { key: 'mcp', label: t('configTabs.mcp') },
-        { key: 'skills', label: t('configTabs.skills') },
+        ...(hasSkills ? [{ key: 'skills' as ConfigTab, label: t('configTabs.skills') }] : []),
     ]
 
     return (

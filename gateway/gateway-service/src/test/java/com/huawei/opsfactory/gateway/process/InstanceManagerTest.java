@@ -14,6 +14,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,11 +27,13 @@ public class InstanceManagerTest {
     private AgentConfigService agentConfigService;
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         properties = new GatewayProperties();
         properties.setSecretKey("test-secret");
         portAllocator = mock(PortAllocator.class);
         runtimePreparer = mock(RuntimePreparer.class);
+        doReturn(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "gateway-test"))
+                .when(runtimePreparer).prepare(anyString(), anyString());
         agentConfigService = mock(AgentConfigService.class);
         when(agentConfigService.loadAgentConfigYaml(anyString())).thenReturn(Map.of());
         when(agentConfigService.loadAgentSecretsYaml(anyString())).thenReturn(Map.of());
@@ -152,20 +155,25 @@ public class InstanceManagerTest {
     }
 
     @Test
-    public void testGetOrSpawn_returnsExistingRunningInstance() {
+    public void testGetOrSpawn_removesInstanceWhenProcessDied() {
         Process mockProcess = mock(Process.class);
-        when(mockProcess.isAlive()).thenReturn(true);
+        when(mockProcess.isAlive()).thenReturn(false);
         ManagedInstance existing = new ManagedInstance("agent1", "user1", 8080, 1234L, mockProcess);
         existing.setStatus(ManagedInstance.Status.RUNNING);
         addInstanceDirectly(existing);
 
-        long beforeTouch = existing.getLastActivity();
+        assertNotNull(instanceManager.getInstance("agent1", "user1"));
 
-        ManagedInstance result = instanceManager.getOrSpawn("agent1", "user1").block();
+        // getOrSpawn detects the dead process, removes the stale entry, then
+        // tries to spawn a new one — which fails in unit tests (no goosed binary).
+        try {
+            instanceManager.getOrSpawn("agent1", "user1").block();
+        } catch (Exception ignored) {
+            // Expected: spawn fails without real goosed binary
+        }
 
-        assertNotNull(result);
-        assertEquals(existing, result);
-        assertTrue(result.getLastActivity() >= beforeTouch);
+        // The stale entry should have been removed
+        assertNull(instanceManager.getInstance("agent1", "user1"));
     }
 
     /**

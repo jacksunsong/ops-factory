@@ -7,7 +7,6 @@ export interface AgentConfig {
     workingDir: string
     provider?: string
     model?: string
-    visionMode?: string  // 'off' | 'passthrough' | 'preprocess'
 }
 
 export interface UpdateAgentConfigRequest {

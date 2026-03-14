@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react'
 import type { AgentConfig, UpdateAgentConfigRequest, UpdateAgentConfigResponse } from '../types/agentConfig'
-import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
+import { GATEWAY_URL, gatewayHeaders } from '../config/runtime'
 import { getErrorMessage } from '../utils/errorMessages'
+import { useUser } from '../contexts/UserContext'
 
 interface UseAgentConfigResult {
     config: AgentConfig | null
@@ -12,6 +13,7 @@ interface UseAgentConfigResult {
 }
 
 export function useAgentConfig(): UseAgentConfigResult {
+    const { userId } = useUser()
     const [config, setConfig] = useState<AgentConfig | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -22,7 +24,7 @@ export function useAgentConfig(): UseAgentConfigResult {
 
         try {
             const res = await fetch(`${GATEWAY_URL}/agents/${agentId}/config`, {
-                headers: { 'x-secret-key': GATEWAY_SECRET_KEY },
+                headers: gatewayHeaders(userId),
                 signal: AbortSignal.timeout(10000),
             })
 
@@ -37,7 +39,7 @@ export function useAgentConfig(): UseAgentConfigResult {
         } finally {
             setIsLoading(false)
         }
-    }, [])
+    }, [userId])
 
     const updateConfig = useCallback(async (
         agentId: string,
@@ -48,10 +50,7 @@ export function useAgentConfig(): UseAgentConfigResult {
         try {
             const res = await fetch(`${GATEWAY_URL}/agents/${agentId}/config`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-secret-key': GATEWAY_SECRET_KEY,
-                },
+                headers: gatewayHeaders(userId),
                 body: JSON.stringify(updates),
                 signal: AbortSignal.timeout(10000),
             })
@@ -68,7 +67,7 @@ export function useAgentConfig(): UseAgentConfigResult {
             setError(errorMsg)
             return { success: false, error: errorMsg }
         }
-    }, [])
+    }, [userId])
 
     return {
         config,

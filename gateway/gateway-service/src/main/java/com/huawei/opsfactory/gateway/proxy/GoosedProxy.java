@@ -127,6 +127,25 @@ public class GoosedProxy {
                 .timeout(Duration.ofSeconds(30));
     }
 
+    public Mono<String> fetchJson(int port, HttpMethod method, String path, String body) {
+        return fetchJson(port, method, path, body, 30);
+    }
+
+    public Mono<String> fetchJson(int port, HttpMethod method, String path, String body, int timeoutSec) {
+        String target = goosedBaseUrl(port) + path;
+        WebClient.RequestBodySpec spec = webClient.method(method)
+                .uri(target)
+                .header(GatewayConstants.HEADER_SECRET_KEY, properties.getSecretKey())
+                .header(HttpHeaders.CONTENT_TYPE, "application/json");
+
+        WebClient.RequestHeadersSpec<?> ready = body != null ? spec.bodyValue(body) : spec;
+
+        return ready.retrieve()
+                .bodyToMono(String.class)
+                .timeout(Duration.ofSeconds(timeoutSec))
+                .onErrorMap(this::isProxyError, this::mapProxyError);
+    }
+
     public WebClient getWebClient() {
         return webClient;
     }

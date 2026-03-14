@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
+import { GATEWAY_URL, gatewayHeaders } from '../config/runtime'
+import { useUser } from '../contexts/UserContext'
 import { getErrorMessage } from '../utils/errorMessages'
 
 // ---- Types matching gateway /monitoring/* responses ----
@@ -62,7 +63,7 @@ function rangeToISO(range: TimeRange): { from: string; to: string } {
   return { from, to }
 }
 
-async function gw<T>(path: string, params?: Record<string, string>): Promise<T> {
+async function gw<T>(path: string, userId: string | null, params?: Record<string, string>): Promise<T> {
   const url = new URL(`${GATEWAY_URL}${path}`)
   if (params) {
     for (const [k, v] of Object.entries(params)) {
@@ -70,7 +71,7 @@ async function gw<T>(path: string, params?: Record<string, string>): Promise<T> 
     }
   }
   const res = await fetch(url.toString(), {
-    headers: { 'x-secret-key': GATEWAY_SECRET_KEY },
+    headers: gatewayHeaders(userId),
     signal: AbortSignal.timeout(15_000),
   })
   if (!res.ok) {
@@ -147,6 +148,7 @@ export interface UseMonitoringResult {
 }
 
 export function useMonitoring(): UseMonitoringResult {
+  const { userId } = useUser()
   const [status, setStatus] = useState<MonitoringStatus | null>(null)
   const [overview, setOverview] = useState<OverviewData | null>(null)
   const [traces, setTraces] = useState<TraceRow[]>([])
@@ -164,7 +166,7 @@ export function useMonitoring(): UseMonitoringResult {
 
     try {
       // Step 1: check status
-      const st = await gw<MonitoringStatus>('/monitoring/status')
+      const st = await gw<MonitoringStatus>('/monitoring/status', userId)
       if (id !== fetchIdRef.current) return
       setStatus(st)
 
@@ -178,10 +180,10 @@ export function useMonitoring(): UseMonitoringResult {
       const params = { from, to }
 
       const [ov, tr, obs, ag] = await Promise.all([
-        gw<OverviewData>('/monitoring/overview', params),
-        gw<TraceRow[]>('/monitoring/traces', { ...params, limit: '30' }),
-        gw<{ observations: ObservationGroup[] }>('/monitoring/observations', params),
-        gw<{ agents: AgentInfo[] }>('/agents'),
+        gw<OverviewData>('/monitoring/overview', userId, params),
+        gw<TraceRow[]>('/monitoring/traces', userId, { ...params, limit: '30' }),
+        gw<{ observations: ObservationGroup[] }>('/monitoring/observations', userId, params),
+        gw<{ agents: AgentInfo[] }>('/agents', userId),
       ])
 
       if (id !== fetchIdRef.current) return
@@ -228,6 +230,7 @@ export interface UseMonitoringPlatformResult {
 }
 
 export function useMonitoringPlatform(): UseMonitoringPlatformResult {
+  const { userId } = useUser()
   const [system, setSystem] = useState<SystemInfo | null>(null)
   const [instances, setInstances] = useState<InstancesData | null>(null)
   const [agents, setAgents] = useState<AgentInfo[]>([])
@@ -242,9 +245,9 @@ export function useMonitoringPlatform(): UseMonitoringPlatformResult {
 
     try {
       const [sys, inst, ag] = await Promise.all([
-        gw<SystemInfo>('/monitoring/system'),
-        gw<InstancesData>('/monitoring/instances'),
-        gw<{ agents: AgentInfo[] }>('/agents'),
+        gw<SystemInfo>('/monitoring/system', userId),
+        gw<InstancesData>('/monitoring/instances', userId),
+        gw<{ agents: AgentInfo[] }>('/agents', userId),
       ])
 
       if (id !== fetchIdRef.current) return

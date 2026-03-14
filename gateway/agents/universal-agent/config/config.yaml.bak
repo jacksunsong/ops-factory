@@ -10,11 +10,6 @@ GOOSE_TEMPERATURE: '0.2'
 GOOSE_CONTEXT_STRATEGY: summarize
 GOOSE_AUTO_COMPACT_THRESHOLD: '0.8'
 GOOSE_MAX_TURNS: '50'
-vision:
-  mode: passthrough
-  provider: openai
-  model: qwen/qwen3.5-35b-a3b
-  baseUrl: https://openrouter.ai/api
 LANGFUSE_INIT_PROJECT_PUBLIC_KEY: pk-lf-opsfactory
 LANGFUSE_INIT_PROJECT_SECRET_KEY: sk-lf-opsfactory
 LANGFUSE_URL: http://localhost:3100
@@ -45,7 +40,7 @@ extensions:
     bundled: true
     available_tools: []
   computercontroller:
-    enabled: false
+    enabled: true
     type: builtin
     name: computercontroller
     description: General computer control tools that don't require you to be a developer or engineer.
@@ -54,7 +49,7 @@ extensions:
     bundled: true
     available_tools: []
   autovisualiser:
-    enabled: false
+    enabled: true
     type: builtin
     name: autovisualiser
     description: Data visualization and UI generation tools
@@ -63,7 +58,7 @@ extensions:
     bundled: true
     available_tools: []
   memory:
-    enabled: false
+    enabled: true
     type: builtin
     name: memory
     description: Teach goose your preferences as you go.
@@ -96,7 +91,7 @@ extensions:
     bundled: true
     available_tools: []
   summon:
-    enabled: false
+    enabled: true
     type: platform
     name: summon
     description: Load knowledge and delegate tasks to subagents
