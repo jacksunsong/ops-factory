@@ -16,12 +16,15 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -182,7 +185,14 @@ public class ReplyController {
         String userId = exchange.getAttribute(UserContextFilter.USER_ID_ATTR);
         return instanceManager.getOrSpawn(agentId, userId)
                 .flatMap(instance -> goosedProxy.fetchJson(
-                        instance.getPort(), HttpMethod.POST, "/agent/resume", body, 120));
+                        instance.getPort(), HttpMethod.POST, "/agent/resume", body, 120))
+                .onErrorResume(WebClientResponseException.class, e -> {
+                    if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                        return Mono.error(new ResponseStatusException(
+                                HttpStatus.NOT_FOUND, "Session not found"));
+                    }
+                    return Mono.error(e);
+                });
     }
 
     @PostMapping({"/restart", "/agent/restart"})
