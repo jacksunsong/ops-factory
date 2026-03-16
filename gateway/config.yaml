@@ -4,7 +4,7 @@ secretKey: test
 corsOrigin: '*'
 goosedBin: goosed
 goosedTls: true
-gatewayTls: true
+gatewayTls: false
 gatewayKeyStore: .gateway-keystore.p12
 gatewayKeyStorePassword: changeit
 paths: {agentsDir: agents, usersDir: users}
@@ -16,7 +16,7 @@ prewarm: {enabled: true, defaultAgentId: universal-agent}
 officePreview:
   enabled: true
   onlyofficeUrl: 'http://127.0.0.1:8080'
-  fileBaseUrl: 'https://host.docker.internal:3000'
+  fileBaseUrl: 'http://host.docker.internal:3000'
 agents:
 - {id: universal-agent, name: Universal Agent}
 - {id: kb-agent, name: KB Agent}
