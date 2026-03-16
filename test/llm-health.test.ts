@@ -7,11 +7,14 @@
  */
 import { ChildProcess, spawn } from 'node:child_process'
 import { resolve, join } from 'node:path'
-import { readFile, mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises'
+import { readFile, mkdtemp, rm, mkdir, writeFile, cp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import net from 'node:net'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { sleep } from './helpers.js'
+
+// Trust goosed's self-signed TLS cert for fetch calls in this test process
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..')
 const AGENT_CONFIG_DIR = join(PROJECT_ROOT, 'gateway', 'agents', 'universal-agent', 'config')
@@ -23,6 +26,12 @@ interface AgentConfig {
   apiKey: string
 }
 
+interface CustomProviderJson {
+  name: string
+  api_key_env: string
+  base_url: string
+}
+
 /** Simple YAML key-value parser (top-level only). */
 function parseSimpleYaml(content: string): Record<string, string> {
   const result: Record<string, string> = {}
@@ -31,6 +40,14 @@ function parseSimpleYaml(content: string): Record<string, string> {
     if (match) result[match[1]] = match[2]
   }
   return result
+}
+
+/** Build chat completions URL, avoiding double /v1 when base_url already includes it. */
+function chatCompletionsUrl(host: string): string {
+  const base = host.replace(/\/+$/, '')
+  return base.endsWith('/v1')
+    ? `${base}/chat/completions`
+    : `${base}/v1/chat/completions`
 }
 
 async function freePort(): Promise<number> {
@@ -52,12 +69,24 @@ beforeAll(async () => {
   const cfg = parseSimpleYaml(configContent)
   const secrets = parseSimpleYaml(secretsContent)
 
-  agentConfig = {
-    provider: cfg.GOOSE_PROVIDER || 'openai',
-    model: cfg.GOOSE_MODEL || '',
-    host: cfg.OPENAI_HOST || 'https://api.openai.com',
-    apiKey: secrets.OPENAI_API_KEY || '',
+  const provider = cfg.GOOSE_PROVIDER || 'openai'
+
+  // Resolve host and apiKey: custom provider reads from JSON, standard provider from config/secrets
+  let host = cfg.OPENAI_HOST || 'https://api.openai.com'
+  let apiKey = secrets.OPENAI_API_KEY || ''
+
+  if (provider.startsWith('custom_')) {
+    const providerJsonPath = join(AGENT_CONFIG_DIR, 'custom_providers', `${provider}.json`)
+    try {
+      const providerJson: CustomProviderJson = JSON.parse(await readFile(providerJsonPath, 'utf-8'))
+      host = providerJson.base_url || host
+      apiKey = secrets[providerJson.api_key_env] || apiKey
+    } catch (err) {
+      console.warn(`Failed to read custom provider config: ${providerJsonPath}`, err)
+    }
   }
+
+  agentConfig = { provider, model: cfg.GOOSE_MODEL || '', host, apiKey }
   console.log(`LLM config: provider=${agentConfig.provider}, model=${agentConfig.model}, host=${agentConfig.host}`)
 })
 
@@ -72,7 +101,7 @@ describe('Direct LLM API', () => {
   })
 
   it('LLM endpoint responds', async () => {
-    const res = await fetch(`${agentConfig.host}/v1/chat/completions`, {
+    const res = await fetch(chatCompletionsUrl(agentConfig.host), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -123,8 +152,19 @@ describe('goosed LLM integration', () => {
       `GOOSE_MODEL: ${agentConfig.model}`,
     ].join('\n'))
 
+    // Copy custom_providers dir so goosed can resolve custom provider configs
+    const customProvidersDir = join(AGENT_CONFIG_DIR, 'custom_providers')
+    try {
+      await cp(customProvidersDir, join(gooseConfigDir, 'custom_providers'), { recursive: true })
+    } catch { /* no custom providers */ }
+
+    // Read all secrets as env vars for goosed (supports custom provider key names)
+    const secretsContent = await readFile(join(AGENT_CONFIG_DIR, 'secrets.yaml'), 'utf-8')
+    const secretsEnv = parseSimpleYaml(secretsContent)
+
     const env: Record<string, string> = {
       ...process.env as Record<string, string>,
+      ...secretsEnv,
       // Agent config as env vars (same as InstanceManager.buildEnvironment)
       GOOSE_PROVIDER: agentConfig.provider,
       GOOSE_MODEL: agentConfig.model,
@@ -221,10 +261,30 @@ describe('goosed LLM integration', () => {
     const { id: sessionId } = await startRes.json() as { id: string }
     console.log(`Session created: ${sessionId}`)
 
-    // Wait for background agent initialization (goosed eagerly loads extensions)
+    // Wait for background extension loading to complete
+    await sleep(1000)
+
+    // 2. Resume the session to load the provider and extensions (start → resume → reply)
+    const resumeRes = await fetch(`${baseUrl}/agent/resume`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        session_id: sessionId,
+        load_model_and_extensions: true,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (!resumeRes.ok) {
+      const errBody = await resumeRes.text()
+      console.error(`agent/resume failed (${resumeRes.status}): ${errBody}`)
+    }
+    expect(resumeRes.ok).toBe(true)
+    console.log('Session resumed')
+
+    // Wait for provider + extensions to initialize
     await sleep(2000)
 
-    // 2. Send a message via /reply (SSE stream)
+    // 3. Send a message via /reply (SSE stream)
     const userMessage = {
       role: 'user',
       created: Math.floor(Date.now() / 1000),
