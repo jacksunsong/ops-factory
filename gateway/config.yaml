@@ -22,3 +22,4 @@ agents:
 - {id: kb-agent, name: KB Agent}
 - {id: report-agent, name: Report Agent}
 - {id: supervisor-agent, name: Supervisor Agent, sysOnly: true}
+- {id: qos-agent, name: QoS Agent}

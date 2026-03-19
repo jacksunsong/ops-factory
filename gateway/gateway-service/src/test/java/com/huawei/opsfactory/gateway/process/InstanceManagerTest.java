@@ -39,7 +39,7 @@ public class InstanceManagerTest {
         when(agentConfigService.loadAgentSecretsYaml(anyString())).thenReturn(Map.of());
 
         instanceManager = new InstanceManager(properties, portAllocator, runtimePreparer, agentConfigService,
-                3000, false);
+                3000, false, "");
     }
 
     @Test

@@ -297,6 +297,18 @@ do_startup() {
         fi
     fi
 
+    # Prompt for password if not provided
+    GATEWAY_API_PASSWORD=""
+    if [ -z "${GATEWAY_API_PASSWORD:-}" ]; then
+        echo -n "Enter API password for gateway REST interface: "
+        read -s GATEWAY_API_PASSWORD
+        echo
+        if [ -z "${GATEWAY_API_PASSWORD}" ]; then
+            log_error "Password cannot be empty"
+            return 1
+        fi
+    fi
+
     log_info "Starting gateway at ${GATEWAY_SCHEME}://${GATEWAY_HOST}:${GATEWAY_PORT}"
 
     # Build Java command — inject all config as Spring properties
@@ -323,6 +335,7 @@ do_startup() {
         "-Dgateway.limits.max-instances-global=${MAX_INSTANCES_GLOBAL}"
         "-Dgateway.prewarm.enabled=${PREWARM_ENABLED}"
         "-Dgateway.prewarm.default-agent-id=${PREWARM_DEFAULT_AGENT_ID}"
+        "-Dgateway.api.password=${GATEWAY_API_PASSWORD}"
     )
 
     # Gateway TLS: inject Spring Boot SSL properties

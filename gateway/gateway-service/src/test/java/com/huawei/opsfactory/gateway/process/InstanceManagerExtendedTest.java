@@ -55,7 +55,7 @@ public class InstanceManagerExtendedTest {
         when(agentConfigService.loadAgentSecretsYaml(anyString())).thenReturn(Map.of());
 
         instanceManager = new InstanceManager(properties, portAllocator, runtimePreparer, agentConfigService,
-                3000, false);
+                3000, false, "");
     }
 
     // ====================== buildEnvironment ======================
@@ -168,7 +168,7 @@ public class InstanceManagerExtendedTest {
     public void testBuildEnvironment_gatewayUrl_httpsWhenSslEnabled() throws Exception {
         // Create a new InstanceManager with SSL enabled and custom port
         InstanceManager sslManager = new InstanceManager(properties, portAllocator, runtimePreparer,
-                agentConfigService, 3443, true);
+                agentConfigService, 3443, true, "");
 
         Path runtimeRoot = tempFolder.getRoot().toPath();
 
@@ -186,7 +186,7 @@ public class InstanceManagerExtendedTest {
     @Test
     public void testBuildEnvironment_gatewayUrl_defaultPort() throws Exception {
         InstanceManager defaultManager = new InstanceManager(properties, portAllocator, runtimePreparer,
-                agentConfigService, 8080, false);
+                agentConfigService, 8080, false, "");
 
         Path runtimeRoot = tempFolder.getRoot().toPath();
 
@@ -198,6 +198,101 @@ public class InstanceManagerExtendedTest {
                 defaultManager, "agent1", "user1", 9000, runtimeRoot);
 
         assertEquals("http://127.0.0.1:8080", env.get("GATEWAY_URL"));
+    }
+
+    // ====================== GATEWAY_API_PASSWORD injection ======================
+
+    @Test
+    public void testBuildEnvironment_gatewayApiPassword_setWhenProvided() throws Exception {
+        // Create InstanceManager with API password set
+        InstanceManager passwordManager = new InstanceManager(properties, portAllocator, runtimePreparer,
+                agentConfigService, 8080, false, "my-secret-password");
+
+        Path runtimeRoot = tempFolder.getRoot().toPath();
+
+        Method buildEnv = InstanceManager.class.getDeclaredMethod(
+                "buildEnvironment", String.class, String.class, int.class, Path.class);
+        buildEnv.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, String> env = (Map<String, String>) buildEnv.invoke(
+                passwordManager, "agent1", "user1", 9000, runtimeRoot);
+
+        assertEquals("my-secret-password", env.get("GATEWAY_API_PASSWORD"));
+    }
+
+    @Test
+    public void testBuildEnvironment_gatewayApiPassword_setToDifferentValue() throws Exception {
+        // Create InstanceManager with a different API password
+        InstanceManager passwordManager = new InstanceManager(properties, portAllocator, runtimePreparer,
+                agentConfigService, 8080, false, "another-password-123");
+
+        Path runtimeRoot = tempFolder.getRoot().toPath();
+
+        Method buildEnv = InstanceManager.class.getDeclaredMethod(
+                "buildEnvironment", String.class, String.class, int.class, Path.class);
+        buildEnv.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, String> env = (Map<String, String>) buildEnv.invoke(
+                passwordManager, "agent1", "user1", 9000, runtimeRoot);
+
+        assertEquals("another-password-123", env.get("GATEWAY_API_PASSWORD"));
+    }
+
+    @Test
+    public void testBuildEnvironment_gatewayApiPassword_notSetWhenEmpty() throws Exception {
+        // Create InstanceManager with empty API password (default behavior)
+        InstanceManager noPasswordManager = new InstanceManager(properties, portAllocator, runtimePreparer,
+                agentConfigService, 8080, false, "");
+
+        Path runtimeRoot = tempFolder.getRoot().toPath();
+
+        Method buildEnv = InstanceManager.class.getDeclaredMethod(
+                "buildEnvironment", String.class, String.class, int.class, Path.class);
+        buildEnv.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, String> env = (Map<String, String>) buildEnv.invoke(
+                noPasswordManager, "agent1", "user1", 9000, runtimeRoot);
+
+        assertNull("GATEWAY_API_PASSWORD should not be set when password is empty",
+                env.get("GATEWAY_API_PASSWORD"));
+    }
+
+    @Test
+    public void testBuildEnvironment_gatewayApiPassword_notSetWhenNull() throws Exception {
+        // Create InstanceManager with null API password
+        InstanceManager nullPasswordManager = new InstanceManager(properties, portAllocator, runtimePreparer,
+                agentConfigService, 8080, false, null);
+
+        Path runtimeRoot = tempFolder.getRoot().toPath();
+
+        Method buildEnv = InstanceManager.class.getDeclaredMethod(
+                "buildEnvironment", String.class, String.class, int.class, Path.class);
+        buildEnv.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, String> env = (Map<String, String>) buildEnv.invoke(
+                nullPasswordManager, "agent1", "user1", 9000, runtimeRoot);
+
+        assertNull("GATEWAY_API_PASSWORD should not be set when password is null",
+                env.get("GATEWAY_API_PASSWORD"));
+    }
+
+    @Test
+    public void testBuildEnvironment_gatewayApiPassword_withSpecialCharacters() throws Exception {
+        // Test password with special characters to ensure it's properly escaped
+        String specialPassword = "p@$$w0rd!#*&^%$";
+        InstanceManager specialPasswordManager = new InstanceManager(properties, portAllocator, runtimePreparer,
+                agentConfigService, 8080, false, specialPassword);
+
+        Path runtimeRoot = tempFolder.getRoot().toPath();
+
+        Method buildEnv = InstanceManager.class.getDeclaredMethod(
+                "buildEnvironment", String.class, String.class, int.class, Path.class);
+        buildEnv.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, String> env = (Map<String, String>) buildEnv.invoke(
+                specialPasswordManager, "agent1", "user1", 9000, runtimeRoot);
+
+        assertEquals(specialPassword, env.get("GATEWAY_API_PASSWORD"));
     }
 
     // ====================== getOrSpawn with dead process ======================
