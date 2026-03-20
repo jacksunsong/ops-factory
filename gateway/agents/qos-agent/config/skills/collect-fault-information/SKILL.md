@@ -25,11 +25,8 @@ version: 1.0.0
 ### 步骤2：解析并校验时间范围
 #### 解析开始时间和结束时间
 
-从用户输入中提取开始时间`${statr_time}`和结束时间`${end_time}`。如果未指定时间范围，默认`${statr_time}`为15分钟前，`${end_time}`为当前时间。
+从用户输入中提取开始时间`${statr_time}`和结束时间`${end_time}`。如果未指定时间范围，默认`${statr_time}`为15分钟前，`${end_time}`为当前时间。**时间格式要求**：- `yyyy-MM-dd HH:mm:ss`格式
 
-**解析格式要求**：
-  - `yyyy-MM-dd HH:mm:ss`格式
-  - 转换成UTC+0时区时间使用UTC时间
 
 #### 校验开始时间和结束时间
 时间范围必须满足要求，若不满足，则向用户确认需要分析的时间范围，并提示用户输入的时间具体违反了哪个要求。 
@@ -37,7 +34,7 @@ version: 1.0.0
 **校验规则**：
   - 开始时间不得早于48小时前
   - 结束时间必须大于等于开始时间
-  - 开始时间与结束时间，时间跨度不得超过10分钟
+  - 开始时间与结束时间，时间跨度不得超过15分钟
 
 
 ### 步骤3：收集故障信息
@@ -48,23 +45,34 @@ version: 1.0.0
 执行脚本：
 
 ```bash
-python3 "./scripts/collect_fault_info.py" --start_time=${statr_time} --end_time=${statr_time} --info_type='alarm'
+python "./scripts/collect_fault_info.py" --start_time=${statr_time} --end_time=${statr_time} --info_type='alarm'
+```
+
+示例：
+
+```bash
+python "./scripts/collect_fault_info.py" --start_time='2026-03-13 12:00:00' --end_time='2026-03-13 12:15:00' --info_type='alarm'
 ```
 #### 收集故障日志信息
 
 执行脚本：
 
 ```bash
-python3 "./scripts/collect_fault_info.py" --start_time=${statr_time} --end_time=${statr_time} --info_type='log'
+python "./scripts/collect_fault_info.py" --start_time=${statr_time} --end_time=${statr_time} --info_type='log'
 ```
 
+示例：
+
+```bash
+python "./scripts/collect_fault_info.py" --start_time='2026-03-13 12:00:00' --end_time='2026-03-13 12:15:00' --info_type='log'
+```
 #### 响应示例
 ```
-4a53f6c7-0341-412d-9299-26ec742b9ee5
+https://192.11.1.1:8080/itom/api/file/download?fileId=afa8fa62-8bb9-44c9-bdbb-aec86a6794ba
 ```
 
 ### 步骤4: 返回故障信息ID
-将脚本执行获取到的id返回给用户。提示用户可通过此ID下载数据。
+将脚本执行获取到的下载链接返回给用户。提示用户可通过此链接下载数据。
 
 ## 异常处理
 

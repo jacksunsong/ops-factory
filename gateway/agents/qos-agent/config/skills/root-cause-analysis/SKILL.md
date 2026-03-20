@@ -23,11 +23,12 @@ version: 1.0.0
 ### 步骤1：解析并校验时间范围
 #### 解析开始时间和结束时间
 
-从用户输入中提取开始时间`${statr_time}`和结束时间`${end_time}`。如果未指定时间范围，默认`${statr_time}`为十分钟前，`${end_time}`为当前时间。
+从用户输入中提取开始时间`${statr_time}`和结束时间`${end_time}`。如果未指定时间范围，默认`${statr_time}`为15分钟前，`${end_time}`为当前时间。
 
 **解析格式要求**：
   - 用毫秒级时间戳格式
-  - 转换成UTC+0时区时间使用UTC时间
+  - 使用当前所在时区
+
 
 #### 校验开始时间和结束时间
 时间范围必须满足要求，若不满足，则向用户确认需要分析的时间范围，并提示用户输入的时间具体违反了哪个要求。 
@@ -35,7 +36,7 @@ version: 1.0.0
 **校验规则**：
   - 开始时间不得早于48小时前
   - 结束时间必须大于等于开始时间
-  - 开始时间与结束时间，时间跨度不得超过10分钟
+  - 开始时间与结束时间，时间跨度不得超过15分钟
 
 
 ### 步骤2：查询告警数据
@@ -44,7 +45,7 @@ version: 1.0.0
 
 执行查询脚本：
 ```bash
-python3 "./scripts/get_abnormal_data.py" --start_time ${statr_time} --end_time ${statr_time}
+python "./scripts/get_abnormal_data.py" --start_time=${statr_time} --end_time=${statr_time}
 ```
 
 响应格式：
@@ -97,12 +98,12 @@ python3 "./scripts/get_abnormal_data.py" --start_time ${statr_time} --end_time $
 
 ### 步骤3：检查告警
 
-验证是否存在任何告警。如果没有告警，生成"无告警"报告并跳过根因识别。
+验证是否存在任何告警。如果没有告警，**则通知用户该对应时间段无告警数据，暂不需进行根因分析，并结束流程**。
 
 ### 步骤4：查询拓扑信息
 执行拓扑数据查询：
 ```bash
-python3 "./scripts/get_topography.py"
+python "./scripts/get_topography.py"
 ```
 
 #### 步骤5：校验拓扑数据
@@ -193,7 +194,7 @@ python3 "./scripts/get_topography.py"
 - 执行查询脚本：
 
 ```bash
-python3 "./scripts/get_subtopography.py" --root_alarm ${rootAlarm} --related_alarms ${relatedAlarms}
+python "./scripts/get_subtopography.py" --root_alarm=${rootAlarm} --related_alarms=${relatedAlarms}
 ```
 - 响应示例
 ```json

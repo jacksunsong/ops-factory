@@ -56,6 +56,18 @@ class ConfigLoader:
         return env_code, mode
 
 
+    def read_download_url(self):
+        if not self.config.has_section('McpServer'):
+            raise KeyError("配置文件中缺少 [McpServer] 节")
+
+        download_url = self.config.get('McpServer', 'downloadUrl', fallback=None)
+
+        if not download_url:
+            raise ValueError("配置文件中缺少 downloadUrl")
+
+        return download_url
+
+
     def load_config(self):
         config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config", "config.ini")
         if not os.path.exists(config_path):

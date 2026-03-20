@@ -3,6 +3,7 @@ import argparse
 import requests
 import json
 import sys
+import os
 from requests.auth import HTTPBasicAuth
 from load_config import ConfigLoader
 
@@ -27,6 +28,7 @@ class CollectFaultInfo:
             username, password = self.loader.read_auth_from_config()
             env_code, mode = self.loader.read_monitor_info()
             base_url = self.loader.read_api_info()
+            download_url = self.loader.read_download_url()
             if self.info_type == "alarm":
                 url = f"{base_url.rstrip('/')}{self.alarm_url}"
             else:
@@ -43,7 +45,30 @@ class CollectFaultInfo:
             response = requests.post(url, json=payload, headers=headers, auth=HTTPBasicAuth(username, password),
                                      verify=False)
             response.raise_for_status()
-            return response.text
+            print(f"1. response.text: {response.text}")
+            # Parse JSON response to get id
+            if response.text is not None:
+                # Try to parse as JSON first
+                print(f"response.text: {response.text}")
+                try:
+                    response_json = response.json()
+                    if isinstance(response_json, dict) and 'id' in response_json:
+                        file_id = response_json['id']
+                    else:
+                        # Response is plain text ID
+                        file_id = response.text.strip()
+                    print(f"==== file id in json: {file_id}")
+                except json.JSONDecodeError:
+                    # Response is plain text ID
+                    file_id = response.text.strip()
+                    print(f"==== file id in text: {response.text}")
+                # Append id to download_url (download_url is just a path)
+                result_url = f"{base_url.rstrip('/')}{download_url.rstrip('/')}{file_id}"
+                print(f"download url: {result_url}")
+                return result_url
+            else:
+                print("download fileId is None")
+                return None
         except requests.exceptions.RequestException as e:
             print(f"请求异常: {e}", file=sys.stderr)
             return None
@@ -65,7 +90,7 @@ def main():
     result = processor.collect_fault_info()
 
     if result is not None:
-        print("接口调用成功，响应：")
+        print("接口调用成功，下载链接：")
         print(result)
         return result
     else:

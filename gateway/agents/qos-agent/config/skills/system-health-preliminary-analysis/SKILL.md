@@ -23,11 +23,11 @@ version: 1.0.0
 ### 步骤1：解析并校验时间范围
 #### 解析开始时间和结束时间
 
-从用户输入中提取开始时间`${statr_time}`和结束时间`${end_time}`。如果未指定时间范围，默认`${statr_time}`为十分钟前，`${end_time}`为当前时间。
+从用户输入中提取开始时间`${statr_time}`和结束时间`${end_time}`。如果未指定时间范围，默认`${statr_time}`为15分钟前，`${end_time}`为当前时间。
 
 **解析格式要求**：
 - 用毫秒级时间戳格式
-- 转换成UTC+0时区时间使用UTC时间
+- 使用当前所在时区
 
 #### 校验开始时间和结束时间
 时间范围必须满足要求，若不满足，则向用户确认需要分析的时间范围，并提示用户输入的时间具体违反了哪个要求。
@@ -35,7 +35,7 @@ version: 1.0.0
 **校验规则**：
 - 开始时间不得早于48小时前
 - 结束时间必须大于等于开始时间
-- 开始时间与结束时间，时间跨度不得超过10分钟
+- 开始时间与结束时间，时间跨度不得超过15分钟
 
 
 ### 步骤2：获取健康分数数据
@@ -43,7 +43,7 @@ version: 1.0.0
 
 执行`./scripts/get_health_score.py`脚本：
 ```bash
-python3 "./scripts/get_health_score.py" --start_time `${statr_time}` --end_time `${end_time}`
+python "./scripts/get_health_score.py" --start_time=`${statr_time}` --end_time=`${end_time}`
 ```
 
 - 响应字段说明：
@@ -108,9 +108,13 @@ python3 "./scripts/get_health_score.py" --start_time `${statr_time}` --end_time 
 
 ### 步骤5：保存报告到本地
 
-1. 必须将报告保存成markdown文件
-2. 存储文件名格式：`system-health-overwiew-{当前时间}.md`，当前时间使用`yyyyMMddHHmmss`格式，例如：`system-health-overwiew-20260301123000.md`
-3. 存储路径: `./output`
+**务必将报告保存为本地文件**，具体要求如下：
+
+1. 报告文件存储路径: `./output`
+2. 必须保存为markdown格式
+3. 获取系统当下时间`${nowTime}`，转换为`yyyyMMddHHmmss`格式
+4. 存储文件名格式：`system-health-overwiew-${nowTime}.md`,例如：`system-health-overwiew-20260301123000.md`
+
 
 ## 错误处理
 
@@ -133,4 +137,5 @@ python3 "./scripts/get_health_score.py" --start_time `${statr_time}` --end_time 
 - 在API调用前始提取开始时间和结束时间，禁止随意生成时间
 - 分析时仅使用健康分数信息`${health_score}`作为输入，并严格遵守阈值判定逻辑
 - 报告内容严格遵守输出要求
-- 返回给用户同事
+- 返回给用户
+- 将markdown报告保存到`./output`路径下
