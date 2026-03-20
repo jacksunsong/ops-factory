@@ -41,8 +41,22 @@ public class CatchAllProxyController {
         String path = exchange.getRequest().getURI().getPath();
         String query = exchange.getRequest().getURI().getRawQuery();
 
+<<<<<<< HEAD
         String gatewayPrefix = "/ops-gateway/agents/";
         if (!path.startsWith(gatewayPrefix)) {
+=======
+        // Remove /ops-gateway prefix if present
+        // Full path format: /ops-gateway/agents/{agentId}/{remainder}
+        // or: /agents/{agentId}/{remainder} (for direct method calls in tests)
+        String pathToParse = path.startsWith("/ops-gateway")
+                ? path.substring("/ops-gateway".length())
+                : path;
+
+        // Extract agentId and the remainder path
+        // Path format: /agents/{agentId}/{remainder}
+        String[] parts = pathToParse.split("/", 4);
+        if (parts.length < 4) {
+>>>>>>> 3df728d532d2949dab8297fcbadf3e5448a0637c
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
