@@ -19,14 +19,14 @@ public class CatchAllProxyEndpointE2ETest extends BaseE2ETest {
 
     @Test
     public void adminAccessToSchedules_proxiesToGoosed() {
-        ManagedInstance instance = new ManagedInstance("test-agent", "sys", 9000, 123L, null, "test-secret");
+        ManagedInstance instance = new ManagedInstance("test-agent", "admin", 9000, 123L, null, "test-secret");
         instance.setStatus(ManagedInstance.Status.RUNNING);
-        when(instanceManager.getOrSpawn("test-agent", "sys")).thenReturn(Mono.just(instance));
+        when(instanceManager.getOrSpawn("test-agent", "admin")).thenReturn(Mono.just(instance));
         when(goosedProxy.proxy(any(), any(), eq(9000), eq("/schedules/list"), any())).thenReturn(Mono.empty());
 
         webClient.get().uri("/ops-gateway/agents/test-agent/schedules/list")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk();
 
@@ -96,14 +96,14 @@ public class CatchAllProxyEndpointE2ETest extends BaseE2ETest {
 
     @Test
     public void queryStringForwarded_toGoosed() {
-        ManagedInstance instance = new ManagedInstance("test-agent", "sys", 9000, 123L, null, "test-secret");
+        ManagedInstance instance = new ManagedInstance("test-agent", "admin", 9000, 123L, null, "test-secret");
         instance.setStatus(ManagedInstance.Status.RUNNING);
-        when(instanceManager.getOrSpawn("test-agent", "sys")).thenReturn(Mono.just(instance));
+        when(instanceManager.getOrSpawn("test-agent", "admin")).thenReturn(Mono.just(instance));
         when(goosedProxy.proxy(any(), any(), eq(9000), eq("/schedules/list?limit=5"), any())).thenReturn(Mono.empty());
 
         webClient.get().uri("/ops-gateway/agents/test-agent/schedules/list?limit=5")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk();
 

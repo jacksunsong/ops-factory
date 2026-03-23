@@ -17,4 +17,4 @@ This repository is a multi-service agent platform. The main development boundary
 - Optional services must remain optional; local development should still support running only gateway and webapp.
 
 ## Configuration Rule
-Default precedence is `config.yaml` with environment variable override. When adding a setting, update the owning service’s `config.yaml.example`, startup script assumptions, and the matching documentation.
+Default precedence is `config.yaml` with environment variable override. When adding a setting, update the owning service’s `config.yaml.example`, startup script assumptions, and the matching documentation. Complex structured gateway runtime settings such as resident-instance lists may be sourced directly from `gateway/config.yaml` when they do not map cleanly to flat environment overrides.

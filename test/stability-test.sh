@@ -64,7 +64,7 @@ send_reply() {
         -o "$tmpfile" \
         -X POST "${GATEWAY}/agents/${AGENT}/reply" \
         -H "Content-Type: application/json" \
-        -H "X-Secret-Key: ${SECRET}" -H "X-User-Id: sys" \
+        -H "X-Secret-Key: ${SECRET}" -H "X-User-Id: admin" \
         -d "$body" 2>/dev/null) || true
 
     local end_time=$(date +%s)
@@ -174,8 +174,8 @@ log_info "Creating session $SESSION_ID..."
 START_RESP=$(curl -sk --max-time 30 -w "\n%{http_code}" \
     -X POST "${GATEWAY}/agents/${AGENT}/agent/start" \
     -H "Content-Type: application/json" \
-    -H "X-Secret-Key: ${SECRET}" -H "X-User-Id: sys" \
-    -d "{\"working_dir\":\"/Users/buyangnie/Documents/GitHub/ops-factory/gateway/users/sys/agents/${AGENT}\"}" 2>&1)
+    -H "X-Secret-Key: ${SECRET}" -H "X-User-Id: admin" \
+    -d "{\"working_dir\":\"/Users/buyangnie/Documents/GitHub/ops-factory/gateway/users/admin/agents/${AGENT}\"}" 2>&1)
 START_CODE=$(echo "$START_RESP" | tail -1)
 START_BODY=$(echo "$START_RESP" | sed '$d')
 log_info "Start response: HTTP $START_CODE"
@@ -185,7 +185,7 @@ log_info "Resuming session $SESSION_ID (loading provider + extensions)..."
 RESUME_RESP=$(curl -sk --max-time 120 -w "\n%{http_code}" \
     -X POST "${GATEWAY}/agents/${AGENT}/agent/resume" \
     -H "Content-Type: application/json" \
-    -H "X-Secret-Key: ${SECRET}" -H "X-User-Id: sys" \
+    -H "X-Secret-Key: ${SECRET}" -H "X-User-Id: admin" \
     -d "{\"session_id\":\"${SESSION_ID}\",\"load_model_and_extensions\":true}" 2>&1)
 RESUME_CODE=$(echo "$RESUME_RESP" | tail -1)
 RESUME_BODY=$(echo "$RESUME_RESP" | sed '$d')
@@ -269,7 +269,7 @@ log_info "Resuming session $SESSION_ID for Phase 2..."
 RESUME2_RESP=$(curl -sk --max-time 120 -w "\n%{http_code}" \
     -X POST "${GATEWAY}/agents/${AGENT}/agent/resume" \
     -H "Content-Type: application/json" \
-    -H "X-Secret-Key: ${SECRET}" -H "X-User-Id: sys" \
+    -H "X-Secret-Key: ${SECRET}" -H "X-User-Id: admin" \
     -d "{\"session_id\":\"${SESSION_ID}\",\"load_model_and_extensions\":true}" 2>&1)
 RESUME2_CODE=$(echo "$RESUME2_RESP" | tail -1)
 log_info "Phase 2 Resume: HTTP $RESUME2_CODE"

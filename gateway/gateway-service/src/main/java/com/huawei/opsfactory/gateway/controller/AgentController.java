@@ -45,7 +45,6 @@ public class AgentController {
                         Map<String, Object> agentMap = new LinkedHashMap<>();
                         agentMap.put("id", entry.id());
                         agentMap.put("name", entry.name());
-                        agentMap.put("sysOnly", entry.sysOnly());
                         agentMap.put("status", "configured");
                         agentMap.put("provider", config.getOrDefault("GOOSE_PROVIDER", ""));
                         agentMap.put("model", config.getOrDefault("GOOSE_MODEL", ""));

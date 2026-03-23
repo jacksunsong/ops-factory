@@ -39,15 +39,15 @@ public class CatchAllProxyControllerTest {
         MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent/schedules/list").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
         exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
-        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "sys");
+        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin");
 
-        ManagedInstance instance = new ManagedInstance("test-agent", "sys", 9000, 123L, null, "test-secret");
-        when(instanceManager.getOrSpawn("test-agent", "sys")).thenReturn(Mono.just(instance));
+        ManagedInstance instance = new ManagedInstance("test-agent", "admin", 9000, 123L, null, "test-secret");
+        when(instanceManager.getOrSpawn("test-agent", "admin")).thenReturn(Mono.just(instance));
         when(goosedProxy.proxy(any(), any(), eq(9000), eq("/schedules/list"), any())).thenReturn(Mono.empty());
 
         controller.catchAll(exchange).block();
 
-        verify(instanceManager).getOrSpawn("test-agent", "sys");
+        verify(instanceManager).getOrSpawn("test-agent", "admin");
         verify(goosedProxy).proxy(any(), any(), eq(9000), eq("/schedules/list"), any());
     }
 
@@ -120,7 +120,7 @@ public class CatchAllProxyControllerTest {
         MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
         exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
-        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "sys");
+        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin");
 
         try {
             controller.catchAll(exchange).block();
@@ -135,10 +135,10 @@ public class CatchAllProxyControllerTest {
         MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent/schedules/list?limit=5").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
         exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
-        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "sys");
+        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin");
 
-        ManagedInstance instance = new ManagedInstance("test-agent", "sys", 9000, 123L, null, "test-secret");
-        when(instanceManager.getOrSpawn("test-agent", "sys")).thenReturn(Mono.just(instance));
+        ManagedInstance instance = new ManagedInstance("test-agent", "admin", 9000, 123L, null, "test-secret");
+        when(instanceManager.getOrSpawn("test-agent", "admin")).thenReturn(Mono.just(instance));
         when(goosedProxy.proxy(any(), any(), eq(9000), eq("/schedules/list?limit=5"), any())).thenReturn(Mono.empty());
 
         controller.catchAll(exchange).block();
@@ -151,10 +151,10 @@ public class CatchAllProxyControllerTest {
         MockServerHttpRequest request = MockServerHttpRequest.get("/ops-gateway/agents/test-agent/schedules/list?limit=5").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
         exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
-        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "sys");
+        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin");
 
-        ManagedInstance instance = new ManagedInstance("test-agent", "sys", 9000, 123L, null, "test-secret");
-        when(instanceManager.getOrSpawn("test-agent", "sys")).thenReturn(Mono.just(instance));
+        ManagedInstance instance = new ManagedInstance("test-agent", "admin", 9000, 123L, null, "test-secret");
+        when(instanceManager.getOrSpawn("test-agent", "admin")).thenReturn(Mono.just(instance));
         when(goosedProxy.proxy(any(), any(), eq(9000), eq("/schedules/list?limit=5"), any())).thenReturn(Mono.empty());
 
         controller.catchAll(exchange).block();

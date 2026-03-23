@@ -2,7 +2,7 @@
  * Supervisor Agent — Integration Tests
  *
  * Tests cover:
- *   1. sysOnly infrastructure (visibility, access control, warm-up exclusion)
+ *   1. resident instance infrastructure
  *   2. platform-monitor MCP tool functionality (3 tools)
  *   3. Schedule auto-registration (recipe → paused schedule)
  *   4. End-to-end conversation: agent invokes MCP tools to answer monitoring queries
@@ -14,7 +14,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { startJavaGateway, sleep, type GatewayHandle } from './helpers.js'
 
 const AGENT_ID = 'supervisor-agent'
-const USER_SYS = 'sys'
+const USER_SYS = 'admin'
 const USER_ALICE = 'test-alice'
 
 let gw: GatewayHandle
@@ -148,12 +148,12 @@ afterAll(async () => {
 
 
 // =============================================================================
-// 1. sysOnly Infrastructure
+// 1. Resident Instance Infrastructure
 // =============================================================================
 
-describe('sysOnly visibility & access control', () => {
+describe('resident instance startup', () => {
 
-  it('GET /agents returns supervisor-agent with sysOnly: true for sys user', async () => {
+  it('GET /agents returns supervisor-agent for admin user', async () => {
     const res = await gw.fetchAs(USER_SYS, '/agents')
     expect(res.ok).toBe(true)
     const data = await res.json()
@@ -161,21 +161,18 @@ describe('sysOnly visibility & access control', () => {
     const supervisor = agents.find(a => a.id === AGENT_ID)
     expect(supervisor).toBeDefined()
     expect(supervisor!.name).toBe('Supervisor Agent')
-    expect(supervisor!.sysOnly).toBe(true)
   })
 
-  it('GET /agents returns supervisor-agent for regular users too (backend does not filter)', async () => {
-    // The backend returns all agents — filtering is done in the frontend
+  it('GET /agents returns supervisor-agent for regular users too', async () => {
     const res = await gw.fetchAs(USER_ALICE, '/agents')
     expect(res.ok).toBe(true)
     const data = await res.json()
     const agents = data.agents as Array<Record<string, any>>
     const supervisor = agents.find(a => a.id === AGENT_ID)
     expect(supervisor).toBeDefined()
-    expect(supervisor!.sysOnly).toBe(true)
   })
 
-  it('supervisor-agent sys instance is pre-started', async () => {
+  it('supervisor-agent system instance is pre-started', async () => {
     const res = await gw.fetch('/monitoring/instances')
     expect(res.ok).toBe(true)
     const data = await res.json()
@@ -187,18 +184,6 @@ describe('sysOnly visibility & access control', () => {
     )
     expect(sysInstance).toBeDefined()
     expect(sysInstance!.status).toBe('running')
-  })
-
-  it('other agents do NOT have sysOnly flag set', async () => {
-    const res = await gw.fetch('/agents')
-    expect(res.ok).toBe(true)
-    const data = await res.json()
-    const agents = data.agents as Array<Record<string, any>>
-    const nonSupervisors = agents.filter(a => a.id !== AGENT_ID)
-    expect(nonSupervisors.length).toBeGreaterThan(0)
-    for (const agent of nonSupervisors) {
-      expect(agent.sysOnly).toBe(false)
-    }
   })
 })
 
@@ -391,7 +376,7 @@ describe('monitoring API endpoints (data sources for MCP)', () => {
     expect(data.runningInstances).toBeGreaterThan(0)
     expect(data.byAgent).toBeInstanceOf(Array)
 
-    // supervisor-agent should have a sys instance
+    // supervisor-agent should have a system instance
     const supervisorGroup = data.byAgent.find(
       (g: Record<string, any>) => g.agentId === AGENT_ID
     )

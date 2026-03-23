@@ -157,12 +157,13 @@ test.describe('Chat — stop generation', () => {
     expect(text!.length).toBeGreaterThan(50) // Should have some content
 
     // Verify session is still usable — send another message
-    await sendMessage(page, 'Reply with "session-still-alive"')
+    const followupMarker = `session-still-alive-${Date.now()}`
+    await sendMessage(page, `Reply with exactly: "${followupMarker}"`)
     await waitForResponse(page)
 
-    // Verify second response came through
+    // Verify second response came through with the requested marker
     const allText = await messages.textContent()
-    expect(allText!.length).toBeGreaterThan(text!.length)
+    expect(allText).toContain(followupMarker)
   }, 120_000)
 })
 

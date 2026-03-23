@@ -28,17 +28,25 @@ upload:
 
 limits:
   maxInstancesPerUser: 5               # env: MAX_INSTANCES_PER_USER
-  maxInstancesGlobal: 50               # env: MAX_INSTANCES_GLOBAL
+  maxInstancesGlobal: 200              # env: MAX_INSTANCES_GLOBAL
 
 prewarm:
   enabled: true                         # env: PREWARM_ENABLED
   defaultAgentId: universal-agent       # env: PREWARM_DEFAULT_AGENT_ID
 
+residentInstances:
+  enabled: true
+  entries:
+    - userId: admin
+      agentIds: ["*"]
+    - userId: robby
+      agentIds: ["*"]
+
 agents:
   - {id: universal-agent, name: Universal Agent}
   - {id: kb-agent, name: KB Agent}
   - {id: report-agent, name: Report Agent}
-  - {id: supervisor-agent, name: Supervisor Agent, sysOnly: true}
+  - {id: supervisor-agent, name: Supervisor Agent}
 
 # Langfuse observability (optional)
 # langfuse:

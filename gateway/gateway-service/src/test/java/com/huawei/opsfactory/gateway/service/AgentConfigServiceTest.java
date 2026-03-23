@@ -35,7 +35,19 @@ public class AgentConfigServiceTest {
         Files.createDirectories(gatewayRoot.resolve("agents"));
         Files.createDirectories(gatewayRoot.resolve("users"));
 
-        String configYaml = "port: 3000\nagents:\n  - id: test-agent\n    name: Test Agent\n  - id: kb-agent\n    name: KB Agent\n    sysOnly: true\n";
+        String configYaml = "port: 3000\n"
+                + "residentInstances:\n"
+                + "  enabled: true\n"
+                + "  entries:\n"
+                + "    - userId: admin\n"
+                + "      agentIds: ['*']\n"
+                + "    - userId: robby\n"
+                + "      agentIds: ['test-agent']\n"
+                + "agents:\n"
+                + "  - id: test-agent\n"
+                + "    name: Test Agent\n"
+                + "  - id: kb-agent\n"
+                + "    name: KB Agent\n";
         Files.writeString(gatewayRoot.resolve("config.yaml"), configYaml);
 
         properties = new GatewayProperties();
@@ -53,9 +65,37 @@ public class AgentConfigServiceTest {
         assertEquals(2, registry.size());
         assertEquals("test-agent", registry.get(0).id());
         assertEquals("Test Agent", registry.get(0).name());
-        assertFalse(registry.get(0).sysOnly());
         assertEquals("kb-agent", registry.get(1).id());
-        assertTrue(registry.get(1).sysOnly());
+        assertEquals("KB Agent", registry.get(1).name());
+    }
+
+    @Test
+    public void testLoadResidentInstances_expandsWildcardAndSpecificAgent() {
+        assertTrue(service.isResidentInstance("test-agent", "admin"));
+        assertTrue(service.isResidentInstance("kb-agent", "admin"));
+        assertTrue(service.isResidentInstance("test-agent", "robby"));
+        assertFalse(service.isResidentInstance("kb-agent", "robby"));
+        assertEquals(3, service.getResidentInstances().size());
+    }
+
+    @Test
+    public void testLoadResidentInstances_ignoresUnknownAndDuplicateAgents() throws IOException {
+        String configYaml = "agents:\n"
+                + "  - id: agent-a\n    name: Agent A\n"
+                + "  - id: agent-b\n    name: Agent B\n"
+                + "residentInstances:\n"
+                + "  enabled: true\n"
+                + "  entries:\n"
+                + "    - userId: admin\n"
+                + "      agentIds: ['agent-a', 'missing-agent', 'agent-a']\n";
+        Files.writeString(gatewayRoot.resolve("config.yaml"), configYaml);
+
+        AgentConfigService freshService = new AgentConfigService(properties);
+        freshService.loadRegistry();
+
+        assertTrue(freshService.isResidentInstance("agent-a", "admin"));
+        assertFalse(freshService.isResidentInstance("missing-agent", "admin"));
+        assertEquals(1, freshService.getResidentInstances().size());
     }
 
     @Test
@@ -256,7 +296,7 @@ public class AgentConfigServiceTest {
     public void testRegistryIsUnmodifiable() {
         List<AgentRegistryEntry> registry = service.getRegistry();
         try {
-            registry.add(new AgentRegistryEntry("illegal", "Illegal", false));
+            registry.add(new AgentRegistryEntry("illegal", "Illegal"));
         } catch (UnsupportedOperationException e) {
             // Expected
         }
@@ -480,15 +520,24 @@ public class AgentConfigServiceTest {
     }
 
     @Test
-    public void testLoadRegistry_sysOnlyWithEnabledFalseIsExcluded() throws IOException {
+    public void testLoadRegistry_disabledAgentIsExcludedFromResidentExpansion() throws IOException {
         String configYaml = "agents:\n"
-                + "  - id: sys-agent\n    name: Sys Agent\n    sysOnly: true\n    enabled: false\n";
+                + "  - id: visible-agent\n    name: Visible Agent\n"
+                + "  - id: hidden-agent\n    name: Hidden Agent\n    enabled: false\n"
+                + "residentInstances:\n"
+                + "  enabled: true\n"
+                + "  entries:\n"
+                + "    - userId: admin\n"
+                + "      agentIds: ['*']\n";
         Files.writeString(gatewayRoot.resolve("config.yaml"), configYaml);
 
         AgentConfigService freshService = new AgentConfigService(properties);
         freshService.loadRegistry();
 
-        assertTrue(freshService.getRegistry().isEmpty());
-        assertNull(freshService.findAgent("sys-agent"));
+        assertEquals(1, freshService.getRegistry().size());
+        assertNotNull(freshService.findAgent("visible-agent"));
+        assertNull(freshService.findAgent("hidden-agent"));
+        assertTrue(freshService.isResidentInstance("visible-agent", "admin"));
+        assertFalse(freshService.isResidentInstance("hidden-agent", "admin"));
     }
 }

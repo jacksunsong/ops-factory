@@ -36,9 +36,9 @@ public class PrewarmServiceTest {
 
     @Test
     public void testOnUserActivity_sysUser_doesNotSpawn() {
-        prewarmService.onUserActivity("sys");
+        prewarmService.onUserActivity("admin");
 
-        verify(instanceManager, never()).getOrSpawn(eq("universal-agent"), eq("sys"));
+        verify(instanceManager, never()).getOrSpawn(eq("universal-agent"), eq("admin"));
     }
 
     @Test

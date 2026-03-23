@@ -44,6 +44,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Component
+@org.springframework.context.annotation.DependsOn("systemUserMigrationService")
 public class InstanceManager {
 
     private static final Logger log = LogManager.getLogger(InstanceManager.class);
@@ -101,22 +102,21 @@ public class InstanceManager {
     }
 
     /**
-     * Auto-start sys instances for sysOnly agents on gateway startup,
+     * Auto-start configured resident instances on gateway startup,
      * then register default schedules from recipe files.
      */
     @PostConstruct
-    public void autoStartSysOnlyAgents() {
-        agentConfigService.getRegistry().stream()
-                .filter(entry -> entry.sysOnly())
-                .forEach(entry -> {
-                    try {
-                        log.info("Auto-starting sys instance for sysOnly agent: {}", entry.id());
-                        ManagedInstance instance = doSpawn(entry.id(), GatewayConstants.SYS_USER);
-                        registerDefaultSchedules(entry.id(), instance.getPort(), instance.getSecretKey());
-                    } catch (Exception e) {
-                        log.error("Failed to auto-start sys instance for {}: {}", entry.id(), e.getMessage());
-                    }
-                });
+    public void autoStartResidentInstances() {
+        agentConfigService.getResidentInstances().forEach(target -> {
+            try {
+                log.info("Auto-starting resident instance for {}:{}", target.agentId(), target.userId());
+                ManagedInstance instance = doSpawn(target.agentId(), target.userId());
+                registerDefaultSchedules(target.agentId(), instance.getPort(), instance.getSecretKey());
+            } catch (Exception e) {
+                log.error("Failed to auto-start resident instance for {}:{}: {}",
+                        target.agentId(), target.userId(), e.getMessage());
+            }
+        });
     }
 
     /**

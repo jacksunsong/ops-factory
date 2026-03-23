@@ -2,7 +2,7 @@
  * Watchdog recovery tests — verifies that the gateway correctly detects
  * dead goosed processes and recovers by respawning on the next request.
  *
- * Also verifies that sys instances are never idle-reaped.
+ * Also verifies that resident instances are never idle-reaped.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { startJavaGateway, sleep, type GatewayHandle } from './helpers.js'
@@ -110,8 +110,8 @@ describe('Watchdog — process crash detection and recovery', () => {
     await client.deleteSession(sessionId)
   }, 180_000)
 
-  it('sys instances should not be idle-reaped', async () => {
-    // supervisor-agent is sysOnly and starts automatically
+  it('resident instances should not be idle-reaped', async () => {
+    // supervisor-agent is configured as a resident instance for admin
     // Verify it's running
     const monData1 = await getMonitoringInstances()
     const sysGroup = monData1.byAgent?.find(
@@ -119,7 +119,7 @@ describe('Watchdog — process crash detection and recovery', () => {
     )
     expect(sysGroup).toBeTruthy()
     expect(sysGroup.instances.length).toBeGreaterThan(0)
-    expect(sysGroup.instances[0].status).toBe('RUNNING')
+    expect(sysGroup.instances[0].status).toBe('running')
 
     // Wait longer than idle timeout (test gateway uses 30s idle timeout)
     // but we don't actually need to wait that long — just verify it's still there
@@ -132,7 +132,7 @@ describe('Watchdog — process crash detection and recovery', () => {
     )
     expect(sysGroup2).toBeTruthy()
     expect(sysGroup2.instances.length).toBeGreaterThan(0)
-    expect(sysGroup2.instances[0].status).toBe('RUNNING')
+    expect(sysGroup2.instances[0].status).toBe('running')
   }, 30_000)
 
   it('gateway /status should remain responsive after process crash', async () => {

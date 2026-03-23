@@ -136,7 +136,7 @@ export async function startGateway(): Promise<GatewayHandle> {
     process: child,
     logs,
     fetch: (path, init) =>
-      fetch(`${baseUrl}${path}`, { ...init, headers: { ...headers('sys'), ...init?.headers } }),
+      fetch(`${baseUrl}${path}`, { ...init, headers: { ...headers('admin'), ...init?.headers } }),
     fetchAs: (userId, path, init) =>
       fetch(`${baseUrl}${path}`, { ...init, headers: { ...headers(userId), ...init?.headers } }),
     stop: async () => {
@@ -237,7 +237,7 @@ export async function startJavaGateway(): Promise<GatewayHandle> {
     process: child,
     logs,
     fetch: (path, init) =>
-      fetch(`${baseUrl}${path}`, { ...init, headers: { ...headers('sys'), ...init?.headers } }),
+      fetch(`${baseUrl}${path}`, { ...init, headers: { ...headers('admin'), ...init?.headers } }),
     fetchAs: (userId, path, init) =>
       fetch(`${baseUrl}${path}`, { ...init, headers: { ...headers(userId), ...init?.headers } }),
     stop: async () => {

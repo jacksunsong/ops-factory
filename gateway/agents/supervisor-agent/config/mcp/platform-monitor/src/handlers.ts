@@ -18,7 +18,7 @@ export async function gw<T>(path: string, params?: Record<string, string>): Prom
   const res = await fetch(url, {
     headers: {
       'x-secret-key': GATEWAY_SECRET_KEY,
-      'x-user-id': 'sys',
+      'x-user-id': 'admin',
     },
     signal: AbortSignal.timeout(15_000),
   })

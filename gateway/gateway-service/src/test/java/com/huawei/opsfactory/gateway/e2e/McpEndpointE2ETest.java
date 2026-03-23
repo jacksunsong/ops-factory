@@ -27,11 +27,11 @@ public class McpEndpointE2ETest extends BaseE2ETest {
 
     @Before
     public void setUp() {
-        sysInstance = new ManagedInstance("test-agent", "sys", 9999, 12345L, null, "test-secret");
+        sysInstance = new ManagedInstance("test-agent", "admin", 9999, 12345L, null, "test-secret");
         sysInstance.setStatus(ManagedInstance.Status.RUNNING);
 
-        // McpController always spawns sys instance
-        when(instanceManager.getOrSpawn("test-agent", "sys"))
+        // McpController always spawns the system instance
+        when(instanceManager.getOrSpawn("test-agent", "admin"))
                 .thenReturn(Mono.just(sysInstance));
         when(instanceManager.getAllInstances()).thenReturn(Collections.emptyList());
         when(goosedProxy.goosedBaseUrl(anyInt())).thenAnswer(inv ->
@@ -47,11 +47,11 @@ public class McpEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/ops-gateway/agents/test-agent/mcp")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk();
 
-        verify(instanceManager).getOrSpawn("test-agent", "sys");
+        verify(instanceManager).getOrSpawn("test-agent", "admin");
         verify(goosedProxy).proxy(any(), any(), eq(9999), eq("/config/extensions"), any());
     }
 
@@ -81,10 +81,10 @@ public class McpEndpointE2ETest extends BaseE2ETest {
 
         // McpController creates its own WebClient request; we can't easily mock that
         // chain end-to-end without a real HTTP server. Instead, test the admin guard.
-        // The POST to sys instance will fail (no real server), returning 500.
+        // The POST to the system instance will fail (no real server), returning 500.
         webClient.post().uri("/ops-gateway/agents/test-agent/mcp")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"name\":\"test-mcp\",\"type\":\"stdio\"}")
                 .exchange()
@@ -129,10 +129,10 @@ public class McpEndpointE2ETest extends BaseE2ETest {
         // The test verifies the admin guard passes and the instance manager is called.
         webClient.delete().uri("/ops-gateway/agents/test-agent/mcp/my-extension")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().is5xxServerError();
 
-        verify(instanceManager).getOrSpawn("test-agent", "sys");
+        verify(instanceManager).getOrSpawn("test-agent", "admin");
     }
 }

@@ -42,7 +42,7 @@ Web App (React/Vite :5173)
 Gateway (Node.js :3000)
     |
     +-- InstanceManager: spawns goosed processes per user on dynamic ports
-    |     +-- "sys" instances (always running, handles schedules)
+    |     +-- "admin" instances (always running, handles schedules)
     |     +-- per-user instances (spawned on demand, idle-reaped after 15 min)
     |
     +-- Routes: /agents/:id/agent/* -> proxy to user's goosed instance

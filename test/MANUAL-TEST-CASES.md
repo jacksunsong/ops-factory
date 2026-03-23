@@ -34,8 +34,8 @@
 
 | 术语 | 说明 |
 |------|------|
-| Admin 用户 | userId 为 `sys` 的用户，角色为 `admin` |
-| 普通用户 | 任意非 `sys` 的 userId，角色为 `user` |
+| Admin 用户 | userId 为 `admin` 的用户，角色为 `admin` |
+| 普通用户 | 任意非 `admin` 的 userId，角色为 `user` |
 | Gateway | 网关服务，默认 `https://localhost:3000`（TLS） |
 | Web App | 前端应用，默认 `http://localhost:5173` |
 | SECRET_KEY | 网关认证密钥，默认 `test` |
@@ -131,7 +131,7 @@
 
 - **自动化状态**：Prompt 编辑已测试，但 Recipe 的创建和编辑未覆盖
 - **操作步骤**：
-  1. 以 `sys` 登录，进入 Agent 配置页，切换到 Prompts Tab
+  1. 以 `admin` 登录，进入 Agent 配置页，切换到 Prompts Tab
   2. 查看现有 Prompt Recipes 列表
   3. 创建新 Recipe
   4. 编辑已有 Recipe
@@ -271,15 +271,15 @@ curl -X OPTIONS -H "Origin: http://localhost:5173" \
 
 ## 2.2 实例管理
 
-### TC-GW-021 `P1`：sys 实例永不回收 ❌ 未自动化
+### TC-GW-021 `P1`：admin 实例永不回收 ❌ 未自动化
 
 - **前置条件**：Gateway 运行超过 15 分钟
 - **操作步骤**：
   ```bash
-  curl -H "x-secret-key: test" -H "x-user-id: sys" \
+  curl -H "x-secret-key: test" -H "x-user-id: admin" \
     https://localhost:3000/monitoring/instances -k
   ```
-- **预期结果**：sys 用户的实例始终存在，状态为 running
+- **预期结果**：admin 用户的实例始终存在，状态为 running
 
 ### TC-GW-022 `P1`：空闲实例回收 ❌ 未自动化
 
@@ -288,7 +288,7 @@ curl -X OPTIONS -H "Origin: http://localhost:5173" \
   1. 创建用户实例（发起一次请求）
   2. 等待超过 15 分钟
   3. 查看实例列表
-- **预期结果**：超时后用户实例被自动停止/移除，sys 实例不受影响
+- **预期结果**：超时后用户实例被自动停止/移除，admin 实例不受影响
 
 ---
 
@@ -523,7 +523,7 @@ docker exec langfuse-postgres pg_isready
 ### TC-LF-020 `P2`：Overview API 数据一致性
 
 ```bash
-curl -H "x-secret-key: test" -H "x-user-id: sys" \
+curl -H "x-secret-key: test" -H "x-user-id: admin" \
   "https://localhost:3000/monitoring/overview?from=2026-03-01&to=2026-03-17" -k
 ```
 
@@ -533,7 +533,7 @@ curl -H "x-secret-key: test" -H "x-user-id: sys" \
 ### TC-LF-021 `P2`：Traces API 数据一致性
 
 ```bash
-curl -H "x-secret-key: test" -H "x-user-id: sys" \
+curl -H "x-secret-key: test" -H "x-user-id: admin" \
   "https://localhost:3000/monitoring/traces?from=2026-03-01&to=2026-03-17&limit=5" -k
 ```
 
@@ -542,7 +542,7 @@ curl -H "x-secret-key: test" -H "x-user-id: sys" \
 ### TC-LF-022 `P2`：Observations API 数据
 
 ```bash
-curl -H "x-secret-key: test" -H "x-user-id: sys" \
+curl -H "x-secret-key: test" -H "x-user-id: admin" \
   "https://localhost:3000/monitoring/observations?from=2026-03-01&to=2026-03-17" -k
 ```
 
@@ -682,7 +682,7 @@ docker exec <onlyoffice-container-id> \
 
 - **自动化状态**：各子功能独立测试通过，但未在单一流程中串联验证
 - **操作步骤**：
-  1. 以 `sys` 登录
+  1. 以 `admin` 登录
   2. 创建新 Agent `e2e-test-agent`
   3. 配置 AGENTS.md
   4. 添加 MCP 扩展
@@ -699,7 +699,7 @@ docker exec <onlyoffice-container-id> \
   1. 浏览器 A 以 `user1` 登录
   2. 浏览器 B 以 `user2` 登录
   3. 两个用户同时向 `universal-agent` 发送消息
-  4. 以 `sys` 查看监控 → 实例列表
+  4. 以 `admin` 查看监控 → 实例列表
 - **人工关注点**：
   - 对话互不干扰
   - 消息内容不会串到另一个用户

@@ -46,8 +46,8 @@ public class AgentControllerTest {
     @Test
     public void testListAgents() {
         when(agentConfigService.getRegistry()).thenReturn(List.of(
-                new AgentRegistryEntry("agent1", "Agent One", false),
-                new AgentRegistryEntry("agent2", "Agent Two", true)
+                new AgentRegistryEntry("agent1", "Agent One"),
+                new AgentRegistryEntry("agent2", "Agent Two")
         ));
         when(agentConfigService.loadAgentConfigYaml("agent1"))
                 .thenReturn(Map.of("GOOSE_PROVIDER", "openai", "GOOSE_MODEL", "gpt-4o"));
@@ -65,13 +65,12 @@ public class AgentControllerTest {
                 .expectBody()
                 .jsonPath("$.agents[0].id").isEqualTo("agent1")
                 .jsonPath("$.agents[0].name").isEqualTo("Agent One")
-                .jsonPath("$.agents[0].sysOnly").isEqualTo(false)
+                .jsonPath("$.agents[0].sysOnly").doesNotExist()
                 .jsonPath("$.agents[0].provider").isEqualTo("openai")
                 .jsonPath("$.agents[0].skills.length()").isEqualTo(1)
                 .jsonPath("$.agents[0].skills[0].name").isEqualTo("brainstorming")
                 .jsonPath("$.agents[0].skills[0].description").isEqualTo("Brainstorm ideas")
-                .jsonPath("$.agents[1].id").isEqualTo("agent2")
-                .jsonPath("$.agents[1].sysOnly").isEqualTo(true);
+                .jsonPath("$.agents[1].id").isEqualTo("agent2");
     }
 
     @Test
@@ -98,7 +97,7 @@ public class AgentControllerTest {
 
         webTestClient.post().uri("/ops-gateway/agents")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"id\": \"new-agent\", \"name\": \"New Agent\"}")
                 .exchange()
@@ -123,7 +122,7 @@ public class AgentControllerTest {
     public void testCreateAgent_missingId() {
         webTestClient.post().uri("/ops-gateway/agents")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"name\": \"New Agent\"}")
                 .exchange()
@@ -137,7 +136,7 @@ public class AgentControllerTest {
 
         webTestClient.delete().uri("/ops-gateway/agents/agent1")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -161,7 +160,7 @@ public class AgentControllerTest {
 
         webTestClient.get().uri("/ops-gateway/agents/agent1/skills")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -174,7 +173,7 @@ public class AgentControllerTest {
     @Test
     public void testGetConfig_asAdmin() {
         when(agentConfigService.findAgent("agent1"))
-                .thenReturn(new AgentRegistryEntry("agent1", "Agent One", false));
+                .thenReturn(new AgentRegistryEntry("agent1", "Agent One"));
         when(agentConfigService.readAgentsMd("agent1")).thenReturn("# Agent One\n");
         Map<String, Object> config = new HashMap<>();
         config.put("GOOSE_PROVIDER", "anthropic");
@@ -184,7 +183,7 @@ public class AgentControllerTest {
 
         webTestClient.get().uri("/ops-gateway/agents/agent1/config")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -196,12 +195,12 @@ public class AgentControllerTest {
     @Test
     public void testUpdateConfig_asAdmin() throws Exception {
         when(agentConfigService.findAgent("agent1"))
-                .thenReturn(new AgentRegistryEntry("agent1", "Agent One", false));
+                .thenReturn(new AgentRegistryEntry("agent1", "Agent One"));
         Mockito.doNothing().when(agentConfigService).writeAgentsMd("agent1", "# Updated\n");
 
         webTestClient.put().uri("/ops-gateway/agents/agent1/config")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"agentsMd\": \"# Updated\\n\"}")
                 .exchange()
@@ -225,7 +224,7 @@ public class AgentControllerTest {
     public void testCreateAgent_missingName() {
         webTestClient.post().uri("/ops-gateway/agents")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"id\": \"new-agent\"}")
                 .exchange()
@@ -236,7 +235,7 @@ public class AgentControllerTest {
     public void testCreateAgent_blankId() {
         webTestClient.post().uri("/ops-gateway/agents")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"id\": \"   \", \"name\": \"New Agent\"}")
                 .exchange()
@@ -250,7 +249,7 @@ public class AgentControllerTest {
 
         webTestClient.post().uri("/ops-gateway/agents")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{\"id\": \"dup-agent\", \"name\": \"Dup Agent\"}")
                 .exchange()

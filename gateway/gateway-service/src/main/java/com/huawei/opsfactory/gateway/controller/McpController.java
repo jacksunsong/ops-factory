@@ -30,8 +30,8 @@ public class McpController {
     @GetMapping
     public Mono<Void> getMcpExtensions(@PathVariable String agentId, ServerWebExchange exchange) {
         requireAdmin(exchange);
-        // Route to sys instance
-        return instanceManager.getOrSpawn(agentId, GatewayConstants.SYS_USER)
+        // Route to the system instance
+        return instanceManager.getOrSpawn(agentId, GatewayConstants.SYSTEM_USER)
                 .flatMap(instance -> goosedProxy.proxy(
                         exchange.getRequest(), exchange.getResponse(),
                         instance.getPort(), "/config/extensions", instance.getSecretKey()));
@@ -43,9 +43,9 @@ public class McpController {
                                             ServerWebExchange exchange) {
         requireAdmin(exchange);
 
-        // Persist config to the sys instance, then recycle all agent instances so
+        // Persist config to the system instance, then recycle all agent instances so
         // subsequent requests start from a clean process with the updated config.
-        return instanceManager.getOrSpawn(agentId, GatewayConstants.SYS_USER)
+        return instanceManager.getOrSpawn(agentId, GatewayConstants.SYSTEM_USER)
                 .flatMap(sysInstance -> {
                     WebClient wc = goosedProxy.getWebClient();
                     String sysTarget = goosedProxy.goosedBaseUrl(sysInstance.getPort());
@@ -71,7 +71,7 @@ public class McpController {
         requireAdmin(exchange);
         String path = "/config/extensions/" + name;
 
-        return instanceManager.getOrSpawn(agentId, GatewayConstants.SYS_USER)
+        return instanceManager.getOrSpawn(agentId, GatewayConstants.SYSTEM_USER)
                 .flatMap(sysInstance -> {
                     WebClient wc = goosedProxy.getWebClient();
                     String sysTarget = goosedProxy.goosedBaseUrl(sysInstance.getPort());

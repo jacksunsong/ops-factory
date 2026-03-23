@@ -10,7 +10,7 @@ public class UserRoleTest {
 
     @Test
     public void testFromUserId_sys() {
-        assertEquals(UserRole.ADMIN, UserRole.fromUserId("sys"));
+        assertEquals(UserRole.ADMIN, UserRole.fromUserId("admin"));
     }
 
     @Test

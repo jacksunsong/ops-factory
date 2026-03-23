@@ -253,7 +253,7 @@ export default function Agents() {
                     <h1 className="page-title">{t('agents.title')}</h1>
                     {isAdmin && (
                         <button
-                            className="action-btn-primary"
+                            className="action-btn-primary btn btn-primary"
                             onClick={() => setShowCreateModal(true)}
                         >
                             {t('agents.createAgent')}

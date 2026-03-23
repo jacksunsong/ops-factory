@@ -156,7 +156,7 @@ public class GatewayMetricsCollector {
             .uri(URI.create(config.getGatewayUrl() + path))
             .timeout(Duration.ofMillis(config.getCollectTimeoutMs()))
             .header("x-secret-key", config.getGatewaySecretKey())
-            .header("x-user-id", "sys")
+            .header("x-user-id", "admin")
             .GET()
             .build();
 

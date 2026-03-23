@@ -24,11 +24,11 @@ public class StatusEndpointE2ETest extends BaseE2ETest {
     public void getMe_sysUser_returnsSys() {
         webClient.get().uri("/ops-gateway/me")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.userId").isEqualTo("sys")
+                .jsonPath("$.userId").isEqualTo("admin")
                 .jsonPath("$.role").isEqualTo("admin");
     }
 

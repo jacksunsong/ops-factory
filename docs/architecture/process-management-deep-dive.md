@@ -51,7 +51,7 @@ ConcurrentHashMap<String, ReentrantLock> spawnLocks;
 | `forceRecycle(agentId, userId)` | 异步强制回收死锁实例 |
 | `respawnAsync(agentId, userId, restartCount)` | 异步重启崩溃实例（带退避） |
 | `touchAllForUser(userId)` | 刷新用户所有实例的活跃时间 |
-| `autoStartSysOnlyAgents()` | Gateway 启动时自动拉起 sysOnly agent |
+| `autoStartResidentInstances()` | Gateway 启动时自动拉起配置的常驻实例 |
 | `stopAll()` | Gateway 关闭时停止所有实例 |
 
 ### 2.2 ManagedInstance — 实例状态模型
@@ -160,7 +160,7 @@ public void onUserActivity(String userId) {
 - 由 `UserContextFilter` 在每次认证请求时触发
 - 每个用户在 Gateway 生命周期内只预热一次（`ConcurrentHashMap.newKeySet()` 去重）
 - 当用户所有实例被回收后，`clearUser()` 重置预热状态，允许下次再次预热
-- 不对 `sys` 用户执行预热
+- 不对 `admin` 用户执行预热
 
 ## 3. 进程启动流程
 
@@ -438,9 +438,9 @@ if (idleDuration > maxIdleMs) → 回收
 - `getOrSpawn()` 复用已有实例时
 - Controller 处理请求时调用 `instance.touch()` 和 `touchAllForUser(userId)`
 
-### 7.2 sys 实例豁免
+### 7.2 admin 实例豁免
 
-userId 为 `sys` 的实例**永远不会被回收**。这些是 Gateway 启动时通过 `autoStartSysOnlyAgents()` 创建的系统级 agent（如 supervisor-agent），需要常驻运行。
+被配置为常驻实例的 `(agentId, userId)` **不会因空闲而被回收**。这些实例由 Gateway 启动时的 `autoStartResidentInstances()` 创建，但仍保留健康检查、超时回收和异常恢复能力。
 
 ### 7.3 优雅停止流程
 

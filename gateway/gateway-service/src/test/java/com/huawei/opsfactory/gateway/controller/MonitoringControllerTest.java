@@ -56,7 +56,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/ops-gateway/monitoring/system")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -82,11 +82,11 @@ public class MonitoringControllerTest {
         inst.setStatus(ManagedInstance.Status.RUNNING);
         when(instanceManager.getAllInstances()).thenReturn(List.of(inst));
         when(agentConfigService.findAgent("agent1")).thenReturn(
-                new com.huawei.opsfactory.gateway.common.model.AgentRegistryEntry("agent1", "Agent One", false));
+                new com.huawei.opsfactory.gateway.common.model.AgentRegistryEntry("agent1", "Agent One"));
 
         webTestClient.get().uri("/ops-gateway/monitoring/instances")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -107,7 +107,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/ops-gateway/monitoring/status")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -140,7 +140,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/ops-gateway/monitoring/instances")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -159,7 +159,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/ops-gateway/monitoring/instances")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -174,7 +174,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/ops-gateway/monitoring/status")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -195,7 +195,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/ops-gateway/monitoring/overview?from=2024-01-01&to=2024-01-02")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -216,15 +216,15 @@ public class MonitoringControllerTest {
     @Test
     public void testSystem_withData() {
         when(agentConfigService.getRegistry()).thenReturn(List.of(
-                new com.huawei.opsfactory.gateway.common.model.AgentRegistryEntry("a1", "Agent1", false),
-                new com.huawei.opsfactory.gateway.common.model.AgentRegistryEntry("a2", "Agent2", true)
+                new com.huawei.opsfactory.gateway.common.model.AgentRegistryEntry("a1", "Agent1"),
+                new com.huawei.opsfactory.gateway.common.model.AgentRegistryEntry("a2", "Agent2")
         ));
         ManagedInstance inst = new ManagedInstance("a1", "u1", 8080, 1234L, null, "test-secret");
         when(instanceManager.getAllInstances()).thenReturn(List.of(inst));
 
         webTestClient.get().uri("/ops-gateway/monitoring/system")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -241,7 +241,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/ops-gateway/monitoring/metrics")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -286,7 +286,7 @@ public class MonitoringControllerTest {
 
         webTestClient.get().uri("/ops-gateway/monitoring/metrics")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -337,7 +337,7 @@ public class MonitoringControllerTest {
         // NOT naive avg = (10000 + 100) / 2 = 5050
         webTestClient.get().uri("/ops-gateway/monitoring/metrics")
                 .header("x-secret-key", "test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()

@@ -1,8 +1,8 @@
 package com.huawei.opsfactory.gateway.process;
 
-import com.huawei.opsfactory.gateway.common.constants.GatewayConstants;
 import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+import com.huawei.opsfactory.gateway.service.AgentConfigService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,12 +23,15 @@ public class InstanceWatchdog {
     private final InstanceManager instanceManager;
     private final GatewayProperties properties;
     private final PrewarmService prewarmService;
+    private final AgentConfigService agentConfigService;
 
     public InstanceWatchdog(InstanceManager instanceManager, GatewayProperties properties,
-                            PrewarmService prewarmService) {
+                            PrewarmService prewarmService,
+                            AgentConfigService agentConfigService) {
         this.instanceManager = instanceManager;
         this.properties = properties;
         this.prewarmService = prewarmService;
+        this.agentConfigService = agentConfigService;
     }
 
     @Scheduled(fixedDelayString = "${gateway.idle.check-interval-ms:60000}")
@@ -99,8 +102,8 @@ public class InstanceWatchdog {
     }
 
     /**
-     * Phase 2: Reap idle instances (original IdleReaper logic).
-     * Sys instances are never reaped.
+     * Phase 2: Reap idle instances.
+     * Resident instances are never reaped for idleness.
      */
     private void reapIdleInstances() {
         long maxIdleMs = properties.getIdle().getTimeoutMinutes() * 60_000L;
@@ -109,8 +112,7 @@ public class InstanceWatchdog {
 
         List<ManagedInstance> snapshot = new ArrayList<>(instanceManager.getAllInstances());
         for (ManagedInstance instance : snapshot) {
-            // Never reap sys instances
-            if (GatewayConstants.SYS_USER.equals(instance.getUserId())) {
+            if (agentConfigService.isResidentInstance(instance.getAgentId(), instance.getUserId())) {
                 continue;
             }
             if (instance.getStatus() == ManagedInstance.Status.RUNNING

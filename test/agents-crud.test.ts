@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { startJavaGateway, type GatewayHandle } from './helpers.js'
 
-const USER_SYS = 'sys'       // admin
+const USER_SYS = 'admin'       // admin
 const USER_ALICE = 'test-alice' // non-admin
 
 let gw: GatewayHandle

@@ -176,7 +176,7 @@ describe('SDK prompt methods', () => {
         const client = new GoosedClient({
             baseUrl: `${gw.baseUrl}/agents/${AGENT_ID}`,
             secretKey: gw.secretKey,
-            userId: 'sys',
+            userId: 'admin',
         })
         const prompts = await client.listPrompts()
         expect(Array.isArray(prompts)).toBe(true)
@@ -189,7 +189,7 @@ describe('SDK prompt methods', () => {
         const client = new GoosedClient({
             baseUrl: `${gw.baseUrl}/agents/${AGENT_ID}`,
             secretKey: gw.secretKey,
-            userId: 'sys',
+            userId: 'admin',
         })
         const prompt = await client.getPrompt('system.md')
         expect(prompt.name).toBe('system.md')
@@ -202,7 +202,7 @@ describe('SDK prompt methods', () => {
         const client = new GoosedClient({
             baseUrl: `${gw.baseUrl}/agents/${AGENT_ID}`,
             secretKey: gw.secretKey,
-            userId: 'sys',
+            userId: 'admin',
         })
         const testPrompt = 'recipe.md'
 
@@ -231,7 +231,7 @@ describe('SDK prompt methods', () => {
         const client = new GoosedClient({
             baseUrl: `${gw.baseUrl}/agents/${AGENT_ID}`,
             secretKey: gw.secretKey,
-            userId: 'sys',
+            userId: 'admin',
         })
         await expect(client.getPrompt('nonexistent.md')).rejects.toThrow()
     })

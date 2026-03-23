@@ -87,7 +87,7 @@ PROJECT_ROOT="${PROJECT_ROOT:-${ROOT_DIR}}"
 MAX_INSTANCES_PER_USER="${MAX_INSTANCES_PER_USER:-$(yaml_nested_val limits maxInstancesPerUser)}"
 MAX_INSTANCES_PER_USER="${MAX_INSTANCES_PER_USER:-5}"
 MAX_INSTANCES_GLOBAL="${MAX_INSTANCES_GLOBAL:-$(yaml_nested_val limits maxInstancesGlobal)}"
-MAX_INSTANCES_GLOBAL="${MAX_INSTANCES_GLOBAL:-50}"
+MAX_INSTANCES_GLOBAL="${MAX_INSTANCES_GLOBAL:-200}"
 
 # Prewarm
 PREWARM_ENABLED="${PREWARM_ENABLED:-$(yaml_nested_val prewarm enabled)}"
@@ -239,7 +239,7 @@ shutdown_agents() {
 check_agents_configured() {
     local agents_json
     agents_json="$(curl -fsS ${CURL_TLS_OPTS} "${GATEWAY_SCHEME}://127.0.0.1:${GATEWAY_PORT}${GATEWAY_AGENTS_PATH}" \
-        -H "x-secret-key: ${GATEWAY_SECRET_KEY}" -H "x-user-id: sys" 2>/dev/null || true)"
+        -H "x-secret-key: ${GATEWAY_SECRET_KEY}" -H "x-user-id: admin" 2>/dev/null || true)"
     [ -z "${agents_json}" ] && { log_error "Failed to query agents"; return 1; }
 
     # Parse with lightweight approach (no node dependency)
@@ -261,7 +261,7 @@ status_agents() {
     if [ -n "${base_url}" ]; then
         local agents_json
         agents_json="$(curl -fsS ${CURL_TLS_OPTS} "${base_url}${GATEWAY_AGENTS_PATH}" \
-            -H "x-secret-key: ${GATEWAY_SECRET_KEY}" -H "x-user-id: sys" 2>/dev/null || true)"
+            -H "x-secret-key: ${GATEWAY_SECRET_KEY}" -H "x-user-id: admin" 2>/dev/null || true)"
         if [ -n "${agents_json}" ]; then
             local count
             count="$(echo "${agents_json}" | python3 -c "import sys,json;d=json.load(sys.stdin);print(len(d.get('agents',d) if isinstance(d,dict) else d))" 2>/dev/null || echo "0")"

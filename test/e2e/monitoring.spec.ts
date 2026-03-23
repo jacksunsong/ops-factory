@@ -12,7 +12,7 @@
  */
 import { test, expect, type Page } from '@playwright/test'
 
-const ADMIN_USER = 'sys'
+const ADMIN_USER = 'admin'
 const REGULAR_USER = 'e2e-mon-user'
 
 async function loginAs(page: Page, username: string) {

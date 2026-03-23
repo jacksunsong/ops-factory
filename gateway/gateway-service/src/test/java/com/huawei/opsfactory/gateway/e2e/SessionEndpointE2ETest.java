@@ -159,7 +159,7 @@ public class SessionEndpointE2ETest extends BaseE2ETest {
     public void listAllSessions_withRunningInstances_aggregatesSessions() {
         ManagedInstance userInstance = new ManagedInstance("agent-a", "alice", 8001, 111L, null, "test-secret");
         userInstance.setStatus(ManagedInstance.Status.RUNNING);
-        ManagedInstance sysInstance = new ManagedInstance("agent-b", "sys", 8002, 222L, null, "test-secret");
+        ManagedInstance sysInstance = new ManagedInstance("agent-b", "admin", 8002, 222L, null, "test-secret");
         sysInstance.setStatus(ManagedInstance.Status.RUNNING);
         ManagedInstance otherUserInstance = new ManagedInstance("agent-a", "bob", 8003, 333L, null, "test-secret");
         otherUserInstance.setStatus(ManagedInstance.Status.RUNNING);
@@ -167,7 +167,7 @@ public class SessionEndpointE2ETest extends BaseE2ETest {
         when(instanceManager.getAllInstances())
                 .thenReturn(List.of(userInstance, sysInstance, otherUserInstance));
 
-        // Sessions returned for alice's instance and sys instance (not bob's)
+        // Sessions returned for alice's instance and the system instance (not bob's)
         when(sessionService.getSessionsFromInstance(userInstance))
                 .thenReturn(Mono.just("{\"sessions\":[{\"id\":\"s1\"}]}"));
         when(sessionService.getSessionsFromInstance(sysInstance))

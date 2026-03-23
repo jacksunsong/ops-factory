@@ -30,7 +30,7 @@ export const GATEWAY_SECRET_KEY = import.meta.env.VITE_GATEWAY_SECRET_KEY || 'te
 
 export function isAdminUser(userId: string | null, role: UserRole | null): boolean {
     if (role === 'admin') return true
-    return userId === 'sys'
+    return userId === 'admin'
 }
 
 /** Build gateway request headers with secret key and optional user ID. */

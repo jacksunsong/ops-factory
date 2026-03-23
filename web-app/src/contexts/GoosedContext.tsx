@@ -1,7 +1,7 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react'
 import { GoosedClient } from '@goosed/sdk'
 import { useUser } from './UserContext'
-import { GATEWAY_URL, GATEWAY_SECRET_KEY, isAdminUser } from '../config/runtime'
+import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
 import { getErrorMessage } from '../utils/errorMessages'
 
 export interface AgentInfo {
@@ -11,7 +11,6 @@ export interface AgentInfo {
     provider?: string
     model?: string
     skills: string[]
-    sysOnly?: boolean
 }
 
 interface GoosedContextType {
@@ -25,7 +24,7 @@ interface GoosedContextType {
 const GoosedContext = createContext<GoosedContextType | null>(null)
 
 export function GoosedProvider({ children }: { children: ReactNode }) {
-    const { userId, role } = useUser()
+    const { userId } = useUser()
     const [agents, setAgents] = useState<AgentInfo[]>([])
     const [isConnected, setIsConnected] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -74,13 +73,8 @@ export function GoosedProvider({ children }: { children: ReactNode }) {
         fetchAgents()
     }, [fetchAgents])
 
-    const visibleAgents = useMemo(() => {
-        if (isAdminUser(userId, role)) return agents
-        return agents.filter(a => !a.sysOnly)
-    }, [agents, role, userId])
-
     return (
-        <GoosedContext.Provider value={{ getClient, agents: visibleAgents, isConnected, error, refreshAgents: fetchAgents }}>
+        <GoosedContext.Provider value={{ getClient, agents, isConnected, error, refreshAgents: fetchAgents }}>
             {children}
         </GoosedContext.Provider>
     )

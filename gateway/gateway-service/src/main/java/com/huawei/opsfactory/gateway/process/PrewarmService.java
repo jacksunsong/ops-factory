@@ -31,7 +31,7 @@ public class PrewarmService {
         if (!properties.getPrewarm().isEnabled()) {
             return;
         }
-        if (GatewayConstants.SYS_USER.equals(userId)) {
+        if (GatewayConstants.SYSTEM_USER.equals(userId)) {
             return;
         }
         if (!warmedUsers.add(userId)) {

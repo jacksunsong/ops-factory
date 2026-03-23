@@ -11,15 +11,17 @@ paths: {agentsDir: agents, usersDir: users}
 idle: {timeoutMinutes: 15, checkIntervalMs: 60000}
 sse: {firstByteTimeoutSec: 120, idleTimeoutSec: 300, maxDurationSec: 600}
 upload: {maxFileSizeMb: 50, maxImageSizeMb: 20}
-limits: {maxInstancesPerUser: 5, maxInstancesGlobal: 100}
+limits: {maxInstancesPerUser: 5, maxInstancesGlobal: 200}
 prewarm: {enabled: true, defaultAgentId: universal-agent}
-officePreview:
+residentInstances:
   enabled: true
-  onlyofficeUrl: 'http://127.0.0.1:8080'
-  fileBaseUrl: 'http://host.docker.internal:3000'
+  entries:
+    - {userId: admin, agentIds: ['*']}
+    - {userId: robby, agentIds: ['*']}
+officePreview: {enabled: true, onlyofficeUrl: 'http://127.0.0.1:8080', fileBaseUrl: 'http://host.docker.internal:3000'}
 agents:
 - {id: universal-agent, name: Universal Agent}
 - {id: kb-agent, name: KB Agent}
 - {id: report-agent, name: Report Agent}
-- {id: supervisor-agent, name: Supervisor Agent, sysOnly: true}
+- {id: supervisor-agent, name: Supervisor Agent}
 - {id: qos-agent, name: QoS Agent}

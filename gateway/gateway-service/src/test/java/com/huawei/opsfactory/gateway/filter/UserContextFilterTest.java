@@ -56,7 +56,7 @@ public class UserContextFilterTest {
     @Test
     public void testSysUserGetsAdminRole() {
         MockServerHttpRequest request = MockServerHttpRequest.get("/test")
-                .header("x-user-id", "sys")
+                .header("x-user-id", "admin")
                 .build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
