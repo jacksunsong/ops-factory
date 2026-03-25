@@ -12,9 +12,9 @@ import type {
 } from '../../types/knowledge'
 
 type RetrievalMode = 'semantic' | 'lexical' | 'hybrid'
+type RetrievalViewMode = RetrievalMode | 'compare'
 
 interface RetrievalSettings {
-    mode: RetrievalMode
     topK: number
     scoreThresholdEnabled: boolean
     scoreThreshold: number
@@ -41,12 +41,6 @@ interface RetrievalSearchResponse {
     total: number
 }
 
-interface RetrievalFetchNeighbor {
-    position: string
-    chunkId: string
-    text: string
-}
-
 interface RetrievalFetchResponse {
     chunkId: string
     documentId: string
@@ -60,13 +54,12 @@ interface RetrievalFetchResponse {
     pageTo: number | null
     previousChunkId: string | null
     nextChunkId: string | null
-    neighbors: RetrievalFetchNeighbor[] | null
 }
 
 interface RetrievalHistoryEntry {
     id: string
     query: string
-    mode: RetrievalMode
+    viewMode: RetrievalViewMode
     topK: number
     scoreThresholdEnabled: boolean
     scoreThreshold: number
@@ -77,7 +70,17 @@ interface RetrievalDisplayHit extends RetrievalSearchHit {
     documentName: string
     displayScore: number
     displayPercent: number
-    signalLevel: number
+}
+
+interface RetrievalSelection {
+    mode: RetrievalMode
+    hit: RetrievalDisplayHit
+}
+
+interface RetrievalModeResultState {
+    hits: RetrievalSearchHit[]
+    total: number
+    error: string | null
 }
 
 interface KnowledgeRetrievalTabProps {
@@ -89,24 +92,16 @@ interface KnowledgeRetrievalTabProps {
 
 const QUERY_MAX_LENGTH = 200
 const HISTORY_LIMIT = 8
+const RECENT_HISTORY_LIMIT = 5
 const TOP_K_MIN = 1
 const TOP_K_MAX = 10
 const SCORE_THRESHOLD_MIN = 0
 const SCORE_THRESHOLD_MAX = 1
 const SCORE_THRESHOLD_STEP = 0.01
+const MODE_ORDER: RetrievalMode[] = ['hybrid', 'semantic', 'lexical']
 
 function clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value))
-}
-
-function formatDateTime(value: string): string {
-    return new Date(value).toLocaleString(undefined, {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-    })
 }
 
 function formatScore(value: number): string {
@@ -130,8 +125,42 @@ function normalizeRetrievalMode(value: string | null | undefined): RetrievalMode
     }
 }
 
+function normalizeViewMode(value: string | null | undefined): RetrievalViewMode | null {
+    if (value === 'compare') return 'compare'
+    return normalizeRetrievalMode(value)
+}
+
 function getStorageKey(sourceId: string): string {
     return `opsfactory:knowledge:retrieval-history:${sourceId}:v1`
+}
+
+function normalizeHistoryEntry(raw: unknown): RetrievalHistoryEntry | null {
+    if (!raw || typeof raw !== 'object') return null
+
+    const record = raw as Record<string, unknown>
+    const query = typeof record.query === 'string' ? record.query.trim() : ''
+    if (!query) return null
+
+    const legacyMode = typeof record.mode === 'string' ? normalizeRetrievalMode(record.mode) : null
+    const viewMode = typeof record.viewMode === 'string'
+        ? normalizeViewMode(record.viewMode)
+        : legacyMode
+
+    if (!viewMode) return null
+
+    return {
+        id: typeof record.id === 'string' ? record.id : `${Date.now()}:${viewMode}:${query}`,
+        query,
+        viewMode,
+        topK: clamp(Number(record.topK) || TOP_K_MIN, TOP_K_MIN, TOP_K_MAX),
+        scoreThresholdEnabled: Boolean(record.scoreThresholdEnabled),
+        scoreThreshold: clamp(
+            Number(record.scoreThreshold) || 0,
+            SCORE_THRESHOLD_MIN,
+            SCORE_THRESHOLD_MAX
+        ),
+        createdAt: typeof record.createdAt === 'string' ? record.createdAt : new Date().toISOString(),
+    }
 }
 
 function loadHistory(storageKey: string): RetrievalHistoryEntry[] {
@@ -140,8 +169,14 @@ function loadHistory(storageKey: string): RetrievalHistoryEntry[] {
     try {
         const raw = window.localStorage.getItem(storageKey)
         if (!raw) return []
-        const parsed = JSON.parse(raw) as RetrievalHistoryEntry[]
-        return Array.isArray(parsed) ? parsed : []
+
+        const parsed = JSON.parse(raw) as unknown
+        if (!Array.isArray(parsed)) return []
+
+        return parsed
+            .map(entry => normalizeHistoryEntry(entry))
+            .filter((entry): entry is RetrievalHistoryEntry => Boolean(entry))
+            .slice(0, HISTORY_LIMIT)
     } catch {
         return []
     }
@@ -150,17 +185,6 @@ function loadHistory(storageKey: string): RetrievalHistoryEntry[] {
 function saveHistory(storageKey: string, entries: RetrievalHistoryEntry[]): void {
     if (typeof window === 'undefined') return
     window.localStorage.setItem(storageKey, JSON.stringify(entries))
-}
-
-function getProfileMode(profile: KnowledgeProfileDetail | null, defaults: KnowledgeDefaults | null): RetrievalMode {
-    const profileMode = profile?.config && typeof profile.config === 'object' && 'retrieval' in profile.config
-        ? normalizeRetrievalMode(((profile.config.retrieval as Record<string, unknown>)?.mode as string | undefined) || undefined)
-        : null
-
-    if (profileMode) return profileMode
-
-    const defaultMode = normalizeRetrievalMode(defaults?.retrieval.mode)
-    return defaultMode || 'hybrid'
 }
 
 function getTopK(defaults: KnowledgeDefaults | null): number {
@@ -179,25 +203,20 @@ function getSupportedModes(capabilities: KnowledgeCapabilities | null): Set<Retr
     return new Set(modes)
 }
 
-function buildInitialSettings(
-    capabilities: KnowledgeCapabilities | null,
-    defaults: KnowledgeDefaults | null,
-    retrievalProfileDetail: KnowledgeProfileDetail | null
-): RetrievalSettings {
-    const supportedModes = getSupportedModes(capabilities)
-    const preferredMode = getProfileMode(retrievalProfileDetail, defaults)
-    const fallbackMode = supportedModes.has(preferredMode)
-        ? preferredMode
-        : supportedModes.has('hybrid')
-            ? 'hybrid'
-            : supportedModes.has('semantic')
-                ? 'semantic'
-                : 'lexical'
+function getOrderedModes(supportedModes: Set<RetrievalMode>): RetrievalMode[] {
+    return MODE_ORDER.filter(mode => supportedModes.has(mode))
+}
 
+function buildInitialViewMode(capabilities: KnowledgeCapabilities | null): RetrievalViewMode {
+    const orderedModes = getOrderedModes(getSupportedModes(capabilities))
+    if (orderedModes.length > 1) return 'compare'
+    return orderedModes[0] || 'hybrid'
+}
+
+function buildInitialSettings(defaults: KnowledgeDefaults | null): RetrievalSettings {
     return {
-        mode: fallbackMode,
         topK: getTopK(defaults),
-        scoreThresholdEnabled: true,
+        scoreThresholdEnabled: false,
         scoreThreshold: 0.2,
     }
 }
@@ -213,15 +232,12 @@ function getModeLabelKey(mode: RetrievalMode): string {
     }
 }
 
-function getModeDescriptionKey(mode: RetrievalMode): string {
-    switch (mode) {
-    case 'semantic':
-        return 'knowledge.retrievalModeSemanticDescription'
-    case 'lexical':
-        return 'knowledge.retrievalModeLexicalDescription'
-    case 'hybrid':
-        return 'knowledge.retrievalModeHybridDescription'
+function getViewModeLabelKey(viewMode: RetrievalViewMode): string {
+    if (viewMode === 'compare') {
+        return 'knowledge.retrievalViewCompare'
     }
+
+    return getModeLabelKey(viewMode)
 }
 
 function getDocumentName(documentId: string, names: Record<string, string>): string {
@@ -241,12 +257,12 @@ function buildDisplayResults(
             const normalized = maxScore > 0
                 ? clamp(useRawScore ? hit.score : hit.score / maxScore, 0, 1)
                 : 0
+
             return {
                 ...hit,
                 documentName: getDocumentName(hit.documentId, documentNames),
                 displayScore: normalized,
                 displayPercent: Math.round(normalized * 100),
-                signalLevel: Math.max(1, Math.ceil(normalized * 5)),
             }
         })
         .filter(hit => !settings.scoreThresholdEnabled || hit.displayScore >= settings.scoreThreshold)
@@ -256,7 +272,7 @@ function upsertHistoryEntry(entries: RetrievalHistoryEntry[], entry: RetrievalHi
     const remaining = entries.filter(item =>
         !(
             item.query === entry.query
-            && item.mode === entry.mode
+            && item.viewMode === entry.viewMode
             && item.topK === entry.topK
             && item.scoreThresholdEnabled === entry.scoreThresholdEnabled
             && item.scoreThreshold === entry.scoreThreshold
@@ -272,280 +288,282 @@ function buildPageRange(pageFrom: number | null, pageTo: number | null, fallback
     return `${pageFrom}-${pageTo}`
 }
 
-function RetrievalSettingsModal({
-    supportedModes,
-    settings,
-    onClose,
-    onSave,
+function createEmptyModeResults(): Record<RetrievalMode, RetrievalModeResultState> {
+    return {
+        semantic: {
+            hits: [],
+            total: 0,
+            error: null,
+        },
+        lexical: {
+            hits: [],
+            total: 0,
+            error: null,
+        },
+        hybrid: {
+            hits: [],
+            total: 0,
+            error: null,
+        },
+    }
+}
+
+function RetrievalModePanel({
+    mode,
+    results,
+    rawCount,
+    error,
+    searched,
+    loading,
+    thresholdEnabled,
+    selectedKey,
+    onSelect,
+    onFocusMode,
+    single,
 }: {
-    supportedModes: Set<RetrievalMode>
-    settings: RetrievalSettings
-    onClose: () => void
-    onSave: (settings: RetrievalSettings) => void
+    mode: RetrievalMode
+    results: RetrievalDisplayHit[]
+    rawCount: number
+    error: string | null
+    searched: boolean
+    loading: boolean
+    thresholdEnabled: boolean
+    selectedKey: string | null
+    onSelect: (mode: RetrievalMode, hit: RetrievalDisplayHit) => void
+    onFocusMode?: (mode: RetrievalMode) => void
+    single?: boolean
 }) {
     const { t } = useTranslation()
-    const [draft, setDraft] = useState<RetrievalSettings>(settings)
-
-    const modeOptions: RetrievalMode[] = ['hybrid', 'semantic', 'lexical']
+    const emptyState = !searched
+        ? t('knowledge.retrievalModeIdle')
+        : rawCount > 0 && thresholdEnabled && results.length === 0
+            ? t('knowledge.retrievalNoResultsThreshold')
+            : t('knowledge.retrievalNoResults')
+    const showFocusAction = Boolean(onFocusMode) && searched
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div
-                className="modal knowledge-retrieval-settings-modal"
-                onClick={event => event.stopPropagation()}
-            >
-                <div className="modal-header">
-                    <div>
-                        <h2 className="modal-title">{t('knowledge.retrievalSettingsTitle')}</h2>
-                        <p className="knowledge-retrieval-modal-subtitle">{t('knowledge.retrievalSettingsDescription')}</p>
+        <section className={`knowledge-retrieval-mode-panel ${single ? 'is-single' : ''}`}>
+            <div className="knowledge-retrieval-mode-panel-header">
+                <div className="knowledge-retrieval-mode-panel-copy">
+                    <div className="knowledge-retrieval-mode-panel-title-row">
+                        <h3 className="knowledge-retrieval-mode-panel-title">{t(getModeLabelKey(mode))}</h3>
+                        {mode === 'hybrid' && (
+                            <span className="knowledge-retrieval-mode-pill">{t('knowledge.retrievalModeRecommended')}</span>
+                        )}
                     </div>
-                    <button className="modal-close" onClick={onClose}>&times;</button>
+                    <div className="resource-card-tags">
+                        <span className="resource-card-tag">{t('knowledge.retrievalColumnRawCount', { count: rawCount })}</span>
+                        <span className="resource-card-tag">{t('knowledge.retrievalColumnShownCount', { count: results.length })}</span>
+                    </div>
                 </div>
 
-                <div className="modal-body knowledge-retrieval-settings-body">
-                    <section className="knowledge-retrieval-settings-section">
-                        <div className="knowledge-retrieval-settings-section-head">
-                            <h3 className="knowledge-retrieval-settings-section-title">{t('knowledge.retrievalMethodLabel')}</h3>
-                            <p className="knowledge-retrieval-settings-section-description">{t('knowledge.retrievalMethodHint')}</p>
-                        </div>
-                        <div className="knowledge-retrieval-mode-options">
-                            {modeOptions.map(mode => {
-                                const supported = supportedModes.has(mode)
-                                return (
-                                    <label
-                                        key={mode}
-                                        className={[
-                                            'knowledge-retrieval-mode-option',
-                                            draft.mode === mode ? 'active' : '',
-                                            !supported ? 'disabled' : '',
-                                        ].filter(Boolean).join(' ')}
-                                    >
-                                        <input
-                                            type="radio"
-                                            name="retrieval-mode"
-                                            checked={draft.mode === mode}
-                                            onChange={() => setDraft(current => ({ ...current, mode }))}
-                                            disabled={!supported}
-                                        />
-                                        <div className="knowledge-retrieval-mode-option-body">
-                                            <div className="knowledge-retrieval-mode-option-title-row">
-                                                <span className="knowledge-retrieval-mode-option-title">{t(getModeLabelKey(mode))}</span>
-                                                {mode === 'hybrid' && (
-                                                    <span className="knowledge-retrieval-mode-pill">{t('knowledge.retrievalModeRecommended')}</span>
-                                                )}
-                                            </div>
-                                            <span className="knowledge-retrieval-mode-option-description">
-                                                {t(getModeDescriptionKey(mode))}
-                                            </span>
-                                        </div>
-                                    </label>
-                                )
-                            })}
-                        </div>
-                    </section>
-
-                    <section className="knowledge-retrieval-settings-section">
-                        <div className="knowledge-retrieval-settings-section-head">
-                            <h3 className="knowledge-retrieval-settings-section-title">{t('knowledge.retrievalSettingsParamsTitle')}</h3>
-                            <p className="knowledge-retrieval-settings-section-description">{t('knowledge.retrievalSettingsParamsDescription')}</p>
-                        </div>
-
-                        <div className="knowledge-retrieval-settings-grid">
-                            <div className="knowledge-retrieval-parameter-card">
-                                <div className="knowledge-retrieval-parameter-head">
-                                    <label className="form-label" htmlFor="retrieval-top-k-input">{t('knowledge.retrievalTopKLabel')}</label>
-                                    <span className="knowledge-retrieval-parameter-value">{draft.topK}</span>
-                                </div>
-                                <p className="knowledge-form-help">{t('knowledge.retrievalTopKHint')}</p>
-                                <div className="knowledge-retrieval-range-row">
-                                    <input
-                                        id="retrieval-top-k-input"
-                                        className="form-input knowledge-retrieval-number-input"
-                                        type="number"
-                                        min={TOP_K_MIN}
-                                        max={TOP_K_MAX}
-                                        value={draft.topK}
-                                        onChange={event => setDraft(current => ({
-                                            ...current,
-                                            topK: clamp(Number(event.target.value) || TOP_K_MIN, TOP_K_MIN, TOP_K_MAX),
-                                        }))}
-                                    />
-                                    <input
-                                        className="knowledge-retrieval-range-input"
-                                        type="range"
-                                        min={TOP_K_MIN}
-                                        max={TOP_K_MAX}
-                                        value={draft.topK}
-                                        onChange={event => setDraft(current => ({
-                                            ...current,
-                                            topK: clamp(Number(event.target.value), TOP_K_MIN, TOP_K_MAX),
-                                        }))}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="knowledge-retrieval-parameter-card">
-                                <div className="knowledge-retrieval-parameter-head">
-                                    <div className="knowledge-retrieval-threshold-head">
-                                        <label className="form-label" htmlFor="retrieval-threshold-input">{t('knowledge.retrievalThresholdLabel')}</label>
-                                        <label className="mcp-toggle">
-                                            <input
-                                                type="checkbox"
-                                                checked={draft.scoreThresholdEnabled}
-                                                onChange={event => setDraft(current => ({
-                                                    ...current,
-                                                    scoreThresholdEnabled: event.target.checked,
-                                                }))}
-                                            />
-                                            <span className="mcp-toggle-slider" />
-                                        </label>
-                                    </div>
-                                    <span className="knowledge-retrieval-parameter-value">
-                                        {draft.scoreThresholdEnabled ? formatScore(draft.scoreThreshold) : t('knowledge.retrievalThresholdOff')}
-                                    </span>
-                                </div>
-                                <p className="knowledge-form-help">{t('knowledge.retrievalThresholdHint')}</p>
-                                <div className={`knowledge-retrieval-range-row ${!draft.scoreThresholdEnabled ? 'is-disabled' : ''}`}>
-                                    <input
-                                        id="retrieval-threshold-input"
-                                        className="form-input knowledge-retrieval-number-input"
-                                        type="number"
-                                        min={SCORE_THRESHOLD_MIN}
-                                        max={SCORE_THRESHOLD_MAX}
-                                        step={SCORE_THRESHOLD_STEP}
-                                        value={draft.scoreThreshold}
-                                        disabled={!draft.scoreThresholdEnabled}
-                                        onChange={event => setDraft(current => ({
-                                            ...current,
-                                            scoreThreshold: clamp(Number(event.target.value) || 0, SCORE_THRESHOLD_MIN, SCORE_THRESHOLD_MAX),
-                                        }))}
-                                    />
-                                    <input
-                                        className="knowledge-retrieval-range-input"
-                                        type="range"
-                                        min={SCORE_THRESHOLD_MIN}
-                                        max={SCORE_THRESHOLD_MAX}
-                                        step={SCORE_THRESHOLD_STEP}
-                                        value={draft.scoreThreshold}
-                                        disabled={!draft.scoreThresholdEnabled}
-                                        onChange={event => setDraft(current => ({
-                                            ...current,
-                                            scoreThreshold: clamp(Number(event.target.value), SCORE_THRESHOLD_MIN, SCORE_THRESHOLD_MAX),
-                                        }))}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-
-                <div className="modal-footer">
-                    <button className="btn btn-secondary" onClick={onClose}>
-                        {t('common.cancel')}
+                {showFocusAction && onFocusMode && (
+                    <button
+                        type="button"
+                        className="btn btn-secondary knowledge-retrieval-focus-btn"
+                        onClick={() => onFocusMode(mode)}
+                    >
+                        {t('knowledge.retrievalFocusModeAction')}
                     </button>
-                    <button className="btn btn-primary" onClick={() => onSave(draft)}>
-                        {t('common.save')}
-                    </button>
-                </div>
+                )}
             </div>
-        </div>
+
+            {error && (
+                <div className="conn-banner conn-banner-error">
+                    {t('common.connectionError', { error })}
+                </div>
+            )}
+
+            <div className="knowledge-retrieval-mode-results">
+                {loading ? (
+                    <div className="knowledge-retrieval-mode-empty">{t('common.loading')}</div>
+                ) : results.length === 0 ? (
+                    <div className="knowledge-retrieval-mode-empty">{emptyState}</div>
+                ) : (
+                    results.map((hit, index) => {
+                        const selectionKey = `${mode}:${hit.chunkId}`
+                        return (
+                            <button
+                                key={selectionKey}
+                                type="button"
+                                className={`knowledge-retrieval-hit-card ${selectedKey === selectionKey ? 'selected' : ''}`}
+                                onClick={() => onSelect(mode, hit)}
+                            >
+                                <span className="knowledge-retrieval-hit-rank">#{index + 1}</span>
+                                <div className="knowledge-retrieval-hit-main">
+                                    <div className="knowledge-retrieval-hit-head">
+                                        <strong className="knowledge-retrieval-hit-title">{hit.documentName}</strong>
+                                        <span className="knowledge-retrieval-score-pill">{formatScore(hit.displayScore)}</span>
+                                    </div>
+                                    <p className="knowledge-retrieval-hit-snippet">{hit.snippet || hit.title || hit.chunkId}</p>
+                                    <div className="knowledge-retrieval-hit-footer">
+                                        <span className="knowledge-retrieval-result-meta">
+                                            {t('knowledge.retrievalPageShort')} {buildPageRange(hit.pageFrom, hit.pageTo, t('knowledge.notAvailable'))}
+                                        </span>
+                                        <span className="knowledge-retrieval-result-meta">
+                                            {hit.title || t('knowledge.notAvailable')}
+                                        </span>
+                                        <span className="knowledge-retrieval-result-meta knowledge-retrieval-hit-chunk">
+                                            {hit.chunkId}
+                                        </span>
+                                    </div>
+                                    <div className="knowledge-retrieval-bar">
+                                        <span style={{ width: `${hit.displayPercent}%` }} />
+                                    </div>
+                                </div>
+                            </button>
+                        )
+                    })
+                )}
+            </div>
+        </section>
     )
 }
 
-function RetrievalDetailModal({
-    hit,
+function RetrievalDetailPanel({
+    selection,
     detail,
-    mode,
     loading,
     error,
-    onClose,
+    onClear,
+    variant,
 }: {
-    hit: RetrievalDisplayHit
+    selection: RetrievalSelection | null
     detail: RetrievalFetchResponse | null
-    mode: RetrievalMode
     loading: boolean
     error: string | null
-    onClose: () => void
+    onClear: () => void
+    variant: 'panel' | 'modal'
 }) {
     const { t } = useTranslation()
-    const content = detail?.text || detail?.markdown || ''
 
-    return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div
-                className="modal knowledge-retrieval-detail-modal"
-                onClick={event => event.stopPropagation()}
-            >
-                <div className="modal-header">
-                    <div className="knowledge-retrieval-detail-header-copy">
-                        <h2 className="modal-title">{t('knowledge.retrievalDetailTitle')}</h2>
-                        <p className="knowledge-retrieval-detail-subtitle">
-                            <span className="knowledge-retrieval-detail-chunk">{hit.chunkId}</span>
-                            <span className="knowledge-retrieval-detail-separator">·</span>
-                            <span className="knowledge-retrieval-detail-document">{hit.documentName}</span>
-                        </p>
-                    </div>
-                    <div className="knowledge-retrieval-detail-header-meta">
-                        <span className="knowledge-retrieval-score-pill">{formatScore(hit.displayScore)}</span>
-                        <button className="modal-close" onClick={onClose}>&times;</button>
+    if (!selection) {
+        if (variant === 'modal') {
+            return null
+        }
+
+        return (
+            <aside className="knowledge-detail-panel knowledge-retrieval-preview-panel">
+                <div className="knowledge-panel-header">
+                    <div>
+                        <h2 className="knowledge-panel-title">{t('knowledge.retrievalDetailTitle')}</h2>
+                        <p className="knowledge-panel-description">{t('knowledge.retrievalDetailPlaceholder')}</p>
                     </div>
                 </div>
+                <div className="knowledge-doc-preview-empty">{t('knowledge.retrievalDetailEmpty')}</div>
+            </aside>
+        )
+    }
 
-                <div className="modal-body knowledge-retrieval-detail-body">
-                    {loading ? (
-                        <div className="knowledge-doc-preview-empty">{t('knowledge.retrievalDetailLoading')}</div>
-                    ) : error ? (
-                        <div className="agents-alert agents-alert-error">{error}</div>
-                    ) : (
-                        <>
-                            <section className="knowledge-retrieval-detail-section knowledge-retrieval-detail-section-content">
-                                <h3 className="knowledge-retrieval-detail-section-title">{t('knowledge.retrievalDetailContent')}</h3>
-                                <div className="knowledge-retrieval-detail-content-panel">
-                                    <div className="knowledge-retrieval-detail-content-text">{content || t('knowledge.notAvailable')}</div>
+    const { hit, mode } = selection
+    const content = detail?.text || detail?.markdown || hit.snippet || ''
+    const panelContent = (
+        <>
+            <div className="knowledge-panel-header">
+                <div>
+                    <h2 className="knowledge-panel-title">{hit.documentName}</h2>
+                    <p className="knowledge-panel-description">{t(getModeLabelKey(mode))}</p>
+                </div>
+                <button type="button" className="knowledge-panel-close" onClick={onClear} aria-label={t('common.close')}>
+                    &times;
+                </button>
+            </div>
+
+            <div className="knowledge-panel-body">
+                <div className="resource-card-tags">
+                    <span className="resource-card-tag">{t('knowledge.retrievalScoreLabel')} {formatScore(hit.displayScore)}</span>
+                    <span className="resource-card-tag">
+                        {t('knowledge.retrievalPageShort')} {buildPageRange(detail?.pageFrom ?? hit.pageFrom, detail?.pageTo ?? hit.pageTo, t('knowledge.notAvailable'))}
+                    </span>
+                    <span className="resource-card-tag">{hit.chunkId}</span>
+                </div>
+
+                {loading ? (
+                    <div className="knowledge-doc-preview-empty">{t('knowledge.retrievalDetailLoading')}</div>
+                ) : error ? (
+                    <div className="conn-banner conn-banner-error">
+                        {t('common.connectionError', { error })}
+                    </div>
+                ) : (
+                    <>
+                        <section className="knowledge-panel-group">
+                            <h3 className="knowledge-panel-group-title">{t('knowledge.retrievalDetailContent')}</h3>
+                            <div className="knowledge-retrieval-detail-content-panel">
+                                <div className="knowledge-retrieval-detail-content-text">{content || t('knowledge.notAvailable')}</div>
+                            </div>
+                        </section>
+
+                        <section className="knowledge-panel-group">
+                            <h3 className="knowledge-panel-group-title">{t('knowledge.retrievalDetailKeywords')}</h3>
+                            {detail?.keywords && detail.keywords.length > 0 ? (
+                                <div className="resource-card-tags knowledge-retrieval-keywords">
+                                    {detail.keywords.map(keyword => (
+                                        <span key={keyword} className="resource-card-tag">#{keyword}</span>
+                                    ))}
                                 </div>
-                            </section>
+                            ) : (
+                                <p className="knowledge-section-empty">{t('knowledge.notAvailable')}</p>
+                            )}
+                        </section>
+                    </>
+                )}
 
-                            <section className="knowledge-retrieval-detail-section">
-                                <h3 className="knowledge-retrieval-detail-section-title">{t('knowledge.retrievalDetailKeywords')}</h3>
-                                {detail?.keywords && detail.keywords.length > 0 ? (
-                                    <div className="resource-card-tags knowledge-retrieval-keywords">
-                                        {detail.keywords.map(keyword => (
-                                            <span key={keyword} className="resource-card-tag">#{keyword}</span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="knowledge-section-empty">{t('knowledge.notAvailable')}</p>
-                                )}
-                            </section>
+                <section className="knowledge-panel-group">
+                    <h3 className="knowledge-panel-group-title">{t('knowledge.retrievalDetailMetadata')}</h3>
+                    <div className="knowledge-kv-grid knowledge-retrieval-detail-grid">
+                        <div className="knowledge-kv-item">
+                            <span className="knowledge-kv-label">{t('knowledge.retrievalDetailDocument')}</span>
+                            <span className="knowledge-kv-value">{hit.documentName}</span>
+                        </div>
+                        <div className="knowledge-kv-item">
+                            <span className="knowledge-kv-label">{t('knowledge.retrievalDetailMode')}</span>
+                            <span className="knowledge-kv-value">{t(getModeLabelKey(mode))}</span>
+                        </div>
+                        <div className="knowledge-kv-item">
+                            <span className="knowledge-kv-label">{t('knowledge.retrievalDetailChunkId')}</span>
+                            <span className="knowledge-kv-value knowledge-kv-code">{hit.chunkId}</span>
+                        </div>
+                        <div className="knowledge-kv-item">
+                            <span className="knowledge-kv-label">{t('knowledge.retrievalScoreLabel')}</span>
+                            <span className="knowledge-kv-value">{formatScore(hit.displayScore)}</span>
+                        </div>
+                        <div className="knowledge-kv-item">
+                            <span className="knowledge-kv-label">{t('knowledge.retrievalDetailPageRange')}</span>
+                            <span className="knowledge-kv-value">
+                                {buildPageRange(detail?.pageFrom ?? hit.pageFrom, detail?.pageTo ?? hit.pageTo, t('knowledge.notAvailable'))}
+                            </span>
+                        </div>
+                        <div className="knowledge-kv-item">
+                            <span className="knowledge-kv-label">{t('knowledge.retrievalDetailTitlePath')}</span>
+                            <span className="knowledge-kv-value">
+                                {(detail?.titlePath || hit.titlePath).length > 0
+                                    ? (detail?.titlePath || hit.titlePath).join(' / ')
+                                    : t('knowledge.notAvailable')}
+                            </span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </>
+    )
 
-                            <section className="knowledge-retrieval-detail-section">
-                                <h3 className="knowledge-retrieval-detail-section-title">{t('knowledge.retrievalDetailMetadata')}</h3>
-                                <div className="knowledge-kv-grid knowledge-retrieval-detail-grid">
-                                    <div className="knowledge-kv-item">
-                                        <span className="knowledge-kv-label">{t('knowledge.retrievalDetailDocument')}</span>
-                                        <span className="knowledge-kv-value">{hit.documentName}</span>
-                                    </div>
-                                    <div className="knowledge-kv-item">
-                                        <span className="knowledge-kv-label">{t('knowledge.retrievalDetailMode')}</span>
-                                        <span className="knowledge-kv-value">{t(getModeLabelKey(mode))}</span>
-                                    </div>
-                                    <div className="knowledge-kv-item">
-                                        <span className="knowledge-kv-label">{t('knowledge.retrievalDetailPageRange')}</span>
-                                        <span className="knowledge-kv-value">
-                                            {buildPageRange(detail?.pageFrom ?? hit.pageFrom, detail?.pageTo ?? hit.pageTo, t('knowledge.notAvailable'))}
-                                        </span>
-                                    </div>
-                                    <div className="knowledge-kv-item">
-                                        <span className="knowledge-kv-label">{t('knowledge.retrievalScoreLabel')}</span>
-                                        <span className="knowledge-kv-value">{formatScore(hit.displayScore)}</span>
-                                    </div>
-                                </div>
-                            </section>
-                        </>
-                    )}
+    if (variant === 'modal') {
+        return (
+            <div className="modal-overlay" onClick={onClear}>
+                <div
+                    className="modal knowledge-retrieval-detail-modal knowledge-retrieval-detail-modal-compare"
+                    onClick={event => event.stopPropagation()}
+                >
+                    {panelContent}
                 </div>
             </div>
-        </div>
+        )
+    }
+
+    return (
+        <aside className="knowledge-detail-panel knowledge-retrieval-preview-panel">
+            {panelContent}
+        </aside>
     )
 }
 
@@ -557,32 +575,45 @@ export default function KnowledgeRetrievalTab({
 }: KnowledgeRetrievalTabProps) {
     const { t } = useTranslation()
     const { showToast } = useToast()
+
     const supportedModes = useMemo(() => getSupportedModes(capabilities), [capabilities])
+    const orderedModes = useMemo(() => getOrderedModes(supportedModes), [supportedModes])
+    const canCompare = orderedModes.length > 1
     const storageKey = useMemo(() => getStorageKey(source.id), [source.id])
-    const [settings, setSettings] = useState<RetrievalSettings>(() => buildInitialSettings(capabilities, defaults, retrievalProfileDetail))
+
+    const [viewMode, setViewMode] = useState<RetrievalViewMode>(() => buildInitialViewMode(capabilities))
+    const [settings, setSettings] = useState<RetrievalSettings>(() => buildInitialSettings(defaults))
     const [query, setQuery] = useState('')
     const [history, setHistory] = useState<RetrievalHistoryEntry[]>(() => loadHistory(storageKey))
     const [documentNames, setDocumentNames] = useState<Record<string, string>>({})
-    const [hits, setHits] = useState<RetrievalSearchHit[]>([])
-    const [hasSearched, setHasSearched] = useState(false)
-    const [searching, setSearching] = useState(false)
+    const [modeResults, setModeResults] = useState<Record<RetrievalMode, RetrievalModeResultState>>(() => createEmptyModeResults())
+    const [searchedModes, setSearchedModes] = useState<RetrievalMode[]>([])
+    const [activeSearchModes, setActiveSearchModes] = useState<RetrievalMode[]>([])
     const [searchError, setSearchError] = useState<string | null>(null)
-    const [settingsOpen, setSettingsOpen] = useState(false)
-    const [detailTarget, setDetailTarget] = useState<RetrievalDisplayHit | null>(null)
+    const [selection, setSelection] = useState<RetrievalSelection | null>(null)
     const [detail, setDetail] = useState<RetrievalFetchResponse | null>(null)
     const [detailLoading, setDetailLoading] = useState(false)
     const [detailError, setDetailError] = useState<string | null>(null)
 
     useEffect(() => {
-        setSettings(buildInitialSettings(capabilities, defaults, retrievalProfileDetail))
+        setViewMode(buildInitialViewMode(capabilities))
+        setSettings(buildInitialSettings(defaults))
         setQuery('')
-        setHits([])
-        setHasSearched(false)
+        setModeResults(createEmptyModeResults())
+        setSearchedModes([])
+        setActiveSearchModes([])
         setSearchError(null)
-        setDetailTarget(null)
+        setSelection(null)
         setDetail(null)
         setDetailError(null)
     }, [source.id])
+
+    useEffect(() => {
+        if (viewMode === 'compare' && canCompare) return
+        if (viewMode !== 'compare' && supportedModes.has(viewMode)) return
+
+        setViewMode(canCompare ? 'compare' : orderedModes[0] || 'hybrid')
+    }, [canCompare, orderedModes, supportedModes, viewMode])
 
     useEffect(() => {
         setHistory(loadHistory(storageKey))
@@ -601,7 +632,11 @@ export default function KnowledgeRetrievalTab({
                 const data = await response.json().catch(() => null) as PagedResponse<KnowledgeDocumentSummary> | { message?: string } | null
 
                 if (!response.ok) {
-                    throw new Error(data && typeof data === 'object' && 'message' in data ? String(data.message || response.statusText) : response.statusText)
+                    throw new Error(
+                        data && typeof data === 'object' && 'message' in data
+                            ? String(data.message || response.statusText)
+                            : response.statusText
+                    )
                 }
 
                 if (cancelled) return
@@ -622,13 +657,92 @@ export default function KnowledgeRetrievalTab({
         }
     }, [source.id])
 
-    const displayResults = useMemo(
-        () => buildDisplayResults(hits, documentNames, settings),
-        [documentNames, hits, settings]
+    const displayResultsByMode = useMemo<Record<RetrievalMode, RetrievalDisplayHit[]>>(() => ({
+        semantic: buildDisplayResults(modeResults.semantic.hits, documentNames, settings),
+        lexical: buildDisplayResults(modeResults.lexical.hits, documentNames, settings),
+        hybrid: buildDisplayResults(modeResults.hybrid.hits, documentNames, settings),
+    }), [documentNames, modeResults, settings])
+
+    const visibleModes = useMemo(
+        () => (viewMode === 'compare' ? orderedModes : [viewMode]),
+        [orderedModes, viewMode]
     )
 
-    const executeSearch = useCallback(async (nextQuery?: string, nextSettings?: RetrievalSettings) => {
+    const selectedKey = selection ? `${selection.mode}:${selection.hit.chunkId}` : null
+    const recentHistory = history.slice(0, RECENT_HISTORY_LIMIT)
+    const bindingName = retrievalProfileDetail?.name || source.retrievalProfileId || t('knowledge.notBound')
+    const selectedModeCount = viewMode === 'compare' ? 0 : displayResultsByMode[viewMode].length
+    const isCompareView = viewMode === 'compare'
+    const showDetailPanel = !isCompareView && Boolean(selection)
+    const hasSearchedVisibleModes = visibleModes.some(mode => searchedModes.includes(mode))
+    const hasActiveVisibleModes = visibleModes.some(mode => activeSearchModes.includes(mode))
+
+    const handleChangeViewMode = useCallback((nextViewMode: RetrievalViewMode) => {
+        setViewMode(nextViewMode)
+        setSearchError(null)
+        setDetail(null)
+        setDetailError(null)
+
+        if (nextViewMode === 'compare') {
+            setSelection(null)
+            return
+        }
+
+        if (selection && selection.mode !== nextViewMode) {
+            setSelection(null)
+        }
+    }, [selection])
+
+    const executeModeSearch = useCallback(async (
+        mode: RetrievalMode,
+        effectiveQuery: string,
+        effectiveSettings: RetrievalSettings
+    ) => {
+        const body: Record<string, unknown> = {
+            query: effectiveQuery,
+            sourceIds: [source.id],
+            topK: effectiveSettings.topK,
+            override: {
+                mode,
+                includeScores: true,
+            },
+        }
+
+        if (source.retrievalProfileId) {
+            body.retrievalProfileId = source.retrievalProfileId
+        }
+
+        const response = await fetch(`${KNOWLEDGE_SERVICE_URL}/ops-knowledge/search`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+        })
+        const data = await response.json().catch(() => null) as RetrievalSearchResponse | { message?: string } | null
+
+        if (!response.ok) {
+            throw new Error(
+                data && typeof data === 'object' && 'message' in data
+                    ? String(data.message || response.statusText)
+                    : response.statusText
+            )
+        }
+
+        const nextHits = (data as RetrievalSearchResponse).hits || []
+        return {
+            hits: nextHits,
+            total: (data as RetrievalSearchResponse).total ?? nextHits.length,
+        }
+    }, [source.id, source.retrievalProfileId])
+
+    const executeSearch = useCallback(async (
+        nextQuery?: string,
+        nextViewMode?: RetrievalViewMode,
+        nextSettings?: RetrievalSettings
+    ) => {
         const effectiveQuery = (nextQuery ?? query).trim()
+        const effectiveViewMode = nextViewMode ?? viewMode
         const effectiveSettings = nextSettings ?? settings
 
         if (!effectiveQuery) {
@@ -636,64 +750,96 @@ export default function KnowledgeRetrievalTab({
             return
         }
 
-        setSearching(true)
+        const modesToQuery = effectiveViewMode === 'compare'
+            ? orderedModes
+            : [effectiveViewMode]
+
+        if (modesToQuery.length === 0) {
+            return
+        }
+
         setSearchError(null)
-        setDetailTarget(null)
+        setSelection(null)
         setDetail(null)
         setDetailError(null)
-        setHasSearched(true)
+        setActiveSearchModes(modesToQuery)
 
         try {
-            const body: Record<string, unknown> = {
-                query: effectiveQuery,
-                sourceIds: [source.id],
-                topK: effectiveSettings.topK,
-                override: {
-                    mode: effectiveSettings.mode,
-                    includeScores: true,
-                },
-            }
+            const settled = await Promise.allSettled(
+                modesToQuery.map(mode => executeModeSearch(mode, effectiveQuery, effectiveSettings))
+            )
 
-            if (source.retrievalProfileId) {
-                body.retrievalProfileId = source.retrievalProfileId
-            }
+            setModeResults(current => {
+                const next = { ...current }
 
-            const response = await fetch(`${KNOWLEDGE_SERVICE_URL}/ops-knowledge/search`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(body),
+                settled.forEach((result, index) => {
+                    const mode = modesToQuery[index]
+
+                    if (result.status === 'fulfilled') {
+                        next[mode] = {
+                            hits: result.value.hits,
+                            total: result.value.total,
+                            error: null,
+                        }
+                        return
+                    }
+
+                    next[mode] = {
+                        hits: [],
+                        total: 0,
+                        error: result.reason instanceof Error ? result.reason.message : t('errors.unknown'),
+                    }
+                })
+
+                return next
             })
-            const data = await response.json().catch(() => null) as RetrievalSearchResponse | { message?: string } | null
 
-            if (!response.ok) {
-                throw new Error(data && typeof data === 'object' && 'message' in data ? String(data.message || response.statusText) : response.statusText)
+            setSearchedModes(current => Array.from(new Set([...current, ...modesToQuery])))
+
+            const successfulModes = settled.filter(result => result.status === 'fulfilled').length
+
+            if (successfulModes > 0) {
+                setHistory(current => upsertHistoryEntry(current, {
+                    id: `${Date.now()}:${effectiveViewMode}:${effectiveQuery}`,
+                    query: effectiveQuery,
+                    viewMode: effectiveViewMode,
+                    topK: effectiveSettings.topK,
+                    scoreThresholdEnabled: effectiveSettings.scoreThresholdEnabled,
+                    scoreThreshold: effectiveSettings.scoreThreshold,
+                    createdAt: new Date().toISOString(),
+                }))
+            } else {
+                const firstError = settled.find(result => result.status === 'rejected')
+                const message = firstError && firstError.status === 'rejected' && firstError.reason instanceof Error
+                    ? firstError.reason.message
+                    : t('errors.unknown')
+                setSearchError(message)
+                showToast('error', message)
             }
-
-            const nextHits = (data as RetrievalSearchResponse).hits || []
-            setHits(nextHits)
-            setHistory(current => upsertHistoryEntry(current, {
-                id: `${Date.now()}:${effectiveSettings.mode}:${effectiveQuery}`,
-                query: effectiveQuery,
-                mode: effectiveSettings.mode,
-                topK: effectiveSettings.topK,
-                scoreThresholdEnabled: effectiveSettings.scoreThresholdEnabled,
-                scoreThreshold: effectiveSettings.scoreThreshold,
-                createdAt: new Date().toISOString(),
-            }))
-        } catch (err) {
-            const message = err instanceof Error ? err.message : t('errors.unknown')
-            setHits([])
-            setSearchError(message)
-            showToast('error', message)
         } finally {
-            setSearching(false)
+            setActiveSearchModes([])
         }
-    }, [query, settings, showToast, source.id, source.retrievalProfileId, t])
+    }, [executeModeSearch, orderedModes, query, settings, showToast, t, viewMode])
+
+    const handleReplayHistory = useCallback((entry: RetrievalHistoryEntry) => {
+        const nextViewMode = entry.viewMode === 'compare' && !canCompare
+            ? orderedModes[0] || 'hybrid'
+            : entry.viewMode
+
+        const replaySettings: RetrievalSettings = {
+            topK: entry.topK,
+            scoreThresholdEnabled: entry.scoreThresholdEnabled,
+            scoreThreshold: entry.scoreThreshold,
+        }
+
+        setQuery(entry.query)
+        handleChangeViewMode(nextViewMode)
+        setSettings(replaySettings)
+        void executeSearch(entry.query, nextViewMode, replaySettings)
+    }, [canCompare, executeSearch, handleChangeViewMode, orderedModes])
 
     useEffect(() => {
-        if (!detailTarget) {
+        if (!selection) {
             setDetail(null)
             setDetailError(null)
             setDetailLoading(false)
@@ -707,11 +853,15 @@ export default function KnowledgeRetrievalTab({
             setDetailError(null)
 
             try {
-                const response = await fetch(`${KNOWLEDGE_SERVICE_URL}/ops-knowledge/fetch/${detailTarget.chunkId}?includeNeighbors=true&neighborWindow=1`)
+                const response = await fetch(`${KNOWLEDGE_SERVICE_URL}/ops-knowledge/fetch/${selection.hit.chunkId}?includeNeighbors=true&neighborWindow=1`)
                 const data = await response.json().catch(() => null) as RetrievalFetchResponse | { message?: string } | null
 
                 if (!response.ok) {
-                    throw new Error(data && typeof data === 'object' && 'message' in data ? String(data.message || response.statusText) : response.statusText)
+                    throw new Error(
+                        data && typeof data === 'object' && 'message' in data
+                            ? String(data.message || response.statusText)
+                            : response.statusText
+                    )
                 }
 
                 if (!cancelled) {
@@ -720,9 +870,7 @@ export default function KnowledgeRetrievalTab({
             } catch (err) {
                 if (!cancelled) {
                     setDetail(null)
-                    setDetailError(t('knowledge.retrievalDetailLoadFailed', {
-                        error: err instanceof Error ? err.message : t('errors.unknown'),
-                    }))
+                    setDetailError(err instanceof Error ? err.message : t('errors.unknown'))
                 }
             } finally {
                 if (!cancelled) {
@@ -736,239 +884,311 @@ export default function KnowledgeRetrievalTab({
         return () => {
             cancelled = true
         }
-    }, [detailTarget])
+    }, [selection, t])
 
-    const handleSaveSettings = useCallback((nextSettings: RetrievalSettings) => {
-        setSettings(nextSettings)
-        setSettingsOpen(false)
+    useEffect(() => {
+        if (!selection) return
 
-        if (query.trim()) {
-            void executeSearch(query, nextSettings)
-        }
-    }, [executeSearch, query])
-
-    const handleReplayHistory = useCallback((entry: RetrievalHistoryEntry) => {
-        const replaySettings: RetrievalSettings = {
-            mode: entry.mode,
-            topK: entry.topK,
-            scoreThresholdEnabled: entry.scoreThresholdEnabled,
-            scoreThreshold: entry.scoreThreshold,
+        if (!visibleModes.includes(selection.mode)) {
+            setSelection(null)
+            return
         }
 
-        setQuery(entry.query)
-        setSettings(replaySettings)
-        void executeSearch(entry.query, replaySettings)
-    }, [executeSearch])
+        const stillVisible = displayResultsByMode[selection.mode]
+            .some(hit => hit.chunkId === selection.hit.chunkId)
 
-    const bindingName = retrievalProfileDetail?.name || source.retrievalProfileId || t('knowledge.notBound')
-    const thresholdSummary = settings.scoreThresholdEnabled
-        ? `>= ${formatScore(settings.scoreThreshold)}`
-        : t('knowledge.retrievalThresholdOff')
+        if (!stillVisible) {
+            setSelection(null)
+        }
+    }, [displayResultsByMode, selection, visibleModes])
+
+    useEffect(() => {
+        if (isCompareView || selection || activeSearchModes.length > 0) return
+
+        for (const mode of visibleModes) {
+            const firstHit = displayResultsByMode[mode][0]
+            if (firstHit) {
+                setSelection({ mode, hit: firstHit })
+                return
+            }
+        }
+    }, [activeSearchModes.length, displayResultsByMode, isCompareView, selection, visibleModes])
+
+    const sectionTitle = viewMode === 'compare'
+        ? t('knowledge.retrievalCompareTitle')
+        : t('knowledge.retrievalResultsTitle', { count: selectedModeCount })
+    const sectionDescription = viewMode === 'compare'
+        ? t('knowledge.retrievalCompareDescription', { count: settings.topK })
+        : t('knowledge.retrievalResultsDescription')
+    const showCompareBoard = isCompareView && (hasSearchedVisibleModes || hasActiveVisibleModes || Boolean(searchError))
+    const showSinglePanel = !isCompareView && (hasSearchedVisibleModes || hasActiveVisibleModes || Boolean(searchError))
 
     return (
         <>
-            <div className="knowledge-retrieval-layout">
-                <div className="knowledge-retrieval-column">
-                    <section className="knowledge-section-card">
-                        <div className="knowledge-section-header">
-                            <div>
-                                <h2 className="knowledge-section-title">{t('knowledge.retrievalTitle')}</h2>
-                                <p className="knowledge-section-description">{t('knowledge.retrievalDescription')}</p>
+            <div className={`knowledge-detail-layout knowledge-retrieval-workbench ${showDetailPanel ? 'has-panel' : ''}`.trim()}>
+            <div className="knowledge-detail-main">
+                <section className="knowledge-section-card">
+                    <div className="knowledge-section-header">
+                        <div>
+                            <h2 className="knowledge-section-title">{t('knowledge.retrievalTitle')}</h2>
+                            <p className="knowledge-section-description">{t('knowledge.retrievalWorkbenchDescription')}</p>
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label" htmlFor="knowledge-retrieval-query">{t('knowledge.retrievalQueryLabel')}</label>
+                        <div className="knowledge-retrieval-query-shell">
+                            <textarea
+                                id="knowledge-retrieval-query"
+                                className="form-input knowledge-retrieval-query"
+                                rows={5}
+                                maxLength={QUERY_MAX_LENGTH}
+                                placeholder={t('knowledge.retrievalQueryPlaceholder')}
+                                value={query}
+                                onChange={event => setQuery(event.target.value)}
+                            />
+                            <span className="knowledge-retrieval-query-count">
+                                {query.length}/{QUERY_MAX_LENGTH}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="knowledge-retrieval-guidance">
+                        {t('knowledge.retrievalGuidance')}
+                    </div>
+
+                    <div className="knowledge-retrieval-control-stack">
+                        <div className="knowledge-retrieval-control-toprow">
+                            <div className="knowledge-retrieval-view-block">
+                                <span className="knowledge-kv-label">{t('knowledge.retrievalMethodLabel')}</span>
+                                <div className="seg-filter knowledge-retrieval-mode-filter" role="tablist" aria-label={t('knowledge.retrievalMethodLabel')}>
+                                    {canCompare && (
+                                        <button
+                                            type="button"
+                                            className={`seg-filter-btn ${viewMode === 'compare' ? 'active' : ''}`}
+                                            onClick={() => handleChangeViewMode('compare')}
+                                        >
+                                            {t('knowledge.retrievalViewCompare')}
+                                        </button>
+                                    )}
+                                    {orderedModes.map(mode => (
+                                        <button
+                                            key={mode}
+                                            type="button"
+                                            className={`seg-filter-btn ${viewMode === mode ? 'active' : ''}`}
+                                            onClick={() => handleChangeViewMode(mode)}
+                                        >
+                                            {t(getModeLabelKey(mode))}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="knowledge-form-help">{t('knowledge.retrievalThresholdRelativeHint')}</p>
                             </div>
-                            <button
-                                type="button"
-                                className="btn btn-secondary"
-                                onClick={() => setSettingsOpen(true)}
-                            >
-                                {t('knowledge.retrievalSettings')}
-                            </button>
+
+                            <div className="knowledge-retrieval-run-card">
+                                <div className="knowledge-retrieval-run-copy">
+                                    <span className="knowledge-kv-label">{t('knowledge.retrievalCurrentBinding')}</span>
+                                    <strong className="knowledge-retrieval-run-title">{bindingName}</strong>
+                                    <p className="knowledge-form-help">{t('knowledge.retrievalBindingHint', { name: bindingName })}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={() => void executeSearch()}
+                                    disabled={activeSearchModes.length > 0 || !query.trim()}
+                                >
+                                    {activeSearchModes.length > 0 ? t('knowledge.retrievalRunning') : t('knowledge.retrievalRun')}
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="form-group">
-                            <label className="form-label" htmlFor="knowledge-retrieval-query">{t('knowledge.retrievalQueryLabel')}</label>
-                            <div className="knowledge-retrieval-query-shell">
-                                <textarea
-                                    id="knowledge-retrieval-query"
-                                    className="form-input knowledge-retrieval-query"
-                                    rows={5}
-                                    maxLength={QUERY_MAX_LENGTH}
-                                    placeholder={t('knowledge.retrievalQueryPlaceholder')}
-                                    value={query}
-                                    onChange={event => setQuery(event.target.value)}
-                                />
-                                <span className="knowledge-retrieval-query-count">
-                                    {query.length}/{QUERY_MAX_LENGTH}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="knowledge-retrieval-summary-panel">
-                            <div className="knowledge-retrieval-summary-line">
-                                <span className="knowledge-retrieval-summary-line-label">{t('knowledge.retrievalBaseConfigLabel')}</span>
-                                <div className="resource-card-tags">
-                                    <span className="resource-card-tag">{bindingName}</span>
+                        <div className="knowledge-retrieval-control-grid">
+                            <div className="knowledge-retrieval-parameter-card">
+                                <div className="knowledge-retrieval-parameter-head">
+                                    <label className="form-label" htmlFor="retrieval-top-k-input">{t('knowledge.retrievalTopKLabel')}</label>
+                                    <span className="knowledge-retrieval-parameter-value">{settings.topK}</span>
+                                </div>
+                                <p className="knowledge-form-help">{t('knowledge.retrievalTopKHint')}</p>
+                                <div className="knowledge-retrieval-range-row">
+                                    <input
+                                        id="retrieval-top-k-input"
+                                        className="form-input knowledge-retrieval-number-input"
+                                        type="number"
+                                        min={TOP_K_MIN}
+                                        max={TOP_K_MAX}
+                                        value={settings.topK}
+                                        onChange={event => setSettings(current => ({
+                                            ...current,
+                                            topK: clamp(Number(event.target.value) || TOP_K_MIN, TOP_K_MIN, TOP_K_MAX),
+                                        }))}
+                                    />
+                                    <input
+                                        className="knowledge-retrieval-range-input"
+                                        type="range"
+                                        min={TOP_K_MIN}
+                                        max={TOP_K_MAX}
+                                        value={settings.topK}
+                                        onChange={event => setSettings(current => ({
+                                            ...current,
+                                            topK: clamp(Number(event.target.value), TOP_K_MIN, TOP_K_MAX),
+                                        }))}
+                                    />
                                 </div>
                             </div>
-                            <div className="knowledge-retrieval-summary-line">
-                                <span className="knowledge-retrieval-summary-line-label">{t('knowledge.retrievalRunConfigLabel')}</span>
-                                <div className="resource-card-tags">
-                                    <span className="resource-card-tag">{t(getModeLabelKey(settings.mode))}</span>
-                                    <span className="resource-card-tag">{`TopK ${settings.topK}`}</span>
-                                    <span className="resource-card-tag">{`${t('knowledge.retrievalThresholdShort')} ${thresholdSummary}`}</span>
+
+                            <div className="knowledge-retrieval-parameter-card">
+                                <div className="knowledge-retrieval-parameter-head">
+                                    <div className="knowledge-retrieval-threshold-head">
+                                        <label className="form-label" htmlFor="retrieval-threshold-input">{t('knowledge.retrievalThresholdLabel')}</label>
+                                        <label className="mcp-toggle">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.scoreThresholdEnabled}
+                                                onChange={event => setSettings(current => ({
+                                                    ...current,
+                                                    scoreThresholdEnabled: event.target.checked,
+                                                }))}
+                                            />
+                                            <span className="mcp-toggle-slider" />
+                                        </label>
+                                    </div>
+                                    <span className="knowledge-retrieval-parameter-value">
+                                        {settings.scoreThresholdEnabled
+                                            ? formatScore(settings.scoreThreshold)
+                                            : t('knowledge.retrievalThresholdOff')}
+                                    </span>
+                                </div>
+                                <p className="knowledge-form-help">{t('knowledge.retrievalThresholdHint')}</p>
+                                <div className={`knowledge-retrieval-range-row ${!settings.scoreThresholdEnabled ? 'is-disabled' : ''}`}>
+                                    <input
+                                        id="retrieval-threshold-input"
+                                        className="form-input knowledge-retrieval-number-input"
+                                        type="number"
+                                        min={SCORE_THRESHOLD_MIN}
+                                        max={SCORE_THRESHOLD_MAX}
+                                        step={SCORE_THRESHOLD_STEP}
+                                        value={settings.scoreThreshold}
+                                        disabled={!settings.scoreThresholdEnabled}
+                                        onChange={event => setSettings(current => ({
+                                            ...current,
+                                            scoreThreshold: clamp(Number(event.target.value) || 0, SCORE_THRESHOLD_MIN, SCORE_THRESHOLD_MAX),
+                                        }))}
+                                    />
+                                    <input
+                                        className="knowledge-retrieval-range-input"
+                                        type="range"
+                                        min={SCORE_THRESHOLD_MIN}
+                                        max={SCORE_THRESHOLD_MAX}
+                                        step={SCORE_THRESHOLD_STEP}
+                                        value={settings.scoreThreshold}
+                                        disabled={!settings.scoreThresholdEnabled}
+                                        onChange={event => setSettings(current => ({
+                                            ...current,
+                                            scoreThreshold: clamp(Number(event.target.value), SCORE_THRESHOLD_MIN, SCORE_THRESHOLD_MAX),
+                                        }))}
+                                    />
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div className="knowledge-retrieval-actions">
-                            <button
-                                type="button"
-                                className="btn btn-primary"
-                                onClick={() => void executeSearch()}
-                                disabled={searching || !query.trim()}
-                            >
-                                {searching ? t('knowledge.retrievalRunning') : t('knowledge.retrievalRun')}
-                            </button>
-                        </div>
-                    </section>
-
-                    <section className="knowledge-section-card">
-                        <div className="knowledge-section-header">
-                            <div>
-                                <h2 className="knowledge-section-title">{t('knowledge.retrievalHistoryTitle')}</h2>
-                                <p className="knowledge-section-description">{t('knowledge.retrievalHistoryDescription')}</p>
-                            </div>
-                        </div>
-
-                        {history.length === 0 ? (
-                            <p className="knowledge-section-empty">{t('knowledge.retrievalHistoryEmpty')}</p>
-                        ) : (
-                            <div className="knowledge-retrieval-history-table">
-                                <div className="knowledge-retrieval-history-head">
-                                    <span>{t('knowledge.retrievalHistoryColumnQuery')}</span>
-                                    <span>{t('knowledge.retrievalHistoryColumnMode')}</span>
-                                    <span>{t('knowledge.retrievalHistoryColumnTime')}</span>
-                                </div>
-                                {history.map(entry => (
+                    {recentHistory.length > 0 && (
+                        <div className="knowledge-retrieval-history-strip">
+                            <span className="knowledge-kv-label">{t('knowledge.retrievalRecentTitle')}</span>
+                            <div className="knowledge-retrieval-history-chips">
+                                {recentHistory.map(entry => (
                                     <button
                                         key={entry.id}
                                         type="button"
-                                        className="knowledge-retrieval-history-row"
+                                        className="knowledge-retrieval-history-chip"
                                         onClick={() => handleReplayHistory(entry)}
                                     >
-                                        <span className="knowledge-retrieval-history-query">{entry.query}</span>
-                                        <span>{t(getModeLabelKey(entry.mode))}</span>
-                                        <span>{formatDateTime(entry.createdAt)}</span>
+                                        <span className="knowledge-retrieval-history-chip-query">{entry.query}</span>
+                                        <span className="knowledge-retrieval-history-chip-mode">{t(getViewModeLabelKey(entry.viewMode))}</span>
                                     </button>
                                 ))}
                             </div>
-                        )}
-                    </section>
-                </div>
-
-                <div className="knowledge-retrieval-column">
-                    <section className="knowledge-section-card">
-                        <div className="knowledge-section-header">
-                            <div>
-                                <h2 className="knowledge-section-title">{t('knowledge.retrievalResultsTitle', { count: displayResults.length })}</h2>
-                                <p className="knowledge-section-description">{t('knowledge.retrievalResultsDescription')}</p>
-                            </div>
                         </div>
+                    )}
+                </section>
 
-                        {searchError && (
-                            <div className="conn-banner conn-banner-error">
-                                {t('common.connectionError', { error: searchError })}
-                            </div>
-                        )}
+                <section className="knowledge-section-card">
+                    <div className="knowledge-section-header">
+                        <div>
+                            <h2 className="knowledge-section-title">{sectionTitle}</h2>
+                            <p className="knowledge-section-description">{sectionDescription}</p>
+                        </div>
+                    </div>
 
-                        {!hasSearched ? (
-                            <div className="knowledge-doc-empty">{t('knowledge.retrievalEmptyDescription')}</div>
-                        ) : searching ? (
-                            <div className="knowledge-doc-empty">{t('common.loading')}</div>
-                        ) : displayResults.length === 0 ? (
-                            <div className="knowledge-doc-empty">
-                                {hits.length > 0 && settings.scoreThresholdEnabled
-                                    ? t('knowledge.retrievalNoResultsThreshold')
-                                    : t('knowledge.retrievalNoResults')}
-                            </div>
-                        ) : (
-                            <div className="knowledge-retrieval-results-shell">
-                                <div className="knowledge-retrieval-results">
-                                    {displayResults.map(hit => (
-                                        <article key={hit.chunkId} className="knowledge-retrieval-result-card">
-                                            <div className="knowledge-retrieval-result-head">
-                                                <div className="knowledge-retrieval-result-headline">
-                                                    <span className="knowledge-retrieval-chunk-id">{hit.chunkId}</span>
-                                                    <span className="knowledge-retrieval-result-meta">
-                                                        {t('knowledge.retrievalScoreLabel')} {formatScore(hit.displayScore)}
-                                                    </span>
-                                                </div>
-                                                <div className="knowledge-retrieval-score-group">
-                                                    <span className="knowledge-retrieval-mode-tag">{t(getModeLabelKey(settings.mode))}</span>
-                                                </div>
-                                            </div>
+                    {searchError && (
+                        <div className="conn-banner conn-banner-error">
+                            {t('common.connectionError', { error: searchError })}
+                        </div>
+                    )}
 
-                                            <div className="knowledge-retrieval-result-body">
-                                                <strong className="knowledge-retrieval-result-title">{hit.documentName}</strong>
-                                                <p className="knowledge-retrieval-result-snippet">{hit.snippet || hit.title || hit.chunkId}</p>
-                                            </div>
-
-                                            <div className="knowledge-retrieval-result-foot">
-                                                <div className="knowledge-retrieval-result-source">
-                                                    <span className="knowledge-retrieval-result-source-name">
-                                                        {hit.title || t('knowledge.notAvailable')}
-                                                    </span>
-                                                    <span className="knowledge-retrieval-result-meta">
-                                                        {t('knowledge.retrievalPageShort')} {buildPageRange(hit.pageFrom, hit.pageTo, t('knowledge.notAvailable'))}
-                                                    </span>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    className="knowledge-retrieval-open-btn"
-                                                    onClick={() => setDetailTarget(hit)}
-                                                >
-                                                    {t('common.open')}
-                                                </button>
-                                            </div>
-
-                                            <div className="knowledge-retrieval-visual">
-                                                <div className="knowledge-retrieval-signal" aria-hidden="true">
-                                                    {Array.from({ length: 5 }).map((_, index) => (
-                                                        <span
-                                                            key={`${hit.chunkId}-${index}`}
-                                                            className={index < hit.signalLevel ? 'active' : ''}
-                                                        />
-                                                    ))}
-                                                </div>
-                                                <div className="knowledge-retrieval-bar">
-                                                    <span style={{ width: `${hit.displayPercent}%` }} />
-                                                </div>
-                                            </div>
-                                        </article>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </section>
-                </div>
+                    {isCompareView && !showCompareBoard ? (
+                        <div className="knowledge-retrieval-results-placeholder">
+                            {t('knowledge.retrievalCompareEmpty')}
+                        </div>
+                    ) : isCompareView ? (
+                        <div className="knowledge-retrieval-compare-grid">
+                            {orderedModes.map(mode => (
+                                <RetrievalModePanel
+                                    key={mode}
+                                    mode={mode}
+                                    results={displayResultsByMode[mode]}
+                                    rawCount={modeResults[mode].total}
+                                    error={modeResults[mode].error}
+                                    searched={searchedModes.includes(mode)}
+                                    loading={activeSearchModes.includes(mode)}
+                                    thresholdEnabled={settings.scoreThresholdEnabled}
+                                    selectedKey={selectedKey}
+                                    onSelect={(selectedMode, hit) => setSelection({ mode: selectedMode, hit })}
+                                    onFocusMode={nextMode => handleChangeViewMode(nextMode)}
+                                />
+                            ))}
+                        </div>
+                    ) : !showSinglePanel ? (
+                        <div className="knowledge-retrieval-results-placeholder">
+                            {t('knowledge.retrievalEmptyDescription')}
+                        </div>
+                    ) : (
+                        <RetrievalModePanel
+                            mode={viewMode}
+                            results={displayResultsByMode[viewMode]}
+                            rawCount={modeResults[viewMode].total}
+                            error={modeResults[viewMode].error}
+                            searched={searchedModes.includes(viewMode)}
+                            loading={activeSearchModes.includes(viewMode)}
+                            thresholdEnabled={settings.scoreThresholdEnabled}
+                            selectedKey={selectedKey}
+                            onSelect={(selectedMode, hit) => setSelection({ mode: selectedMode, hit })}
+                            single
+                        />
+                    )}
+                </section>
             </div>
 
-            {settingsOpen && (
-                <RetrievalSettingsModal
-                    supportedModes={supportedModes}
-                    settings={settings}
-                    onClose={() => setSettingsOpen(false)}
-                    onSave={handleSaveSettings}
-                />
-            )}
-
-            {detailTarget && (
-                <RetrievalDetailModal
-                    hit={detailTarget}
+            {showDetailPanel && (
+                <RetrievalDetailPanel
+                    selection={selection}
                     detail={detail}
-                    mode={settings.mode}
                     loading={detailLoading}
                     error={detailError}
-                    onClose={() => setDetailTarget(null)}
+                    onClear={() => setSelection(null)}
+                    variant="panel"
+                />
+            )}
+            </div>
+
+            {isCompareView && (
+                <RetrievalDetailPanel
+                    selection={selection}
+                    detail={detail}
+                    loading={detailLoading}
+                    error={detailError}
+                    onClear={() => setSelection(null)}
+                    variant="modal"
                 />
             )}
         </>

@@ -50,6 +50,51 @@ const baseSource = {
     updatedAt: '2026-03-25T10:00:00Z',
 }
 
+const detailByChunkId = {
+    chk_hyb_001: {
+        chunkId: 'chk_hyb_001',
+        documentId: 'doc_hybrid',
+        sourceId: 'src_001',
+        title: '混合结论',
+        titlePath: ['召回评估', '混合结论'],
+        text: '混合检索把语义相关和关键词命中放在一起，整体排序更均衡。',
+        markdown: '混合检索把语义相关和关键词命中放在一起。',
+        keywords: ['hybrid', 'rank'],
+        pageFrom: 6,
+        pageTo: 6,
+        previousChunkId: null,
+        nextChunkId: null,
+    },
+    chk_sem_001: {
+        chunkId: 'chk_sem_001',
+        documentId: 'doc_semantic',
+        sourceId: 'src_001',
+        title: '语义覆盖',
+        titlePath: ['召回评估', '语义覆盖'],
+        text: '向量召回覆盖更多语义近邻段落，适合问题表达不稳定的场景。',
+        markdown: '向量召回覆盖更多语义近邻段落。',
+        keywords: ['semantic', 'embedding'],
+        pageFrom: 3,
+        pageTo: 3,
+        previousChunkId: null,
+        nextChunkId: null,
+    },
+    chk_lex_001: {
+        chunkId: 'chk_lex_001',
+        documentId: 'doc_lexical',
+        sourceId: 'src_001',
+        title: '精确命中',
+        titlePath: ['召回评估', '精确命中'],
+        text: '关键词检索优先命中包含 Qwen3-32B 精确词项的结论段落。该段落适合验证词项召回。',
+        markdown: '关键词检索优先命中包含 Qwen3-32B 精确词项的结论段落。',
+        keywords: ['Qwen3-32B', 'keyword'],
+        pageFrom: 8,
+        pageTo: 8,
+        previousChunkId: null,
+        nextChunkId: null,
+    },
+} as const
+
 describe('KnowledgeConfigure retrieval tab', () => {
     beforeEach(() => {
         vi.clearAllMocks()
@@ -175,11 +220,11 @@ describe('KnowledgeConfigure retrieval tab', () => {
                     json: async () => ({
                         items: [
                             {
-                                id: 'doc_001',
+                                id: 'doc_hybrid',
                                 sourceId: 'src_001',
-                                name: '模型选型在+V100+环境下评估结论.pdf',
+                                name: '混合检索总结.pdf',
                                 contentType: 'application/pdf',
-                                title: '模型选型在+V100+环境下评估结论',
+                                title: '混合检索总结',
                                 status: 'INDEXED',
                                 indexStatus: 'INDEXED',
                                 fileSizeBytes: 1024,
@@ -188,61 +233,127 @@ describe('KnowledgeConfigure retrieval tab', () => {
                                 createdAt: '2026-03-25T10:00:00Z',
                                 updatedAt: '2026-03-25T10:05:00Z',
                             },
+                            {
+                                id: 'doc_semantic',
+                                sourceId: 'src_001',
+                                name: '向量召回评估.pdf',
+                                contentType: 'application/pdf',
+                                title: '向量召回评估',
+                                status: 'INDEXED',
+                                indexStatus: 'INDEXED',
+                                fileSizeBytes: 2048,
+                                chunkCount: 6,
+                                userEditedChunkCount: 0,
+                                createdAt: '2026-03-25T10:00:00Z',
+                                updatedAt: '2026-03-25T10:05:00Z',
+                            },
+                            {
+                                id: 'doc_lexical',
+                                sourceId: 'src_001',
+                                name: '关键词命中说明.pdf',
+                                contentType: 'application/pdf',
+                                title: '关键词命中说明',
+                                status: 'INDEXED',
+                                indexStatus: 'INDEXED',
+                                fileSizeBytes: 2048,
+                                chunkCount: 4,
+                                userEditedChunkCount: 0,
+                                createdAt: '2026-03-25T10:00:00Z',
+                                updatedAt: '2026-03-25T10:05:00Z',
+                            },
                         ],
                         page: 1,
                         pageSize: 100,
-                        total: 1,
+                        total: 3,
                     }),
                 } as Response)
             }
 
             if (method === 'POST' && url.endsWith('/ops-knowledge/search')) {
                 const requestBody = JSON.parse(String(init?.body || '{}')) as Record<string, unknown>
+                const override = requestBody.override as Record<string, unknown>
+                const mode = String(override.mode)
                 searchRequests.push(requestBody)
-                return Promise.resolve({
-                    ok: true,
-                    json: async () => ({
+
+                const responseByMode = {
+                    hybrid: {
                         query: requestBody.query,
                         total: 1,
                         hits: [
                             {
-                                chunkId: 'chk_001',
-                                documentId: 'doc_001',
+                                chunkId: 'chk_hyb_001',
+                                documentId: 'doc_hybrid',
                                 sourceId: 'src_001',
-                                title: '关键结论',
-                                titlePath: ['模型选型', '结论'],
-                                snippet: '当前唯一建议继续推进的模型是 Qwen3-32B。',
-                                score: 0.7,
-                                lexicalScore: 0.4,
-                                semanticScore: 0.7,
-                                fusionScore: 0.7,
+                                title: '混合结论',
+                                titlePath: ['召回评估', '混合结论'],
+                                snippet: '混合检索把语义相关和关键词命中放在一起，整体排序更均衡。',
+                                score: 0.92,
+                                lexicalScore: 0.74,
+                                semanticScore: 0.88,
+                                fusionScore: 0.92,
+                                pageFrom: 6,
+                                pageTo: 6,
+                            },
+                        ],
+                    },
+                    semantic: {
+                        query: requestBody.query,
+                        total: 1,
+                        hits: [
+                            {
+                                chunkId: 'chk_sem_001',
+                                documentId: 'doc_semantic',
+                                sourceId: 'src_001',
+                                title: '语义覆盖',
+                                titlePath: ['召回评估', '语义覆盖'],
+                                snippet: '向量召回覆盖更多语义近邻段落，适合问题表达不稳定的场景。',
+                                score: 0.81,
+                                lexicalScore: 0.32,
+                                semanticScore: 0.81,
+                                fusionScore: 0.81,
+                                pageFrom: 3,
+                                pageTo: 3,
+                            },
+                        ],
+                    },
+                    lexical: {
+                        query: requestBody.query,
+                        total: 1,
+                        hits: [
+                            {
+                                chunkId: 'chk_lex_001',
+                                documentId: 'doc_lexical',
+                                sourceId: 'src_001',
+                                title: '精确命中',
+                                titlePath: ['召回评估', '精确命中'],
+                                snippet: '关键词检索优先命中包含 Qwen3-32B 精确词项的结论段落。',
+                                score: 0.76,
+                                lexicalScore: 0.76,
+                                semanticScore: 0.24,
+                                fusionScore: 0.76,
                                 pageFrom: 8,
                                 pageTo: 8,
                             },
                         ],
-                    }),
+                    },
+                } as const
+
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => responseByMode[mode as keyof typeof responseByMode],
                 } as Response)
             }
 
-            if (method === 'GET' && url.includes('/ops-knowledge/fetch/chk_001')) {
-                return Promise.resolve({
-                    ok: true,
-                    json: async () => ({
-                        chunkId: 'chk_001',
-                        documentId: 'doc_001',
-                        sourceId: 'src_001',
-                        title: '关键结论',
-                        titlePath: ['模型选型', '结论'],
-                        text: '当前唯一建议继续推进的模型是 Qwen3-32B。Cohere Command-R 不适合 Goose / tools。',
-                        markdown: '当前唯一建议继续推进的模型是 Qwen3-32B。',
-                        keywords: ['Qwen3', '32B', 'Cohere'],
-                        pageFrom: 8,
-                        pageTo: 8,
-                        previousChunkId: null,
-                        nextChunkId: 'chk_002',
-                        neighbors: [],
-                    }),
-                } as Response)
+            if (method === 'GET' && url.includes('/ops-knowledge/fetch/')) {
+                const match = url.match(/\/ops-knowledge\/fetch\/([^?]+)/)
+                const chunkId = match?.[1] as keyof typeof detailByChunkId | undefined
+
+                if (chunkId && detailByChunkId[chunkId]) {
+                    return Promise.resolve({
+                        ok: true,
+                        json: async () => detailByChunkId[chunkId],
+                    } as Response)
+                }
             }
 
             return Promise.resolve({
@@ -253,7 +364,7 @@ describe('KnowledgeConfigure retrieval tab', () => {
         }))
     })
 
-    it('runs retrieval search, updates settings, and opens detail modal', async () => {
+    it('supports compare mode, single-mode tuning, and inline detail inspection', async () => {
         render(
             <MemoryRouter initialEntries={['/knowledge/src_001?tab=retrieval']}>
                 <Routes>
@@ -263,43 +374,54 @@ describe('KnowledgeConfigure retrieval tab', () => {
         )
 
         await screen.findByText('knowledge.retrievalTitle')
+        expect(screen.getByRole('button', { name: 'knowledge.retrievalViewCompare' })).toBeInTheDocument()
 
-        fireEvent.change(screen.getByLabelText('knowledge.retrievalQueryLabel'), {
+        const queryInput = screen.getByRole('textbox', { name: 'knowledge.retrievalQueryLabel' }) as HTMLTextAreaElement
+
+        fireEvent.change(queryInput, {
             target: { value: 'qwen3' },
         })
-        fireEvent.click(screen.getByRole('button', { name: 'knowledge.retrievalRun' }))
-
-        await screen.findByText('模型选型在+V100+环境下评估结论.pdf')
-        expect(searchRequests.at(0)?.override).toEqual({
-            mode: 'semantic',
-            includeScores: true,
+        expect(queryInput.value).toBe('qwen3')
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: 'knowledge.retrievalRun' })).not.toBeDisabled()
         })
 
-        fireEvent.click(screen.getByRole('button', { name: 'knowledge.retrievalSettings' }))
-        await screen.findByText('knowledge.retrievalSettingsTitle')
+        fireEvent.click(screen.getByRole('button', { name: 'knowledge.retrievalRun' }))
 
-        fireEvent.click(screen.getByText('knowledge.retrievalModeLexical'))
+        await screen.findByText('混合检索总结.pdf')
+        expect(await screen.findByText('向量召回评估.pdf')).toBeInTheDocument()
+        expect(await screen.findByText('关键词命中说明.pdf')).toBeInTheDocument()
+
+        await waitFor(() => {
+            expect(searchRequests).toHaveLength(3)
+        })
+
+        expect(searchRequests.map(request => (request.override as Record<string, unknown>).mode)).toEqual([
+            'hybrid',
+            'semantic',
+            'lexical',
+        ])
+
+        fireEvent.click(screen.getByRole('button', { name: 'knowledge.retrievalModeLexical' }))
         fireEvent.change(screen.getByLabelText('knowledge.retrievalTopKLabel'), {
             target: { value: '5' },
         })
-        fireEvent.click(screen.getByRole('button', { name: 'common.save' }))
+        fireEvent.click(screen.getByRole('button', { name: 'knowledge.retrievalRun' }))
 
         await waitFor(() => {
-            expect(searchRequests).toHaveLength(2)
+            expect(searchRequests).toHaveLength(4)
         })
 
-        expect(searchRequests.at(1)?.override).toEqual({
-            mode: 'lexical',
-            includeScores: true,
-        })
-        expect(searchRequests.at(1)?.topK).toBe(5)
+        expect(searchRequests.at(-1)?.topK).toBe(5)
+        expect((searchRequests.at(-1)?.override as Record<string, unknown>).mode).toBe('lexical')
 
-        fireEvent.click(screen.getByRole('button', { name: 'common.open' }))
-        await screen.findByText('knowledge.retrievalDetailTitle')
-        expect((await screen.findAllByText(/Qwen3-32B/)).length).toBeGreaterThan(0)
+        fireEvent.click(screen.getAllByText('关键词命中说明.pdf')[0])
+        expect(await screen.findByText('关键词检索优先命中包含 Qwen3-32B 精确词项的结论段落。该段落适合验证词项召回。')).toBeInTheDocument()
+        expect(screen.getByText('knowledge.retrievalDetailMetadata')).toBeInTheDocument()
 
         const rawHistory = window.localStorage.getItem('opsfactory:knowledge:retrieval-history:src_001:v1')
         expect(rawHistory).toContain('qwen3')
-        expect(rawHistory).toContain('lexical')
+        expect(rawHistory).toContain('"viewMode":"compare"')
+        expect(rawHistory).toContain('"viewMode":"lexical"')
     })
 })
