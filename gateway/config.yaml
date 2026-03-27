@@ -4,6 +4,7 @@ secretKey: test
 corsOrigin: '*'
 goosedBin: goosed
 goosedTls: true
+gooseTls: true
 gatewayTls: false
 gatewayKeyStore: .gateway-keystore.p12
 gatewayKeyStorePassword: changeit
