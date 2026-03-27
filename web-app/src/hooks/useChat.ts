@@ -292,15 +292,23 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
     const stopMessage = useCallback(async (): Promise<boolean> => {
         if (!sessionId || !isStreamingRef.current) return false
 
+        console.info('[chat-stop] stop requested', { sessionId })
+
         // Abort the SSE connection immediately
         abortControllerRef.current?.abort()
         isStreamingRef.current = false
         dispatch({ type: 'STREAM_FINISH' })
+        console.info('[chat-stop] local stream aborted', { sessionId })
 
         try {
             await client.stopSession(sessionId)
+            console.info('[chat-stop] gateway stop acknowledged', { sessionId })
             return true
         } catch (err) {
+            console.warn('[chat-stop] gateway stop failed', {
+                sessionId,
+                error: err instanceof Error ? err.message : String(err),
+            })
             if (isMountedRef.current) {
                 dispatch({ type: 'SET_ERROR', payload: err instanceof Error ? err.message : 'Failed to stop message' })
             }

@@ -11,7 +11,7 @@ paths: {agentsDir: agents, usersDir: users}
 idle: {timeoutMinutes: 15, checkIntervalMs: 60000}
 sse: {firstByteTimeoutSec: 120, idleTimeoutSec: 300, maxDurationSec: 600}
 upload: {maxFileSizeMb: 50, maxImageSizeMb: 20}
-limits: {maxInstancesPerUser: 5, maxInstancesGlobal: 200}
+limits: {maxInstancesPerUser: 20, maxInstancesGlobal: 200}
 prewarm: {enabled: true, defaultAgentId: universal-agent}
 residentInstances:
   enabled: true
@@ -25,3 +25,4 @@ agents:
 - {id: report-agent, name: Report Agent}
 - {id: supervisor-agent, name: Supervisor Agent}
 - {id: qos-agent, name: QoS Agent}
+- {id: qa-agent, name: QA Agent}

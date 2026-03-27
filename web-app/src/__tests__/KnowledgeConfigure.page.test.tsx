@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import KnowledgeConfigure from '../pages/KnowledgeConfigure'
 
 const showToast = vi.fn()
+const openPreview = vi.fn()
 vi.mock('react-i18next', () => ({
     initReactI18next: {
         type: '3rdParty',
@@ -30,7 +31,7 @@ vi.mock('../contexts/PreviewContext', () => ({
         previewFile: null,
         isLoading: false,
         error: null,
-        openPreview: vi.fn(),
+        openPreview,
         closePreview: vi.fn(),
         isPreviewable: () => true,
     }),
@@ -310,6 +311,33 @@ describe('KnowledgeConfigure page', () => {
                 return downloadOriginalResponse()
             }
 
+            if (method === 'POST' && url.endsWith('/ops-knowledge/sources/src_001/documents:ingest')) {
+                documents = [
+                    {
+                        id: 'doc_002',
+                        sourceId: 'src_001',
+                        name: 'guide.pdf',
+                        contentType: 'application/pdf',
+                        title: 'Guide PDF',
+                        status: 'UPLOADED',
+                        indexStatus: 'PENDING',
+                        fileSizeBytes: 2048,
+                        chunkCount: 0,
+                        userEditedChunkCount: 0,
+                        createdAt: '2026-03-25T10:06:00Z',
+                        updatedAt: '2026-03-25T10:06:00Z',
+                    },
+                    ...documents,
+                ]
+
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({
+                        documentCount: 1,
+                    }),
+                } as Response)
+            }
+
             if (method === 'PATCH' && url.endsWith('/ops-knowledge/documents/doc_001')) {
                 const payload = JSON.parse(String(init?.body ?? '{}')) as { title?: string }
                 documents = documents.map(document => (
@@ -493,6 +521,53 @@ describe('KnowledgeConfigure page', () => {
         await screen.findByText('knowledge.uploadTitle:产品文档库')
     })
 
+    it('keeps the upload modal open after a successful import until the user closes it', async () => {
+        render(
+            <MemoryRouter initialEntries={['/knowledge/src_001?tab=documents']}>
+                <Routes>
+                    <Route path="/knowledge/:sourceId" element={<KnowledgeConfigure />} />
+                </Routes>
+            </MemoryRouter>
+        )
+
+        await screen.findByText('knowledge.documentsTabTitle')
+        fireEvent.click(screen.getByRole('button', { name: 'knowledge.docUpload' }))
+        await screen.findByText('knowledge.uploadTitle:产品文档库')
+
+        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement | null
+        expect(fileInput).not.toBeNull()
+
+        fireEvent.change(fileInput!, {
+            target: {
+                files: [new File(['pdf'], 'guide.pdf', { type: 'application/pdf' })],
+            },
+        })
+
+        expect(await screen.findByText('guide.pdf')).toBeInTheDocument()
+        fireEvent.click(screen.getByRole('button', { name: 'knowledge.uploadStart' }))
+
+        await waitFor(() => {
+            expect(fetch).toHaveBeenCalledWith(
+                'http://127.0.0.1:8092/ops-knowledge/sources/src_001/documents:ingest',
+                expect.objectContaining({
+                    method: 'POST',
+                    body: expect.any(FormData),
+                }),
+            )
+        })
+
+        await screen.findAllByText('knowledge.uploadItemCompleted')
+        expect(screen.getByRole('button', { name: 'knowledge.uploadClose' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'knowledge.uploadContinue' })).toBeInTheDocument()
+        expect(screen.getByText('Guide PDF')).toBeInTheDocument()
+
+        fireEvent.click(screen.getByRole('button', { name: 'knowledge.uploadClose' }))
+
+        await waitFor(() => {
+            expect(screen.queryByText('knowledge.uploadTitle:产品文档库')).not.toBeInTheDocument()
+        })
+    })
+
     it('shows the renamed document title after a successful rename', async () => {
         render(
             <MemoryRouter initialEntries={['/knowledge/src_001?tab=documents']}>
@@ -549,6 +624,31 @@ describe('KnowledgeConfigure page', () => {
         })
         expect(globalThis.URL.createObjectURL).toHaveBeenCalled()
         expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith('blob:runbook')
+    })
+
+    it('loads markdown preview in the document side panel', async () => {
+        render(
+            <MemoryRouter initialEntries={['/knowledge/src_001?tab=documents']}>
+                <Routes>
+                    <Route path="/knowledge/:sourceId" element={<KnowledgeConfigure />} />
+                </Routes>
+            </MemoryRouter>
+        )
+
+        await screen.findByText('knowledge.documentsTabTitle')
+        fireEvent.click(screen.getByRole('button', { name: 'files.preview' }))
+
+        await waitFor(() => {
+            expect(fetch).toHaveBeenCalledWith('http://127.0.0.1:8092/ops-knowledge/documents/doc_001/preview')
+        })
+
+        expect(openPreview).toHaveBeenCalledWith(expect.objectContaining({
+            name: 'Runbook PDF',
+            path: 'knowledge-document:doc_001',
+            type: 'md',
+            previewKind: 'markdown',
+            downloadUrl: 'http://127.0.0.1:8092/ops-knowledge/documents/doc_001/original',
+        }))
     })
 
     it('shows a toast when the original download endpoint is unavailable', async () => {

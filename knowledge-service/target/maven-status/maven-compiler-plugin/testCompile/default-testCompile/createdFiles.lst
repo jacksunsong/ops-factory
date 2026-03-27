@@ -8,3 +8,4 @@ com/huawei/opsfactory/knowledge/common/error/ApiExceptionHandlerTest.class
 com/huawei/opsfactory/knowledge/api/KnowledgeCoverageIntegrationTest.class
 com/huawei/opsfactory/knowledge/common/error/ApiExceptionHandlerTest$FailingController.class
 com/huawei/opsfactory/knowledge/api/KnowledgeUploadFlowIntegrationTest.class
+com/huawei/opsfactory/knowledge/service/TikaConversionServiceTest.class

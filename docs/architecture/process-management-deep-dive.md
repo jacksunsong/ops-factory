@@ -468,7 +468,7 @@ prewarmService.clearUser(userId);
 
 | 限制项 | 默认值 | 配置路径 |
 |--------|--------|----------|
-| 单用户最大实例数 | 5 | `gateway.limits.maxInstancesPerUser` |
+| 单用户最大实例数 | 20 | `gateway.limits.maxInstancesPerUser` |
 | 全局最大实例数 | 50 | `gateway.limits.maxInstancesGlobal` |
 
 超过限额时 `doSpawn()` 抛出 `IllegalStateException`，请求返回错误。
@@ -502,7 +502,7 @@ try {
 | SSE 首字节超时 | 120s | `gateway.sse.firstByteTimeoutSec` | 无数据则判定死锁并回收 |
 | SSE 内容空闲超时 | 300s | `gateway.sse.idleTimeoutSec` | 有 Ping 无内容则通知客户端 |
 | SSE 最大时长 | 600s | `gateway.sse.maxDurationSec` | 单次回复硬上限 |
-| 单用户实例上限 | 5 | `gateway.limits.maxInstancesPerUser` | — |
+| 单用户实例上限 | 20 | `gateway.limits.maxInstancesPerUser` | — |
 | 全局实例上限 | 50 | `gateway.limits.maxInstancesGlobal` | — |
 | 预热开关 | true | `gateway.prewarm.enabled` | — |
 | 预热默认 Agent | universal-agent | `gateway.prewarm.defaultAgentId` | — |

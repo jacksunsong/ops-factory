@@ -5,7 +5,7 @@ import ToolCallDisplay from './ToolCallDisplay'
 import CitationMark from './CitationMark'
 import ReferenceList from './ReferenceList'
 import { usePreview } from '../contexts/PreviewContext'
-import { parseCitations, type Citation } from '../utils/citationParser'
+import { mergeCitationMetadata, parseCitations, replaceCitationsWithPlaceholders, type Citation } from '../utils/citationParser'
 import { getDisplayTextContent, getFullTextContent, getReasoningContent, getThinkingContent } from '../utils/messageContent'
 import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
 import type { ChatMessage, DetectedFile, ToolResponseMap } from '../types/message'
@@ -429,177 +429,177 @@ function MessageInner({
     }
 
     const rawDisplayText = !isUser ? (displayTextFromContent || fullText) : fullText
-    const citations: Citation[] = !isUser && rawDisplayText ? parseCitations(rawDisplayText) : []
+    const parsedCitations: Citation[] = !isUser && rawDisplayText ? parseCitations(rawDisplayText) : []
+    const citations = mergeCitationMetadata(parsedCitations, sourceDocuments || [])
     const citationMap = new Map(citations.map(c => [c.index, c]))
 
     const displayText = citations.length > 0
-        ? rawDisplayText
-            .replace(
-                /\{\{cite:(\d+):\s*[^:]*:[^}]*\}\}/g,
-                (_, num) => `[CITE_${num}](#cite-${num})`
-            )
+        ? replaceCitationsWithPlaceholders(rawDisplayText)
             .replace(/```[ \t]*\[CITE_/g, '```\n\n[CITE_')
         : rawDisplayText
+    const shouldShowReferences = !isUser && !isStreaming && citations.length > 0
 
     return (
         <div className={`message ${isUser ? 'user' : 'assistant'} animate-slide-in`}>
             <div className="message-avatar">
                 {isUser ? 'U' : 'G'}
             </div>
-            <div className="message-content">
-                {isEmptyAssistantResponse && (
-                    <div className="message-error-banner">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="12" />
-                            <line x1="12" y1="16" x2="12.01" y2="16" />
-                        </svg>
-                        <span>The model did not return a valid response. This may be a temporary service issue.</span>
-                        {onRetry && (
-                            <button className="message-error-retry" onClick={onRetry}>
-                                Retry
-                            </button>
-                        )}
-                    </div>
-                )}
+            <div className="message-body">
+                <div className="message-content">
+                    {isEmptyAssistantResponse && (
+                        <div className="message-error-banner">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            <span>The model did not return a valid response. This may be a temporary service issue.</span>
+                            {onRetry && (
+                                <button className="message-error-retry" onClick={onRetry}>
+                                    Retry
+                                </button>
+                            )}
+                        </div>
+                    )}
 
-                {!isUser && processEntries.length > 0 && (
-                    <div className="process-flow">
-                        {processEntries.map((entry, index) => {
-                            const stepClass = `${index === 0 ? ' process-step-first' : ''}${index === processEntries.length - 1 ? ' process-step-last' : ''}`
+                    {!isUser && processEntries.length > 0 && (
+                        <div className="process-flow">
+                            {processEntries.map((entry, index) => {
+                                const stepClass = `${index === 0 ? ' process-step-first' : ''}${index === processEntries.length - 1 ? ' process-step-last' : ''}`
 
-                            if (entry.kind === 'reasoning' || entry.kind === 'thinking') {
-                                const isOpen = openState[entry.key] ?? true
-                                const state = fadeState[entry.key] || { hasTopFade: false, hasBottomFade: false }
-                                return (
-                                    <div key={entry.key} className={`process-step process-step-thinking${stepClass}`}>
-                                        <div className="process-step-rail" aria-hidden="true" />
-                                        <div className="process-step-content">
-                                            <button
-                                                type="button"
-                                                className={`process-thinking-header${isOpen ? ' open' : ''}${isStreaming ? ' is-streaming' : ''}`}
-                                                onClick={() => toggleEntry(entry.key)}
-                                                disabled={isStreaming}
-                                                aria-expanded={isOpen}
-                                            >
-                                                <ThinkingStatusIcon isStreaming={isStreaming} isOpen={isOpen} />
-                                                <span className="process-thinking-label">{entry.label}</span>
-                                            </button>
-                                            {isOpen && (
-                                                <div
-                                                    ref={element => { contentRefs.current[entry.key] = element }}
-                                                    className={`thinking-block-content process-thinking-content${state.hasTopFade ? ' has-top-fade' : ''}${state.hasBottomFade ? ' has-bottom-fade' : ''}`}
-                                                    onScroll={() => handleScroll(entry.key)}
+                                if (entry.kind === 'reasoning' || entry.kind === 'thinking') {
+                                    const isOpen = openState[entry.key] ?? true
+                                    const state = fadeState[entry.key] || { hasTopFade: false, hasBottomFade: false }
+                                    return (
+                                        <div key={entry.key} className={`process-step process-step-thinking${stepClass}`}>
+                                            <div className="process-step-rail" aria-hidden="true" />
+                                            <div className="process-step-content">
+                                                <button
+                                                    type="button"
+                                                    className={`process-thinking-header${isOpen ? ' open' : ''}${isStreaming ? ' is-streaming' : ''}`}
+                                                    onClick={() => toggleEntry(entry.key)}
+                                                    disabled={isStreaming}
+                                                    aria-expanded={isOpen}
                                                 >
-                                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                        {entry.content || ''}
-                                                    </ReactMarkdown>
-                                                </div>
-                                            )}
+                                                    <ThinkingStatusIcon isStreaming={isStreaming} isOpen={isOpen} />
+                                                    <span className="process-thinking-label">{entry.label}</span>
+                                                </button>
+                                                {isOpen && (
+                                                    <div
+                                                        ref={element => { contentRefs.current[entry.key] = element }}
+                                                        className={`thinking-block-content process-thinking-content${state.hasTopFade ? ' has-top-fade' : ''}${state.hasBottomFade ? ' has-bottom-fade' : ''}`}
+                                                        onScroll={() => handleScroll(entry.key)}
+                                                    >
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                            {entry.content || ''}
+                                                        </ReactMarkdown>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                }
+
+                                const toolCall = entry.toolCall!
+                                const indicatorTone = toolCall.isError ? 'error' : toolCall.isPending ? 'pending' : 'success'
+
+                                return (
+                                    <div key={entry.key} className={`process-step process-step-tool process-step-tool-${indicatorTone}${stepClass}`}>
+                                        <div className="process-step-rail" aria-hidden="true">
+                                            <span className={`process-step-node ${indicatorTone}`} />
+                                        </div>
+                                        <div className="process-step-content">
+                                            {toolCall.name.startsWith('todo__')
+                                                ? <TodoToolCard toolCall={toolCall} />
+                                                : (
+                                                    <ToolCallDisplay
+                                                        name={toolCall.name}
+                                                        args={toolCall.args}
+                                                        result={toolCall.result}
+                                                        isPending={toolCall.isPending}
+                                                        isError={toolCall.isError}
+                                                        embedded
+                                                    />
+                                                )}
                                         </div>
                                     </div>
                                 )
-                            }
-
-                            const toolCall = entry.toolCall!
-                            const indicatorTone = toolCall.isError ? 'error' : toolCall.isPending ? 'pending' : 'success'
-
-                            return (
-                                <div key={entry.key} className={`process-step process-step-tool process-step-tool-${indicatorTone}${stepClass}`}>
-                                    <div className="process-step-rail" aria-hidden="true">
-                                        <span className={`process-step-node ${indicatorTone}`} />
-                                    </div>
-                                    <div className="process-step-content">
-                                        {toolCall.name.startsWith('todo__')
-                                            ? <TodoToolCard toolCall={toolCall} />
-                                            : (
-                                                <ToolCallDisplay
-                                                    name={toolCall.name}
-                                                    args={toolCall.args}
-                                                    result={toolCall.result}
-                                                    isPending={toolCall.isPending}
-                                                    isError={toolCall.isError}
-                                                    embedded
-                                                />
-                                            )}
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                )}
-
-                {displayText && (
-                    <div className="message-text">
-                        <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                                a: ({ href, children, ...props }) => {
-                                    if (href?.startsWith('#cite-')) {
-                                        const index = parseInt(href.replace('#cite-', ''), 10)
-                                        const citation = citationMap.get(index)
-                                        if (citation) return <CitationMark citation={citation} />
-                                        return <>{children}</>
-                                    }
-                                    if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('mailto:') && agentId) {
-                                        return (
-                                            <span className="file-link-group">
-                                                <span className="file-link-name">{children}</span>
-                                            </span>
-                                        )
-                                    }
-                                    return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
-                                }
-                            }}
-                        >
-                            {displayText}
-                        </ReactMarkdown>
-                    </div>
-                )}
-
-                {isUser && message.metadata?.attachedFiles && message.metadata.attachedFiles.length > 0 && (
-                    <div className="file-capsules-container">
-                        {message.metadata.attachedFiles.map((file, idx) => (
-                            <FileCapsule
-                                key={`attached-${file.path}-${idx}`}
-                                filePath={file.path}
-                                fileName={file.name}
-                                fileExt={file.ext}
-                                agentId={agentId}
-                                userId={userId}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {!isUser && showFileCapsules && outputFiles.length > 0 && (
-                    <div className="file-capsules-container">
-                        {outputFiles.map((file, idx) => (
-                            <FileCapsule
-                                key={`${file.path}-${idx}`}
-                                filePath={file.path}
-                                fileName={file.name}
-                                fileExt={file.ext}
-                                agentId={agentId}
-                                userId={userId}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {sourceDocuments && sourceDocuments.length > 0 && displayText && (
-                    <ReferenceList citations={sourceDocuments} />
-                )}
-
-                {isStreaming && (
-                    <div className="streaming-indicator">
-                        <div className="loading-dots">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                            })}
                         </div>
-                    </div>
-                )}
+                    )}
+
+                    {displayText && (
+                        <div className="message-text">
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                    a: ({ href, children, ...props }) => {
+                                        if (href?.startsWith('#cite-')) {
+                                            const index = parseInt(href.replace('#cite-', ''), 10)
+                                            const citation = citationMap.get(index)
+                                            if (citation) return <CitationMark citation={citation} />
+                                            return <>{children}</>
+                                        }
+                                        if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('mailto:') && agentId) {
+                                            return (
+                                                <span className="file-link-group">
+                                                    <span className="file-link-name">{children}</span>
+                                                </span>
+                                            )
+                                        }
+                                        return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+                                    }
+                                }}
+                            >
+                                {displayText}
+                            </ReactMarkdown>
+                        </div>
+                    )}
+
+                    {isUser && message.metadata?.attachedFiles && message.metadata.attachedFiles.length > 0 && (
+                        <div className="file-capsules-container">
+                            {message.metadata.attachedFiles.map((file, idx) => (
+                                <FileCapsule
+                                    key={`attached-${file.path}-${idx}`}
+                                    filePath={file.path}
+                                    fileName={file.name}
+                                    fileExt={file.ext}
+                                    agentId={agentId}
+                                    userId={userId}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {!isUser && showFileCapsules && outputFiles.length > 0 && (
+                        <div className="file-capsules-container">
+                            {outputFiles.map((file, idx) => (
+                                <FileCapsule
+                                    key={`${file.path}-${idx}`}
+                                    filePath={file.path}
+                                    fileName={file.name}
+                                    fileExt={file.ext}
+                                    agentId={agentId}
+                                    userId={userId}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {shouldShowReferences && displayText && (
+                        <ReferenceList citations={citations} />
+                    )}
+
+                    {isStreaming && (
+                        <div className="streaming-indicator">
+                            <div className="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     )

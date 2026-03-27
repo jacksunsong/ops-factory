@@ -27,7 +27,7 @@ upload:
   maxImageSizeMb: 20                    # env: MAX_IMAGE_SIZE_MB
 
 limits:
-  maxInstancesPerUser: 5               # env: MAX_INSTANCES_PER_USER
+  maxInstancesPerUser: 20              # env: MAX_INSTANCES_PER_USER
   maxInstancesGlobal: 200              # env: MAX_INSTANCES_GLOBAL
 
 prewarm:

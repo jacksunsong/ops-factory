@@ -22,7 +22,7 @@ gateway:
     max-image-size-mb: ${MAX_IMAGE_SIZE_MB:20}
 
   limits:
-    max-instances-per-user: ${MAX_INSTANCES_PER_USER:5}
+    max-instances-per-user: ${MAX_INSTANCES_PER_USER:20}
     max-instances-global: ${MAX_INSTANCES_GLOBAL:50}
 
   sse:

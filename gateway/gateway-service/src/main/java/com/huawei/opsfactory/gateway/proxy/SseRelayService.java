@@ -232,13 +232,19 @@ public class SseRelayService {
                 }
                 String stopBody = "{\"session_id\":\"" + sessionId + "\"}";
                 String target = goosedProxy.goosedBaseUrl(port) + "/agent/stop";
+                log.info("[SSE-DIAG] sending stop to goosed session={} port={} target={}", sessionId, port, target);
                 webClient.post()
                         .uri(target)
                         .header(GatewayConstants.HEADER_SECRET_KEY, secretKey)
                         .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                         .bodyValue(stopBody)
-                        .retrieve()
-                        .bodyToMono(String.class)
+                        .exchangeToMono(response -> response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .map(respBody -> {
+                                    log.info("[SSE-DIAG] stop response session={} status={} bodyLen={}",
+                                            sessionId, response.statusCode(), respBody.length());
+                                    return respBody;
+                                }))
                         .timeout(Duration.ofSeconds(5))
                         .subscribe(
                                 resp -> log.info("[SSE-DIAG] stop sent for session {}", sessionId),

@@ -306,18 +306,20 @@ export default function MessageList({ messages, isLoading = false, chatState = C
             {isLoading && displayMessages[displayMessages.length - 1]?.role !== 'assistant' && (
                 <div className="message assistant animate-fade-in">
                     <div className="message-avatar">G</div>
-                    <div className="message-content">
-                        <div className="loading-dots">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                    <div className="message-body">
+                        <div className="message-content">
+                            <div className="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            {chatState === ChatState.Thinking && (
+                                <div className="loading-status-text">{t('chat.thinking')}</div>
+                            )}
+                            {chatState === ChatState.Compacting && (
+                                <div className="loading-status-text">{t('chat.compactingContext')}</div>
+                            )}
                         </div>
-                        {chatState === ChatState.Thinking && (
-                            <div className="loading-status-text">{t('chat.thinking')}</div>
-                        )}
-                        {chatState === ChatState.Compacting && (
-                            <div className="loading-status-text">{t('chat.compactingContext')}</div>
-                        )}
                     </div>
                 </div>
             )}

@@ -524,7 +524,7 @@ describe('KnowledgeConfigure chunks tab', () => {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    keywords: ['manual-keyword', 'incident-custom'],
+                    keywords: ['runbook', 'incident', 'manual-keyword', 'incident-custom'],
                     text: 'Updated runbook content with manual edits.',
                     markdown: 'Updated runbook content with manual edits.',
                 }),

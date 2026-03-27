@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KNOWLEDGE_SERVICE_URL } from '../../config/runtime'
 import { useToast } from '../../contexts/ToastContext'
+import KnowledgeChunkDetailModal from './KnowledgeChunkDetailModal'
 import type {
     KnowledgeCapabilities,
     KnowledgeDefaults,
@@ -14,8 +15,10 @@ import type {
 type RetrievalMode = 'semantic' | 'lexical' | 'hybrid'
 interface RetrievalSettings {
     displayCount: number
-    scoreThresholdEnabled: boolean
-    scoreThreshold: number
+    lexicalThresholdEnabled: boolean
+    lexicalThreshold: number
+    semanticThresholdEnabled: boolean
+    semanticThreshold: number
 }
 
 interface RetrievalSearchHit {
@@ -67,10 +70,28 @@ interface RetrievalHistoryEntry {
     createdAt: string
 }
 
+interface RetrievalCacheEntry {
+    query: string
+    createdAt: string
+    fetchedTopK: number
+    results: Record<RetrievalMode, RetrievalModeResultState>
+}
+
+interface RetrievalPersistedState {
+    lastQuery: string
+    settings: RetrievalSettings | null
+    entries: RetrievalCacheEntry[]
+}
+
 interface RetrievalDisplayHit extends RetrievalSearchHit {
     documentName: string
     displayScore: number
     displayPercent: number
+}
+
+interface RetrievalCompareAccent {
+    strongColor: string
+    shape: 'circle' | 'square' | 'diamond' | 'triangle'
 }
 
 interface RetrievalSelection {
@@ -99,7 +120,7 @@ interface KnowledgeRetrievalTabProps {
 
 const QUERY_MAX_LENGTH = 200
 const HISTORY_LIMIT = 8
-const RECENT_HISTORY_LIMIT = 5
+const RECENT_HISTORY_LIMIT = 4
 const TOP_K_MIN = 1
 const TOP_K_MAX = 10
 const COMPARE_FETCH_TOP_K = 64
@@ -107,6 +128,20 @@ const SCORE_THRESHOLD_MIN = 0
 const SCORE_THRESHOLD_MAX = 1
 const SCORE_THRESHOLD_STEP = 0.01
 const MODE_ORDER: RetrievalMode[] = ['hybrid', 'semantic', 'lexical']
+const COMPARE_ACCENT_PALETTE: RetrievalCompareAccent[] = [
+    { strongColor: '#2563eb', shape: 'circle' },
+    { strongColor: '#ea580c', shape: 'square' },
+    { strongColor: '#16a34a', shape: 'diamond' },
+    { strongColor: '#9333ea', shape: 'triangle' },
+    { strongColor: '#dc2626', shape: 'circle' },
+    { strongColor: '#0891b2', shape: 'square' },
+    { strongColor: '#ca8a04', shape: 'diamond' },
+    { strongColor: '#db2777', shape: 'triangle' },
+    { strongColor: '#4f46e5', shape: 'circle' },
+    { strongColor: '#7c3aed', shape: 'square' },
+    { strongColor: '#0f766e', shape: 'diamond' },
+    { strongColor: '#b45309', shape: 'triangle' },
+]
 
 function clamp(value: number, min: number, max: number): number {
     return Math.min(max, Math.max(min, value))
@@ -135,6 +170,10 @@ function normalizeRetrievalMode(value: string | null | undefined): RetrievalMode
 
 function getStorageKey(sourceId: string): string {
     return `opsfactory:knowledge:retrieval-history:${sourceId}:v1`
+}
+
+function getCacheStorageKey(sourceId: string): string {
+    return `opsfactory:knowledge:retrieval-cache:${sourceId}:v1`
 }
 
 function normalizeHistoryEntry(raw: unknown): RetrievalHistoryEntry | null {
@@ -173,6 +212,98 @@ function loadHistory(storageKey: string): RetrievalHistoryEntry[] {
 function saveHistory(storageKey: string, entries: RetrievalHistoryEntry[]): void {
     if (typeof window === 'undefined') return
     window.localStorage.setItem(storageKey, JSON.stringify(entries))
+}
+
+function normalizeModeResultState(raw: unknown): RetrievalModeResultState {
+    if (!raw || typeof raw !== 'object') {
+        return {
+            hits: [],
+            total: 0,
+            error: null,
+        }
+    }
+
+    const record = raw as Record<string, unknown>
+    const hits = Array.isArray(record.hits) ? record.hits as RetrievalSearchHit[] : []
+    const total = typeof record.total === 'number' ? record.total : hits.length
+    const error = typeof record.error === 'string' ? record.error : null
+
+    return {
+        hits,
+        total,
+        error,
+    }
+}
+
+function normalizeCacheEntry(raw: unknown): RetrievalCacheEntry | null {
+    if (!raw || typeof raw !== 'object') return null
+
+    const record = raw as Record<string, unknown>
+    const query = typeof record.query === 'string' ? record.query.trim() : ''
+    if (!query) return null
+
+    const results = isRecord(record.results) ? record.results : {}
+
+    return {
+        query,
+        createdAt: typeof record.createdAt === 'string' ? record.createdAt : new Date().toISOString(),
+        fetchedTopK: typeof record.fetchedTopK === 'number' ? record.fetchedTopK : COMPARE_FETCH_TOP_K,
+        results: {
+            hybrid: normalizeModeResultState(results.hybrid),
+            semantic: normalizeModeResultState(results.semantic),
+            lexical: normalizeModeResultState(results.lexical),
+        },
+    }
+}
+
+function loadPersistedState(storageKey: string): RetrievalPersistedState | null {
+    if (typeof window === 'undefined') return null
+
+    try {
+        const raw = window.localStorage.getItem(storageKey)
+        if (!raw) return null
+
+        const parsed = JSON.parse(raw) as unknown
+        if (!parsed || typeof parsed !== 'object') return null
+
+        const record = parsed as Record<string, unknown>
+        const entries = Array.isArray(record.entries)
+            ? record.entries
+                .map(entry => normalizeCacheEntry(entry))
+                .filter((entry): entry is RetrievalCacheEntry => Boolean(entry))
+                .slice(0, HISTORY_LIMIT)
+            : []
+
+        return {
+            lastQuery: typeof record.lastQuery === 'string' ? record.lastQuery.trim() : '',
+            settings: normalizeSettings(record.settings, null),
+            entries,
+        }
+    } catch {
+        return null
+    }
+}
+
+function savePersistedState(storageKey: string, state: RetrievalPersistedState | null): void {
+    if (typeof window === 'undefined') return
+
+    if (!state || (state.entries.length === 0 && state.settings === null && !state.lastQuery)) {
+        window.localStorage.removeItem(storageKey)
+        return
+    }
+
+    window.localStorage.setItem(storageKey, JSON.stringify(state))
+}
+
+function upsertCacheEntry(entries: RetrievalCacheEntry[], entry: RetrievalCacheEntry): RetrievalCacheEntry[] {
+    const remaining = entries.filter(item => item.query !== entry.query)
+    return [entry, ...remaining].slice(0, HISTORY_LIMIT)
+}
+
+function getCachedEntry(entries: RetrievalCacheEntry[], query: string): RetrievalCacheEntry | null {
+    const normalizedQuery = query.trim()
+    if (!normalizedQuery) return null
+    return entries.find(entry => entry.query === normalizedQuery) ?? null
 }
 
 function getTopK(defaults: KnowledgeDefaults | null): number {
@@ -216,8 +347,44 @@ function getConfiguredMode(
 function buildInitialSettings(defaults: KnowledgeDefaults | null): RetrievalSettings {
     return {
         displayCount: getTopK(defaults),
-        scoreThresholdEnabled: true,
-        scoreThreshold: 0.3,
+        lexicalThresholdEnabled: true,
+        lexicalThreshold: 0.3,
+        semanticThresholdEnabled: true,
+        semanticThreshold: 0.3,
+    }
+}
+
+function normalizeSettings(raw: unknown, defaults: KnowledgeDefaults | null): RetrievalSettings {
+    const initialSettings = buildInitialSettings(defaults)
+
+    if (!raw || typeof raw !== 'object') {
+        return initialSettings
+    }
+
+    const record = raw as Record<string, unknown>
+
+    return {
+        displayCount: clamp(
+            typeof record.displayCount === 'number' ? record.displayCount : initialSettings.displayCount,
+            TOP_K_MIN,
+            TOP_K_MAX
+        ),
+        lexicalThresholdEnabled: typeof record.lexicalThresholdEnabled === 'boolean'
+            ? record.lexicalThresholdEnabled
+            : initialSettings.lexicalThresholdEnabled,
+        lexicalThreshold: clamp(
+            typeof record.lexicalThreshold === 'number' ? record.lexicalThreshold : initialSettings.lexicalThreshold,
+            SCORE_THRESHOLD_MIN,
+            SCORE_THRESHOLD_MAX
+        ),
+        semanticThresholdEnabled: typeof record.semanticThresholdEnabled === 'boolean'
+            ? record.semanticThresholdEnabled
+            : initialSettings.semanticThresholdEnabled,
+        semanticThreshold: clamp(
+            typeof record.semanticThreshold === 'number' ? record.semanticThreshold : initialSettings.semanticThreshold,
+            SCORE_THRESHOLD_MIN,
+            SCORE_THRESHOLD_MAX
+        ),
     }
 }
 
@@ -267,6 +434,18 @@ function getModeScore(hit: RetrievalSearchHit, mode: RetrievalMode): number {
     return hit.score
 }
 
+function isThresholdEnabledForMode(mode: RetrievalMode, settings: RetrievalSettings): boolean {
+    if (mode === 'semantic') return settings.semanticThresholdEnabled
+    if (mode === 'lexical') return settings.lexicalThresholdEnabled
+    return false
+}
+
+function getThresholdForMode(mode: RetrievalMode, settings: RetrievalSettings): number | null {
+    if (mode === 'semantic') return settings.semanticThreshold
+    if (mode === 'lexical') return settings.lexicalThreshold
+    return null
+}
+
 function buildDisplayResults(
     mode: RetrievalMode,
     hits: RetrievalSearchHit[],
@@ -274,7 +453,18 @@ function buildDisplayResults(
     settings: RetrievalSettings
 ): RetrievalDisplayHit[] {
     return hits
-        .filter(hit => !settings.scoreThresholdEnabled || getModeScore(hit, mode) >= settings.scoreThreshold)
+        .filter(hit => {
+            if (mode === 'hybrid') {
+                return true
+            }
+
+            if (!isThresholdEnabledForMode(mode, settings)) {
+                return true
+            }
+
+            const threshold = getThresholdForMode(mode, settings)
+            return threshold === null || getModeScore(hit, mode) >= threshold
+        })
         .slice(0, settings.displayCount)
         .map(hit => {
         const rawScore = getModeScore(hit, mode)
@@ -322,6 +512,36 @@ function createEmptyModeResults(): Record<RetrievalMode, RetrievalModeResultStat
     }
 }
 
+function buildCompareAccentMap(
+    orderedModes: RetrievalMode[],
+    resultsByMode: Record<RetrievalMode, RetrievalDisplayHit[]>
+): Record<string, RetrievalCompareAccent> {
+    const modesByChunk = new Map<string, Set<RetrievalMode>>()
+    const compareChunkIdsInOrder: string[] = []
+
+    orderedModes.forEach(mode => {
+        resultsByMode[mode].forEach(hit => {
+            const existing = modesByChunk.get(hit.chunkId)
+            if (existing) {
+                existing.add(mode)
+                return
+            }
+
+            modesByChunk.set(hit.chunkId, new Set([mode]))
+            compareChunkIdsInOrder.push(hit.chunkId)
+        })
+    })
+
+    const repeatedChunkIds = compareChunkIdsInOrder
+        .filter(chunkId => (modesByChunk.get(chunkId)?.size ?? 0) >= 2)
+
+    return repeatedChunkIds.reduce<Record<string, RetrievalCompareAccent>>((accumulator, chunkId, index) => {
+        const paletteIndex = (index * 5) % COMPARE_ACCENT_PALETTE.length
+        accumulator[chunkId] = COMPARE_ACCENT_PALETTE[paletteIndex]
+        return accumulator
+    }, {})
+}
+
 function toCompareModeResponse(payload: { hits?: RetrievalSearchHit[]; total?: number } | null | undefined): RetrievalCompareModeResponse {
     const hits = payload?.hits || []
     return {
@@ -337,7 +557,9 @@ function RetrievalModePanel({
     error,
     searched,
     loading,
+    thresholdFiltered,
     selectedKey,
+    compareAccentByChunkId,
     onSelect,
 }: {
     mode: RetrievalMode
@@ -346,13 +568,15 @@ function RetrievalModePanel({
     error: string | null
     searched: boolean
     loading: boolean
+    thresholdFiltered: boolean
     selectedKey: string | null
+    compareAccentByChunkId: Record<string, RetrievalCompareAccent>
     onSelect: (mode: RetrievalMode, hit: RetrievalDisplayHit) => void
 }) {
     const { t } = useTranslation()
     const emptyState = !searched
         ? t('knowledge.retrievalModeIdle')
-        : rawCount > 0
+        : thresholdFiltered
             ? t('knowledge.retrievalNoResultsThreshold')
         : t('knowledge.retrievalNoResults')
     return (
@@ -387,18 +611,26 @@ function RetrievalModePanel({
                 ) : (
                     results.map((hit, index) => {
                         const selectionKey = `${mode}:${hit.chunkId}`
+                        const compareAccent = compareAccentByChunkId[hit.chunkId]
                         return (
                             <button
                                 key={selectionKey}
                                 type="button"
-                                className={`knowledge-retrieval-hit-card ${selectedKey === selectionKey ? 'selected' : ''}`}
+                                className={`knowledge-retrieval-hit-card ${selectedKey === selectionKey ? 'selected' : ''} ${compareAccent ? `has-compare-accent compare-accent-${compareAccent.shape}` : ''}`}
                                 onClick={() => onSelect(mode, hit)}
+                                style={compareAccent ? {
+                                    ['--compare-accent-strong' as string]: compareAccent.strongColor,
+                                } : undefined}
                             >
                                 <span className="knowledge-retrieval-hit-rank">#{index + 1}</span>
                                 <div className="knowledge-retrieval-hit-main">
                                     <div className="knowledge-retrieval-hit-head">
                                         <strong className="knowledge-retrieval-hit-title">{hit.documentName}</strong>
-                                        <span className="knowledge-retrieval-score-pill">{formatScore(hit.displayScore)}</span>
+                                        {mode === 'hybrid' ? (
+                                            <span className="knowledge-retrieval-score-pill">{t('knowledge.retrievalHybridRankOnly')}</span>
+                                        ) : (
+                                            <span className="knowledge-retrieval-score-pill">{formatScore(hit.displayScore)}</span>
+                                        )}
                                     </div>
                                     <p className="knowledge-retrieval-hit-snippet">{hit.snippet || hit.title || hit.chunkId}</p>
                                     <div className="knowledge-retrieval-hit-footer">
@@ -411,22 +643,30 @@ function RetrievalModePanel({
                                         <span className="knowledge-retrieval-result-meta knowledge-retrieval-hit-chunk">
                                             {hit.chunkId}
                                         </span>
-                                        <span className="knowledge-retrieval-result-meta">
-                                            {t('knowledge.retrievalModeScoreLabel')} {formatScore(hit.displayScore)}
-                                        </span>
-                                        <span className="knowledge-retrieval-result-meta">
-                                            {t('knowledge.retrievalLexicalScoreLabel')} {formatScore(hit.lexicalScore)}
-                                        </span>
-                                        <span className="knowledge-retrieval-result-meta">
-                                            {t('knowledge.retrievalSemanticScoreLabel')} {formatScore(hit.semanticScore)}
-                                        </span>
-                                        <span className="knowledge-retrieval-result-meta">
-                                            {t('knowledge.retrievalFusionScoreLabel')} {formatScore(hit.fusionScore)}
-                                        </span>
+                                        {mode !== 'hybrid' && (
+                                            <span className="knowledge-retrieval-result-meta">
+                                                {t('knowledge.retrievalModeScoreLabel')} {formatScore(hit.displayScore)}
+                                            </span>
+                                        )}
                                     </div>
-                                    <div className="knowledge-retrieval-bar">
-                                        <span style={{ width: `${hit.displayPercent}%` }} />
-                                    </div>
+                                    {mode === 'hybrid' && (
+                                        <div className="knowledge-retrieval-score-metas">
+                                            <span className="knowledge-retrieval-result-meta knowledge-retrieval-result-meta-score">
+                                                {t('knowledge.retrievalLexicalScoreLabel')} {formatScore(hit.lexicalScore)}
+                                            </span>
+                                            <span className="knowledge-retrieval-result-meta knowledge-retrieval-result-meta-score">
+                                                {t('knowledge.retrievalSemanticScoreLabel')} {formatScore(hit.semanticScore)}
+                                            </span>
+                                            <span className="knowledge-retrieval-result-meta knowledge-retrieval-result-meta-score">
+                                                {t('knowledge.retrievalFusionScoreLabel')} {formatScore(hit.fusionScore)}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {mode !== 'hybrid' && (
+                                        <div className="knowledge-retrieval-bar">
+                                            <span style={{ width: `${hit.displayPercent}%` }} />
+                                        </div>
+                                    )}
                                 </div>
                             </button>
                         )
@@ -443,159 +683,99 @@ function RetrievalDetailPanel({
     loading,
     error,
     onClear,
-    variant,
 }: {
     selection: RetrievalSelection | null
     detail: RetrievalFetchResponse | null
     loading: boolean
     error: string | null
     onClear: () => void
-    variant: 'panel' | 'modal'
 }) {
     const { t } = useTranslation()
 
     if (!selection) {
-        if (variant === 'modal') {
-            return null
-        }
-
-        return (
-            <aside className="knowledge-detail-panel knowledge-retrieval-preview-panel">
-                <div className="knowledge-panel-header">
-                    <div>
-                        <h2 className="knowledge-panel-title">{t('knowledge.retrievalDetailTitle')}</h2>
-                        <p className="knowledge-panel-description">{t('knowledge.retrievalDetailPlaceholder')}</p>
-                    </div>
-                </div>
-                <div className="knowledge-doc-preview-empty">{t('knowledge.retrievalDetailEmpty')}</div>
-            </aside>
-        )
+        return null
     }
 
     const { hit, mode } = selection
     const content = detail?.text || detail?.markdown || hit.snippet || ''
-    const panelContent = (
-        <>
-            <div className="knowledge-panel-header">
-                <div>
-                    <h2 className="knowledge-panel-title">{hit.documentName}</h2>
-                    <p className="knowledge-panel-description">{t(getModeLabelKey(mode))}</p>
-                </div>
-                <button type="button" className="knowledge-panel-close" onClick={onClear} aria-label={t('common.close')}>
-                    &times;
-                </button>
-            </div>
-
-            <div className="knowledge-panel-body">
-                <div className="resource-card-tags">
-                    <span className="resource-card-tag">{t('knowledge.retrievalModeScoreLabel')} {formatScore(hit.displayScore)}</span>
-                    <span className="resource-card-tag">{t('knowledge.retrievalLexicalScoreLabel')} {formatScore(hit.lexicalScore)}</span>
-                    <span className="resource-card-tag">{t('knowledge.retrievalSemanticScoreLabel')} {formatScore(hit.semanticScore)}</span>
-                    <span className="resource-card-tag">{t('knowledge.retrievalFusionScoreLabel')} {formatScore(hit.fusionScore)}</span>
-                    <span className="resource-card-tag">
-                        {t('knowledge.retrievalPageShort')} {buildPageRange(detail?.pageFrom ?? hit.pageFrom, detail?.pageTo ?? hit.pageTo, t('knowledge.notAvailable'))}
-                    </span>
-                    <span className="resource-card-tag">{hit.chunkId}</span>
-                </div>
-
-                {loading ? (
-                    <div className="knowledge-doc-preview-empty">{t('knowledge.retrievalDetailLoading')}</div>
-                ) : error ? (
-                    <div className="conn-banner conn-banner-error">
-                        {t('common.connectionError', { error })}
-                    </div>
-                ) : (
-                    <>
-                        <section className="knowledge-panel-group">
-                            <h3 className="knowledge-panel-group-title">{t('knowledge.retrievalDetailContent')}</h3>
-                            <div className="knowledge-retrieval-detail-content-panel">
-                                <div className="knowledge-retrieval-detail-content-text">{content || t('knowledge.notAvailable')}</div>
-                            </div>
-                        </section>
-
-                        <section className="knowledge-panel-group">
-                            <h3 className="knowledge-panel-group-title">{t('knowledge.retrievalDetailKeywords')}</h3>
-                            {detail?.keywords && detail.keywords.length > 0 ? (
-                                <div className="resource-card-tags knowledge-retrieval-keywords">
-                                    {detail.keywords.map(keyword => (
-                                        <span key={keyword} className="resource-card-tag">#{keyword}</span>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="knowledge-section-empty">{t('knowledge.notAvailable')}</p>
-                            )}
-                        </section>
-                    </>
-                )}
-
-                <section className="knowledge-panel-group">
-                    <h3 className="knowledge-panel-group-title">{t('knowledge.retrievalDetailMetadata')}</h3>
-                    <div className="knowledge-kv-grid knowledge-retrieval-detail-grid">
-                        <div className="knowledge-kv-item">
-                            <span className="knowledge-kv-label">{t('knowledge.retrievalDetailDocument')}</span>
-                            <span className="knowledge-kv-value">{hit.documentName}</span>
-                        </div>
-                        <div className="knowledge-kv-item">
-                            <span className="knowledge-kv-label">{t('knowledge.retrievalDetailMode')}</span>
-                            <span className="knowledge-kv-value">{t(getModeLabelKey(mode))}</span>
-                        </div>
-                        <div className="knowledge-kv-item">
-                            <span className="knowledge-kv-label">{t('knowledge.retrievalDetailChunkId')}</span>
-                            <span className="knowledge-kv-value knowledge-kv-code">{hit.chunkId}</span>
-                        </div>
-                        <div className="knowledge-kv-item">
-                            <span className="knowledge-kv-label">{t('knowledge.retrievalModeScoreLabel')}</span>
-                            <span className="knowledge-kv-value">{formatScore(hit.displayScore)}</span>
-                        </div>
-                        <div className="knowledge-kv-item">
-                            <span className="knowledge-kv-label">{t('knowledge.retrievalLexicalScoreLabel')}</span>
-                            <span className="knowledge-kv-value">{formatScore(hit.lexicalScore)}</span>
-                        </div>
-                        <div className="knowledge-kv-item">
-                            <span className="knowledge-kv-label">{t('knowledge.retrievalSemanticScoreLabel')}</span>
-                            <span className="knowledge-kv-value">{formatScore(hit.semanticScore)}</span>
-                        </div>
-                        <div className="knowledge-kv-item">
-                            <span className="knowledge-kv-label">{t('knowledge.retrievalFusionScoreLabel')}</span>
-                            <span className="knowledge-kv-value">{formatScore(hit.fusionScore)}</span>
-                        </div>
-                        <div className="knowledge-kv-item">
-                            <span className="knowledge-kv-label">{t('knowledge.retrievalDetailPageRange')}</span>
-                            <span className="knowledge-kv-value">
-                                {buildPageRange(detail?.pageFrom ?? hit.pageFrom, detail?.pageTo ?? hit.pageTo, t('knowledge.notAvailable'))}
-                            </span>
-                        </div>
-                        <div className="knowledge-kv-item">
-                            <span className="knowledge-kv-label">{t('knowledge.retrievalDetailTitlePath')}</span>
-                            <span className="knowledge-kv-value">
-                                {(detail?.titlePath || hit.titlePath).length > 0
-                                    ? (detail?.titlePath || hit.titlePath).join(' / ')
-                                    : t('knowledge.notAvailable')}
-                            </span>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </>
-    )
-
-    if (variant === 'modal') {
-        return (
-            <div className="modal-overlay" onClick={onClear}>
-                <div
-                    className="modal knowledge-retrieval-detail-modal knowledge-retrieval-detail-modal-compare"
-                    onClick={event => event.stopPropagation()}
-                >
-                    {panelContent}
-                </div>
-            </div>
-        )
-    }
-
     return (
-        <aside className="knowledge-detail-panel knowledge-retrieval-preview-panel">
-            {panelContent}
-        </aside>
+        <KnowledgeChunkDetailModal
+            title={hit.documentName}
+            subtitle={hit.chunkId}
+            badges={[
+                `${t('knowledge.retrievalDetailMode')} ${t(getModeLabelKey(mode))}`,
+                ...(mode === 'hybrid' ? [] : [`${t('knowledge.retrievalModeScoreLabel')} ${formatScore(hit.displayScore)}`]),
+                `${t('knowledge.retrievalLexicalScoreLabel')} ${formatScore(hit.lexicalScore)}`,
+                `${t('knowledge.retrievalSemanticScoreLabel')} ${formatScore(hit.semanticScore)}`,
+                `${t('knowledge.retrievalFusionScoreLabel')} ${formatScore(hit.fusionScore)}`,
+                `${t('knowledge.retrievalPageShort')} ${buildPageRange(detail?.pageFrom ?? hit.pageFrom, detail?.pageTo ?? hit.pageTo, t('knowledge.notAvailable'))}`,
+            ]}
+            error={error ? t('common.connectionError', { error }) : null}
+            loading={loading}
+            loadingLabel={t('knowledge.retrievalDetailLoading')}
+            metadataTitle={t('knowledge.retrievalDetailMetadata')}
+            metadataItems={[
+                {
+                    label: t('knowledge.retrievalDetailDocument'),
+                    value: hit.documentName,
+                },
+                {
+                    label: t('knowledge.retrievalDetailMode'),
+                    value: t(getModeLabelKey(mode)),
+                },
+                {
+                    label: t('knowledge.retrievalDetailChunkId'),
+                    value: hit.chunkId,
+                    code: true,
+                },
+                ...(mode === 'hybrid'
+                    ? []
+                    : [{
+                        label: t('knowledge.retrievalModeScoreLabel'),
+                        value: formatScore(hit.displayScore),
+                    }]),
+                {
+                    label: t('knowledge.retrievalLexicalScoreLabel'),
+                    value: formatScore(hit.lexicalScore),
+                },
+                {
+                    label: t('knowledge.retrievalSemanticScoreLabel'),
+                    value: formatScore(hit.semanticScore),
+                },
+                {
+                    label: t('knowledge.retrievalFusionScoreLabel'),
+                    value: formatScore(hit.fusionScore),
+                },
+                {
+                    label: t('knowledge.retrievalDetailPageRange'),
+                    value: buildPageRange(detail?.pageFrom ?? hit.pageFrom, detail?.pageTo ?? hit.pageTo, t('knowledge.notAvailable')),
+                },
+                {
+                    label: t('knowledge.retrievalDetailTitlePath'),
+                    value: (detail?.titlePath || hit.titlePath).length > 0
+                        ? (detail?.titlePath || hit.titlePath).join(' / ')
+                        : t('knowledge.notAvailable'),
+                },
+            ]}
+            keywordsTitle={t('knowledge.retrievalDetailKeywords')}
+            keywordsContent={detail?.keywords && detail.keywords.length > 0 ? (
+                <div className="resource-card-tags knowledge-retrieval-keywords">
+                    {detail.keywords.map(keyword => (
+                        <span key={keyword} className="resource-card-tag">#{keyword}</span>
+                    ))}
+                </div>
+            ) : (
+                <p className="knowledge-section-empty">{t('knowledge.notAvailable')}</p>
+            )}
+            contentTitle={t('knowledge.retrievalDetailContent')}
+            contentContent={(
+                <div className="knowledge-retrieval-detail-content-panel">
+                    <div className="knowledge-retrieval-detail-content-text">{content || t('knowledge.notAvailable')}</div>
+                </div>
+            )}
+            onClose={onClear}
+            widthClassName="knowledge-retrieval-detail-modal-compare"
+        />
     )
 }
 
@@ -623,10 +803,18 @@ export default function KnowledgeRetrievalTab({
     }, [allowRequestOverride, configuredMode, systemSupportedModes])
     const orderedModes = useMemo(() => getOrderedModes(supportedModes), [supportedModes])
     const storageKey = useMemo(() => getStorageKey(source.id), [source.id])
+    const cacheStorageKey = useMemo(() => getCacheStorageKey(source.id), [source.id])
 
-    const [settings, setSettings] = useState<RetrievalSettings>(() => buildInitialSettings(defaults))
+    const [settings, setSettings] = useState<RetrievalSettings>(() => {
+        const persistedState = loadPersistedState(cacheStorageKey)
+        return persistedState?.settings
+            ? normalizeSettings(persistedState.settings, defaults)
+            : buildInitialSettings(defaults)
+    })
     const [query, setQuery] = useState('')
     const [history, setHistory] = useState<RetrievalHistoryEntry[]>(() => loadHistory(storageKey))
+    const [cachedEntries, setCachedEntries] = useState<RetrievalCacheEntry[]>(() => loadPersistedState(cacheStorageKey)?.entries ?? [])
+    const [hasLoadedPersistedState, setHasLoadedPersistedState] = useState(false)
     const [documentNames, setDocumentNames] = useState<Record<string, string>>({})
     const [modeResults, setModeResults] = useState<Record<RetrievalMode, RetrievalModeResultState>>(() => createEmptyModeResults())
     const [compareCache, setCompareCache] = useState<CompareCacheState | null>(null)
@@ -640,26 +828,49 @@ export default function KnowledgeRetrievalTab({
     const [detailError, setDetailError] = useState<string | null>(null)
 
     useEffect(() => {
-        setSettings(buildInitialSettings(defaults))
-        setQuery('')
-        setModeResults(createEmptyModeResults())
-        setCompareCache(null)
-        setLastExecutedQuery('')
-        setSearchedModes([])
-        setActiveSearchModes([])
-        setSearchError(null)
-        setSelection(null)
-        setDetail(null)
-        setDetailError(null)
-    }, [defaults, orderedModes, source.id])
-
-    useEffect(() => {
         setHistory(loadHistory(storageKey))
     }, [storageKey])
 
     useEffect(() => {
         saveHistory(storageKey, history)
     }, [history, storageKey])
+
+    useEffect(() => {
+        const persistedState = loadPersistedState(cacheStorageKey)
+        const nextCachedEntries = persistedState?.entries ?? []
+        const lastQuery = persistedState?.lastQuery ?? ''
+        const lastEntry = getCachedEntry(nextCachedEntries, lastQuery)
+        const restoredModes = lastEntry ? [...orderedModes] : []
+        const persistedSettings = normalizeSettings(persistedState?.settings, defaults)
+
+        setCachedEntries(nextCachedEntries)
+        setSettings(persistedSettings)
+        setQuery(lastEntry?.query ?? '')
+        setModeResults(lastEntry?.results ?? createEmptyModeResults())
+        setCompareCache(lastEntry ? {
+            query: lastEntry.query,
+            fetchedTopK: lastEntry.fetchedTopK,
+            results: lastEntry.results,
+        } : null)
+        setLastExecutedQuery(lastEntry?.query ?? '')
+        setSearchedModes(lastEntry ? restoredModes : [])
+        setActiveSearchModes([])
+        setSearchError(null)
+        setSelection(null)
+        setDetail(null)
+        setDetailError(null)
+        setDetailLoading(false)
+        setHasLoadedPersistedState(true)
+    }, [cacheStorageKey, orderedModes, source.id])
+
+    useEffect(() => {
+        if (!hasLoadedPersistedState) return
+        savePersistedState(cacheStorageKey, {
+            lastQuery: lastExecutedQuery,
+            settings,
+            entries: cachedEntries,
+        })
+    }, [cacheStorageKey, cachedEntries, hasLoadedPersistedState, lastExecutedQuery, settings])
 
     useEffect(() => {
         let cancelled = false
@@ -700,6 +911,19 @@ export default function KnowledgeRetrievalTab({
         lexical: buildDisplayResults('lexical', modeResults.lexical.hits, documentNames, settings),
         hybrid: buildDisplayResults('hybrid', modeResults.hybrid.hits, documentNames, settings),
     }), [documentNames, modeResults, settings])
+    const compareAccentByChunkId = useMemo(
+        () => buildCompareAccentMap(orderedModes, displayResultsByMode),
+        [displayResultsByMode, orderedModes]
+    )
+    const thresholdFilteredByMode = useMemo<Record<RetrievalMode, boolean>>(() => ({
+        hybrid: false,
+        semantic: searchedModes.includes('semantic')
+            && modeResults.semantic.total > 0
+            && displayResultsByMode.semantic.length === 0,
+        lexical: searchedModes.includes('lexical')
+            && modeResults.lexical.total > 0
+            && displayResultsByMode.lexical.length === 0,
+    }), [displayResultsByMode.lexical.length, displayResultsByMode.semantic.length, modeResults.lexical.total, modeResults.semantic.total, searchedModes])
 
     const selectedKey = selection ? `${selection.mode}:${selection.hit.chunkId}` : null
     const recentHistory = history.slice(0, RECENT_HISTORY_LIMIT)
@@ -866,6 +1090,12 @@ export default function KnowledgeRetrievalTab({
             })
             setLastExecutedQuery(effectiveQuery)
             setSearchedModes(modesToQuery)
+            setCachedEntries(current => upsertCacheEntry(current, {
+                query: effectiveQuery,
+                createdAt: new Date().toISOString(),
+                fetchedTopK: compareResponse.fetchedTopK,
+                results: nextResults,
+            }))
 
             if (modesToQuery.length > 0) {
                 setHistory(current => upsertHistoryEntry(current, {
@@ -888,8 +1118,27 @@ export default function KnowledgeRetrievalTab({
         if (compareCache && lastExecutedQuery === entry.query) {
             return
         }
+
+        const cachedEntry = getCachedEntry(cachedEntries, entry.query)
+        if (cachedEntry) {
+            setModeResults(cachedEntry.results)
+            setCompareCache({
+                query: cachedEntry.query,
+                fetchedTopK: cachedEntry.fetchedTopK,
+                results: cachedEntry.results,
+            })
+            setLastExecutedQuery(cachedEntry.query)
+            setSearchedModes([...orderedModes])
+            setActiveSearchModes([])
+            setSearchError(null)
+            setSelection(null)
+            setDetail(null)
+            setDetailError(null)
+            return
+        }
+
         void executeSearch(entry.query)
-    }, [compareCache, executeSearch, lastExecutedQuery])
+    }, [cachedEntries, compareCache, executeSearch, lastExecutedQuery, orderedModes])
 
     useEffect(() => {
         if (!selection) {
@@ -958,155 +1207,214 @@ export default function KnowledgeRetrievalTab({
         <>
             <div className="knowledge-detail-layout knowledge-retrieval-workbench">
             <div className="knowledge-detail-main">
-                <section className="knowledge-section-card">
+                <section className="knowledge-section-card knowledge-retrieval-test-card">
                     <div className="knowledge-section-header">
                         <div>
                             <h2 className="knowledge-section-title">{t('knowledge.retrievalTitle')}</h2>
                         </div>
                     </div>
-
-                    <div className="knowledge-retrieval-query-head">
-                        <div className="knowledge-retrieval-query-title-row">
-                            <label className="form-label" htmlFor="knowledge-retrieval-query">{t('knowledge.retrievalQueryLabel')}</label>
-                        </div>
-                        <button
-                            type="button"
-                            className="btn btn-primary knowledge-section-action"
-                            onClick={() => void executeSearch()}
-                            disabled={testButtonDisabled}
-                        >
-                            {activeSearchModes.length > 0
-                                ? t('knowledge.retrievalRunning')
-                                : testButtonDisabled && effectiveQuery && compareCache && effectiveQuery === lastExecutedQuery
-                                    ? t('knowledge.retrievalRunCurrent')
-                                    : t('knowledge.retrievalRun')}
-                        </button>
-                    </div>
-
-                    <div className="form-group">
-                        <div className="knowledge-retrieval-query-shell">
-                            <textarea
-                                id="knowledge-retrieval-query"
-                                className="form-input knowledge-retrieval-query"
-                                rows={5}
-                                maxLength={QUERY_MAX_LENGTH}
-                                placeholder={t('knowledge.retrievalQueryPlaceholder')}
-                                value={query}
-                                onChange={event => setQuery(event.target.value)}
-                            />
-                            <span className="knowledge-retrieval-query-count">
-                                {query.length}/{QUERY_MAX_LENGTH}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="knowledge-retrieval-workbench-card is-flat">
-                        <div className="knowledge-retrieval-workbench-section">
-                            <div className="knowledge-retrieval-workbench-head">
-                                <span className="knowledge-kv-label">{t('knowledge.retrievalMethodLabel')}</span>
+                    <div className="knowledge-retrieval-dual-pane">
+                        <div className="knowledge-retrieval-pane knowledge-retrieval-pane-main">
+                            <div className="knowledge-retrieval-query-head">
+                                <div className="knowledge-retrieval-query-title-row">
+                                    <label className="form-label" htmlFor="knowledge-retrieval-query">{t('knowledge.retrievalQueryLabel')}</label>
+                                </div>
                             </div>
 
-                            <div className="knowledge-retrieval-settings-list is-two-column">
-                                <div className="knowledge-retrieval-setting-row">
-                                    <div className="knowledge-retrieval-setting-head">
-                                        <label className="form-label" htmlFor="retrieval-top-k-input">{t('knowledge.retrievalDisplayCountLabel')}</label>
-                                    </div>
-                                    <div className="knowledge-retrieval-range-row">
-                                        <input
-                                            id="retrieval-top-k-input"
-                                            className="form-input knowledge-retrieval-number-input"
-                                            type="number"
-                                            min={TOP_K_MIN}
-                                            max={TOP_K_MAX}
-                                            value={settings.displayCount}
-                                            onChange={event => setSettings(current => ({
-                                                ...current,
-                                                displayCount: clamp(Number(event.target.value) || TOP_K_MIN, TOP_K_MIN, TOP_K_MAX),
-                                            }))}
-                                        />
-                                        <input
-                                            className="knowledge-retrieval-range-input"
-                                            type="range"
-                                            min={TOP_K_MIN}
-                                            max={TOP_K_MAX}
-                                            value={settings.displayCount}
-                                            onChange={event => setSettings(current => ({
-                                                ...current,
-                                                displayCount: clamp(Number(event.target.value), TOP_K_MIN, TOP_K_MAX),
-                                            }))}
-                                        />
-                                    </div>
+                            <div className="form-group">
+                                <div className="knowledge-retrieval-query-shell">
+                                    <textarea
+                                        id="knowledge-retrieval-query"
+                                        className="form-input knowledge-retrieval-query"
+                                        rows={4}
+                                        maxLength={QUERY_MAX_LENGTH}
+                                        placeholder={t('knowledge.retrievalQueryPlaceholder')}
+                                        value={query}
+                                        onChange={event => setQuery(event.target.value)}
+                                    />
+                                    <span className="knowledge-retrieval-query-count">
+                                        {query.length}/{QUERY_MAX_LENGTH}
+                                    </span>
                                 </div>
+                            </div>
 
-                                <div className="knowledge-retrieval-setting-row">
-                                    <div className="knowledge-retrieval-setting-head">
-                                        <div className="knowledge-retrieval-threshold-head">
-                                            <label className="form-label" htmlFor="retrieval-threshold-input">{t('knowledge.retrievalFilterThresholdLabel')}</label>
-                                            <label className="mcp-toggle">
+                            <div className="knowledge-retrieval-workbench-card knowledge-retrieval-controls-card">
+                                <div className="knowledge-retrieval-workbench-section">
+                                    <div className="knowledge-retrieval-workbench-head">
+                                        <span className="knowledge-kv-label">{t('knowledge.retrievalMethodLabel')}</span>
+                                    </div>
+
+                                    <div className="knowledge-retrieval-settings-list is-three-column">
+                                        <div className="knowledge-retrieval-setting-row">
+                                            <div className="knowledge-retrieval-setting-head">
+                                                <label className="form-label" htmlFor="retrieval-top-k-input">{t('knowledge.retrievalDisplayCountLabel')}</label>
+                                            </div>
+                                            <div className="knowledge-retrieval-range-row">
                                                 <input
-                                                    type="checkbox"
-                                                    checked={settings.scoreThresholdEnabled}
+                                                    id="retrieval-top-k-input"
+                                                    className="form-input knowledge-retrieval-number-input"
+                                                    type="number"
+                                                    min={TOP_K_MIN}
+                                                    max={TOP_K_MAX}
+                                                    value={settings.displayCount}
                                                     onChange={event => setSettings(current => ({
                                                         ...current,
-                                                        scoreThresholdEnabled: event.target.checked,
+                                                        displayCount: clamp(Number(event.target.value) || TOP_K_MIN, TOP_K_MIN, TOP_K_MAX),
                                                     }))}
                                                 />
-                                                <span className="mcp-toggle-slider" />
-                                            </label>
+                                                <input
+                                                    className="knowledge-retrieval-range-input"
+                                                    type="range"
+                                                    min={TOP_K_MIN}
+                                                    max={TOP_K_MAX}
+                                                    value={settings.displayCount}
+                                                    onChange={event => setSettings(current => ({
+                                                        ...current,
+                                                        displayCount: clamp(Number(event.target.value), TOP_K_MIN, TOP_K_MAX),
+                                                    }))}
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className={`knowledge-retrieval-range-row ${!settings.scoreThresholdEnabled ? 'is-disabled' : ''}`}>
-                                        <input
-                                            id="retrieval-threshold-input"
-                                            className="form-input knowledge-retrieval-number-input"
-                                            type="number"
-                                            min={SCORE_THRESHOLD_MIN}
-                                            max={SCORE_THRESHOLD_MAX}
-                                            step={SCORE_THRESHOLD_STEP}
-                                            value={settings.scoreThreshold}
-                                            disabled={!settings.scoreThresholdEnabled}
-                                            onChange={event => setSettings(current => ({
-                                                ...current,
-                                                scoreThreshold: clamp(Number(event.target.value) || 0, SCORE_THRESHOLD_MIN, SCORE_THRESHOLD_MAX),
-                                            }))}
-                                        />
-                                        <input
-                                            className="knowledge-retrieval-range-input"
-                                            type="range"
-                                            min={SCORE_THRESHOLD_MIN}
-                                            max={SCORE_THRESHOLD_MAX}
-                                            step={SCORE_THRESHOLD_STEP}
-                                            value={settings.scoreThreshold}
-                                            disabled={!settings.scoreThresholdEnabled}
-                                            onChange={event => setSettings(current => ({
-                                                ...current,
-                                                scoreThreshold: clamp(Number(event.target.value), SCORE_THRESHOLD_MIN, SCORE_THRESHOLD_MAX),
-                                            }))}
-                                        />
+
+                                        <div className="knowledge-retrieval-setting-row">
+                                            <div className="knowledge-retrieval-setting-head">
+                                                <div className="knowledge-retrieval-threshold-head">
+                                                    <label className="form-label" htmlFor="retrieval-semantic-threshold-input">{t('knowledge.retrievalSemanticThresholdLabel')}</label>
+                                                    <label className="mcp-toggle">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.semanticThresholdEnabled}
+                                                            onChange={event => setSettings(current => ({
+                                                                ...current,
+                                                                semanticThresholdEnabled: event.target.checked,
+                                                            }))}
+                                                        />
+                                                        <span className="mcp-toggle-slider" />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div className={`knowledge-retrieval-range-row ${!settings.semanticThresholdEnabled ? 'is-disabled' : ''}`}>
+                                                <input
+                                                    id="retrieval-semantic-threshold-input"
+                                                    className="form-input knowledge-retrieval-number-input"
+                                                    type="number"
+                                                    min={SCORE_THRESHOLD_MIN}
+                                                    max={SCORE_THRESHOLD_MAX}
+                                                    step={SCORE_THRESHOLD_STEP}
+                                                    value={settings.semanticThreshold}
+                                                    disabled={!settings.semanticThresholdEnabled}
+                                                    onChange={event => setSettings(current => ({
+                                                        ...current,
+                                                        semanticThreshold: clamp(Number(event.target.value) || 0, SCORE_THRESHOLD_MIN, SCORE_THRESHOLD_MAX),
+                                                    }))}
+                                                />
+                                                <input
+                                                    className="knowledge-retrieval-range-input"
+                                                    type="range"
+                                                    min={SCORE_THRESHOLD_MIN}
+                                                    max={SCORE_THRESHOLD_MAX}
+                                                    step={SCORE_THRESHOLD_STEP}
+                                                    value={settings.semanticThreshold}
+                                                    disabled={!settings.semanticThresholdEnabled}
+                                                    onChange={event => setSettings(current => ({
+                                                        ...current,
+                                                        semanticThreshold: clamp(Number(event.target.value), SCORE_THRESHOLD_MIN, SCORE_THRESHOLD_MAX),
+                                                    }))}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="knowledge-retrieval-setting-row">
+                                            <div className="knowledge-retrieval-setting-head">
+                                                <div className="knowledge-retrieval-threshold-head">
+                                                    <label className="form-label" htmlFor="retrieval-lexical-threshold-input">{t('knowledge.retrievalLexicalThresholdLabel')}</label>
+                                                    <label className="mcp-toggle">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={settings.lexicalThresholdEnabled}
+                                                            onChange={event => setSettings(current => ({
+                                                                ...current,
+                                                                lexicalThresholdEnabled: event.target.checked,
+                                                            }))}
+                                                        />
+                                                        <span className="mcp-toggle-slider" />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div className={`knowledge-retrieval-range-row ${!settings.lexicalThresholdEnabled ? 'is-disabled' : ''}`}>
+                                                <input
+                                                    id="retrieval-lexical-threshold-input"
+                                                    className="form-input knowledge-retrieval-number-input"
+                                                    type="number"
+                                                    min={SCORE_THRESHOLD_MIN}
+                                                    max={SCORE_THRESHOLD_MAX}
+                                                    step={SCORE_THRESHOLD_STEP}
+                                                    value={settings.lexicalThreshold}
+                                                    disabled={!settings.lexicalThresholdEnabled}
+                                                    onChange={event => setSettings(current => ({
+                                                        ...current,
+                                                        lexicalThreshold: clamp(Number(event.target.value) || 0, SCORE_THRESHOLD_MIN, SCORE_THRESHOLD_MAX),
+                                                    }))}
+                                                />
+                                                <input
+                                                    className="knowledge-retrieval-range-input"
+                                                    type="range"
+                                                    min={SCORE_THRESHOLD_MIN}
+                                                    max={SCORE_THRESHOLD_MAX}
+                                                    step={SCORE_THRESHOLD_STEP}
+                                                    value={settings.lexicalThreshold}
+                                                    disabled={!settings.lexicalThresholdEnabled}
+                                                    onChange={event => setSettings(current => ({
+                                                        ...current,
+                                                        lexicalThreshold: clamp(Number(event.target.value), SCORE_THRESHOLD_MIN, SCORE_THRESHOLD_MAX),
+                                                    }))}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    {recentHistory.length > 0 && (
-                        <div className="knowledge-retrieval-history-strip is-standalone">
-                            <span className="knowledge-kv-label">{t('knowledge.retrievalRecentTitle')}</span>
-                            <div className="knowledge-retrieval-history-chips">
-                                {recentHistory.map(entry => (
-                                    <button
-                                        key={entry.id}
-                                        type="button"
-                                        className="knowledge-retrieval-history-chip"
-                                        onClick={() => handleReplayHistory(entry)}
-                                    >
-                                        <span className="knowledge-retrieval-history-chip-query">{entry.query}</span>
-                                        <span className="knowledge-retrieval-history-chip-mode">{t('knowledge.retrievalViewCompare')}</span>
-                                    </button>
-                                ))}
+                            <div className="knowledge-retrieval-actions">
+                                <button
+                                    type="button"
+                                    className="btn btn-primary knowledge-section-action"
+                                    onClick={() => void executeSearch()}
+                                    disabled={testButtonDisabled}
+                                >
+                                    {activeSearchModes.length > 0
+                                        ? t('knowledge.retrievalRunning')
+                                        : testButtonDisabled && effectiveQuery && compareCache && effectiveQuery === lastExecutedQuery
+                                            ? t('knowledge.retrievalRunCurrent')
+                                            : t('knowledge.retrievalRun')}
+                                </button>
                             </div>
                         </div>
-                    )}
+
+                        <aside className="knowledge-retrieval-pane knowledge-retrieval-pane-history">
+                            <div className="knowledge-retrieval-history-headline">
+                                <span className="knowledge-kv-label">{t('knowledge.retrievalRecentTitle')}</span>
+                            </div>
+                            <div className="knowledge-retrieval-history-strip">
+                                {recentHistory.length > 0 ? (
+                                    <div className="knowledge-retrieval-history-list" role="list">
+                                        {recentHistory.map(entry => (
+                                            <button
+                                                key={entry.id}
+                                                type="button"
+                                                className="knowledge-retrieval-history-item"
+                                                onClick={() => handleReplayHistory(entry)}
+                                            >
+                                                <span className="knowledge-retrieval-history-item-query">{entry.query}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="knowledge-retrieval-mode-empty">{t('knowledge.retrievalCompareEmpty')}</div>
+                                )}
+                            </div>
+                        </aside>
+                    </div>
                 </section>
 
                 <section className="knowledge-section-card">
@@ -1144,7 +1452,9 @@ export default function KnowledgeRetrievalTab({
                                     error={modeResults[mode].error}
                                     searched={searchedModes.includes(mode)}
                                     loading={activeSearchModes.includes(mode)}
+                                    thresholdFiltered={thresholdFilteredByMode[mode]}
                                     selectedKey={selectedKey}
+                                    compareAccentByChunkId={compareAccentByChunkId}
                                     onSelect={(selectedMode, hit) => setSelection({ mode: selectedMode, hit })}
                                 />
                             ))}
@@ -1160,7 +1470,6 @@ export default function KnowledgeRetrievalTab({
                 loading={detailLoading}
                 error={detailError}
                 onClear={() => setSelection(null)}
-                variant="modal"
             />
         </>
     )

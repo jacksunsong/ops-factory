@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../contexts/ToastContext'
+import { usePreview } from '../contexts/PreviewContext'
 import { KNOWLEDGE_SERVICE_URL } from '../config/runtime'
 import { useKnowledgeSourceDetail } from '../hooks/useKnowledgeSourceDetail'
 import KnowledgeChunksTab from '../components/knowledge/KnowledgeChunksTab'
@@ -9,6 +10,7 @@ import KnowledgeRetrievalTab from '../components/knowledge/KnowledgeRetrievalTab
 import type { ResourceStatusTone } from '../components/ResourceCard'
 import type {
     KnowledgeDocumentArtifacts,
+    KnowledgeDocumentPreview,
     KnowledgeDocumentSummary,
     KnowledgeIngestResponse,
     KnowledgeJobResponse,
@@ -1007,16 +1009,6 @@ function UploadDocumentsModal({
         setSessionState('idle')
     }, [])
 
-    useEffect(() => {
-        if (sessionState === 'finished' && completedCount > 0 && failedCount === 0) {
-            const timer = window.setTimeout(() => {
-                onClose()
-            }, 600)
-            return () => window.clearTimeout(timer)
-        }
-        return undefined
-    }, [completedCount, failedCount, onClose, sessionState])
-
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal knowledge-upload-modal" onClick={event => event.stopPropagation()}>
@@ -1137,6 +1129,7 @@ export default function KnowledgeConfigure() {
     const { sourceId } = useParams<{ sourceId: string }>()
     const [searchParams, setSearchParams] = useSearchParams()
     const { showToast } = useToast()
+    const { openPreview, previewFile } = usePreview()
     const {
         source,
         stats,
@@ -1304,6 +1297,10 @@ export default function KnowledgeConfigure() {
             return matchesSearch && matchesStatus && matchesType
         })
     }, [documentArtifacts, documentSearchTerm, documentStatusFilter, documentTypeFilter, documents])
+    const previewDocumentId = useMemo(() => {
+        if (!previewFile?.path?.startsWith('knowledge-document:')) return null
+        return previewFile.path.replace('knowledge-document:', '')
+    }, [previewFile?.path])
 
     const updateRouteState = useCallback((tab: KnowledgeConfigureTab, options?: { documentId?: string | null }) => {
         const nextParams = new URLSearchParams(searchParams)
@@ -1584,6 +1581,34 @@ export default function KnowledgeConfigure() {
         }
     }, [showToast, t])
 
+    const handlePreviewDocument = useCallback(async (knowledgeDocument: KnowledgeDocumentSummary) => {
+        try {
+            const response = await fetch(`${KNOWLEDGE_SERVICE_URL}/ops-knowledge/documents/${knowledgeDocument.id}/preview`)
+            const data = await response.json().catch(() => null) as KnowledgeDocumentPreview | { message?: string } | null
+
+            if (!response.ok) {
+                throw new Error((data as { message?: string } | null)?.message || response.statusText)
+            }
+
+            const previewData = data as KnowledgeDocumentPreview
+            await openPreview({
+                name: previewData.title || getDocumentDisplayTitle(knowledgeDocument),
+                path: `knowledge-document:${knowledgeDocument.id}`,
+                type: 'md',
+                content: previewData.markdownPreview,
+                downloadUrl: getDocumentDownloadUrl(knowledgeDocument.id),
+                previewKind: 'markdown',
+            })
+        } catch (err) {
+            showToast(
+                'error',
+                t('knowledge.docPreviewLoadFailed', {
+                    error: err instanceof Error ? err.message : t('errors.unknown'),
+                })
+            )
+        }
+    }, [openPreview, showToast, t])
+
     const handleRebuildSource = useCallback(async () => {
         if (!source || isRebuildingSource) return
 
@@ -1613,6 +1638,7 @@ export default function KnowledgeConfigure() {
     useEffect(() => {
         if (activeTab === 'documents') {
             void loadDocuments()
+            return
         }
     }, [activeTab, loadDocuments])
 
@@ -1986,127 +2012,162 @@ export default function KnowledgeConfigure() {
                                 </div>
                             )}
 
-                            <div className="knowledge-doc-filters">
-                                <div className="search-input-wrapper knowledge-doc-search">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <circle cx="11" cy="11" r="8" />
-                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                                    </svg>
-                                    <input
-                                        type="text"
-                                        className="search-input knowledge-doc-search-input"
-                                        placeholder={t('knowledge.docSearchPlaceholder')}
-                                        value={documentSearchTerm}
-                                        onChange={event => setDocumentSearchTerm(event.target.value)}
-                                    />
-                                </div>
+                            <div className="knowledge-doc-layout">
+                                <div className="knowledge-doc-main">
+                                    <div className="knowledge-doc-filters">
+                                        <div className="search-input-wrapper knowledge-doc-search">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <circle cx="11" cy="11" r="8" />
+                                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                            </svg>
+                                            <input
+                                                type="text"
+                                                className="search-input knowledge-doc-search-input"
+                                                placeholder={t('knowledge.docSearchPlaceholder')}
+                                                value={documentSearchTerm}
+                                                onChange={event => setDocumentSearchTerm(event.target.value)}
+                                            />
+                                        </div>
 
-                                <select
-                                    className="form-input knowledge-doc-filter-select"
-                                    value={documentTypeFilter}
-                                    onChange={event => setDocumentTypeFilter(event.target.value)}
-                                >
-                                    <option value="ALL">{t('knowledge.docTypeAll')}</option>
-                                    {documentTypeOptions.map(type => (
-                                        <option key={type} value={type}>{type}</option>
-                                    ))}
-                                </select>
+                                        <select
+                                            className="form-input knowledge-doc-filter-select"
+                                            value={documentTypeFilter}
+                                            onChange={event => setDocumentTypeFilter(event.target.value)}
+                                        >
+                                            <option value="ALL">{t('knowledge.docTypeAll')}</option>
+                                            {documentTypeOptions.map(type => (
+                                                <option key={type} value={type}>{type}</option>
+                                            ))}
+                                        </select>
 
-                                <select
-                                    className="form-input knowledge-doc-filter-select"
-                                    value={documentStatusFilter}
-                                    onChange={event => setDocumentStatusFilter(event.target.value as KnowledgeDocumentFilterStatus)}
-                                >
-                                    <option value="ALL">{t('knowledge.docFilterAll')}</option>
-                                    <option value="READY">{t('knowledge.docStatusReady')}</option>
-                                    <option value="ATTENTION">{t('knowledge.docStatusAttention')}</option>
-                                    <option value="PROCESSING">{t('knowledge.docStatusProcessing')}</option>
-                                    <option value="ERROR">{t('knowledge.docStatusError')}</option>
-                                </select>
-                            </div>
-
-                            {documentsLoading ? (
-                                <div className="knowledge-doc-empty">{t('common.loading')}</div>
-                            ) : filteredDocuments.length === 0 ? (
-                                <div className="knowledge-doc-empty">
-                                    {documents.length === 0 ? t('knowledge.docEmptyState') : t('knowledge.docNoMatch')}
-                                </div>
-                            ) : (
-                                <div className="knowledge-doc-table">
-                                    <div className="knowledge-doc-table-head">
-                                        <span>{t('knowledge.docColumnName')}</span>
-                                        <span>{t('knowledge.docColumnType')}</span>
-                                        <span>{t('knowledge.docColumnStatus')}</span>
-                                        <span>{t('knowledge.docColumnChunks')}</span>
-                                        <span>{t('knowledge.docColumnArtifacts')}</span>
-                                        <span>{t('knowledge.updatedAt')}</span>
-                                        <span>{t('knowledge.docColumnActions')}</span>
+                                        <select
+                                            className="form-input knowledge-doc-filter-select"
+                                            value={documentStatusFilter}
+                                            onChange={event => setDocumentStatusFilter(event.target.value as KnowledgeDocumentFilterStatus)}
+                                        >
+                                            <option value="ALL">{t('knowledge.docFilterAll')}</option>
+                                            <option value="READY">{t('knowledge.docStatusReady')}</option>
+                                            <option value="ATTENTION">{t('knowledge.docStatusAttention')}</option>
+                                            <option value="PROCESSING">{t('knowledge.docStatusProcessing')}</option>
+                                            <option value="ERROR">{t('knowledge.docStatusError')}</option>
+                                        </select>
                                     </div>
 
-                                    {filteredDocuments.map(document => {
-                                        const artifacts = documentArtifacts[document.id]
-                                        const health = getDocumentHealthStatus(document, artifacts)
-                                        const displayTitle = getDocumentDisplayTitle(document)
-                                        const showOriginalName = displayTitle !== document.name
-                                        return (
-                                            <div key={document.id} className="knowledge-doc-row">
-                                                <div className="knowledge-doc-name">
-                                                    <strong>{displayTitle}</strong>
-                                                    {showOriginalName && (
-                                                        <span className="knowledge-doc-name-meta">{document.name}</span>
-                                                    )}
-                                                </div>
-                                                <span className="knowledge-doc-cell">{getDocumentType(document)}</span>
-                                                <span className="knowledge-doc-cell">
-                                                    <span className={`resource-status resource-status-${health.tone}`}>
-                                                        {t(health.labelKey)}
-                                                    </span>
-                                                </span>
-                                                <span className="knowledge-doc-cell">{document.chunkCount}</span>
-                                                <span className="knowledge-doc-cell">{getArtifactsLabel(artifacts, t)}</span>
-                                                <span className="knowledge-doc-cell">{formatDateTime(document.updatedAt)}</span>
-                                                <div className="knowledge-doc-actions">
-                                                    <button
-                                                        type="button"
-                                                        className="knowledge-doc-action-link"
-                                                        onClick={() => void handleDownloadDocument(document)}
-                                                        disabled={downloadingDocumentId === document.id}
-                                                    >
-                                                        {downloadingDocumentId === document.id ? t('common.loading') : t('knowledge.docDownload')}
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="knowledge-doc-action-link"
-                                                        onClick={() => updateRouteState('chunks', { documentId: document.id })}
-                                                    >
-                                                        {t('knowledge.docViewChunks')}
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="knowledge-doc-action-link"
-                                                        onClick={() => {
-                                                            setRenameDocumentError(null)
-                                                            setRenameDocumentTarget(document)
-                                                        }}
-                                                    >
-                                                        {t('knowledge.docRename')}
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="knowledge-doc-action-link danger"
-                                                        onClick={() => {
-                                                            setDeleteDocumentError(null)
-                                                            setDeleteDocumentTarget(document)
-                                                        }}
-                                                    >
-                                                        {t('common.delete')}
-                                                    </button>
-                                                </div>
+                                    {documentsLoading ? (
+                                        <div className="knowledge-doc-empty">{t('common.loading')}</div>
+                                    ) : filteredDocuments.length === 0 ? (
+                                        <div className="knowledge-doc-empty">
+                                            {documents.length === 0 ? t('knowledge.docEmptyState') : t('knowledge.docNoMatch')}
+                                        </div>
+                                    ) : (
+                                        <div className="knowledge-doc-table">
+                                            <div className="knowledge-doc-table-head">
+                                                <span>{t('knowledge.docColumnName')}</span>
+                                                <span>{t('knowledge.docColumnType')}</span>
+                                                <span>{t('knowledge.docColumnStatus')}</span>
+                                                <span>{t('knowledge.docColumnChunks')}</span>
+                                                <span>{t('knowledge.docColumnArtifacts')}</span>
+                                                <span>{t('knowledge.updatedAt')}</span>
+                                                <span>{t('knowledge.docColumnActions')}</span>
                                             </div>
-                                        )
-                                    })}
+
+                                            {filteredDocuments.map(document => {
+                                                const artifacts = documentArtifacts[document.id]
+                                                const health = getDocumentHealthStatus(document, artifacts)
+                                                const displayTitle = getDocumentDisplayTitle(document)
+                                                const showOriginalName = displayTitle !== document.name
+                                                const isSelected = previewDocumentId === document.id
+                                                return (
+                                                    <div key={document.id} className={`knowledge-doc-row${isSelected ? ' selected' : ''}`}>
+                                                        <div className="knowledge-doc-name">
+                                                            <strong>{displayTitle}</strong>
+                                                            {showOriginalName && (
+                                                                <span className="knowledge-doc-name-meta">{document.name}</span>
+                                                            )}
+                                                        </div>
+                                                        <span className="knowledge-doc-cell">{getDocumentType(document)}</span>
+                                                        <span className="knowledge-doc-cell">
+                                                            <span className={`resource-status resource-status-${health.tone}`}>
+                                                                {t(health.labelKey)}
+                                                            </span>
+                                                        </span>
+                                                        <span className="knowledge-doc-cell">{document.chunkCount}</span>
+                                                        <span className="knowledge-doc-cell">{getArtifactsLabel(artifacts, t)}</span>
+                                                        <span className="knowledge-doc-cell">{formatDateTime(document.updatedAt)}</span>
+                                                        <div className="knowledge-doc-actions">
+                                                            <div className="knowledge-doc-actions-text">
+                                                                <button
+                                                                    type="button"
+                                                                    className="knowledge-doc-action-link"
+                                                                    onClick={() => updateRouteState('chunks', { documentId: document.id })}
+                                                                >
+                                                                    {t('knowledge.docViewChunks')}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="knowledge-doc-action-link"
+                                                                    onClick={() => {
+                                                                        setRenameDocumentError(null)
+                                                                        setRenameDocumentTarget(document)
+                                                                    }}
+                                                                >
+                                                                    {t('knowledge.docRename')}
+                                                                </button>
+                                                            </div>
+                                                            <div className="knowledge-doc-actions-icons">
+                                                                <button
+                                                                    type="button"
+                                                                    className={`knowledge-doc-action-btn knowledge-doc-action-icon${isSelected ? ' active' : ''}`}
+                                                                    title={t('files.preview')}
+                                                                    aria-label={t('files.preview')}
+                                                                    onClick={() => void handlePreviewDocument(document)}
+                                                                >
+                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                                                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                                                        <circle cx="12" cy="12" r="3" />
+                                                                    </svg>
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="knowledge-doc-action-btn knowledge-doc-action-icon"
+                                                                    title={t('files.download')}
+                                                                    aria-label={t('knowledge.docDownload')}
+                                                                    onClick={() => void handleDownloadDocument(document)}
+                                                                    disabled={downloadingDocumentId === document.id}
+                                                                >
+                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                                        <polyline points="7 10 12 15 17 10" />
+                                                                        <line x1="12" y1="15" x2="12" y2="3" />
+                                                                    </svg>
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="knowledge-doc-action-btn knowledge-doc-action-icon danger"
+                                                                    title={t('common.delete')}
+                                                                    aria-label={t('common.delete')}
+                                                                    onClick={() => {
+                                                                        setDeleteDocumentError(null)
+                                                                        setDeleteDocumentTarget(document)
+                                                                    }}
+                                                                >
+                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                                                                        <polyline points="3 6 5 6 21 6" />
+                                                                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                                                        <line x1="10" y1="11" x2="10" y2="17" />
+                                                                        <line x1="14" y1="11" x2="14" y2="17" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            </div>
                         </section>
                     )}
 

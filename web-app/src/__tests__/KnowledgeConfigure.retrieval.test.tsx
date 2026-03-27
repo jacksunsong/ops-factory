@@ -640,23 +640,28 @@ describe('KnowledgeConfigure retrieval tab', () => {
             target: { value: 'qwen3 threshold' },
         })
 
-        const thresholdToggle = screen.getByRole('checkbox') as HTMLInputElement
-        expect(thresholdToggle.checked).toBe(true)
+        const [semanticToggle, lexicalToggle] = screen.getAllByRole('checkbox') as HTMLInputElement[]
+        expect(lexicalToggle.checked).toBe(true)
+        expect(semanticToggle.checked).toBe(true)
         fireEvent.click(screen.getByRole('button', { name: 'knowledge.retrievalRun' }))
 
         await waitFor(() => {
             expect(compareRequests).toHaveLength(1)
         })
 
-        fireEvent.change(screen.getByLabelText('knowledge.retrievalFilterThresholdLabel'), {
+        fireEvent.change(screen.getByLabelText('knowledge.retrievalLexicalThresholdLabel'), {
+            target: { value: '0.95' },
+        })
+        fireEvent.change(screen.getByLabelText('knowledge.retrievalSemanticThresholdLabel'), {
             target: { value: '0.95' },
         })
 
         expect(compareRequests).toHaveLength(1)
-        expect(await screen.findAllByText('knowledge.retrievalNoResultsThreshold')).toHaveLength(3)
+        expect(await screen.findAllByText('knowledge.retrievalNoResultsThreshold')).toHaveLength(2)
+        expect(screen.getByText('混合检索总结.pdf')).toBeInTheDocument()
     })
 
-    it('restores locally filtered results when threshold is turned off without calling the backend again', async () => {
+    it('restores locally filtered semantic results when semantic threshold is turned off without calling the backend again', async () => {
         render(
             <MemoryRouter initialEntries={['/knowledge/src_001?tab=retrieval']}>
                 <Routes>
@@ -676,13 +681,14 @@ describe('KnowledgeConfigure retrieval tab', () => {
             expect(compareRequests).toHaveLength(1)
         })
 
-        fireEvent.change(screen.getByLabelText('knowledge.retrievalFilterThresholdLabel'), {
+        fireEvent.change(screen.getByLabelText('knowledge.retrievalSemanticThresholdLabel'), {
             target: { value: '0.95' },
         })
 
-        expect(await screen.findAllByText('knowledge.retrievalNoResultsThreshold')).toHaveLength(3)
+        expect(await screen.findAllByText('knowledge.retrievalNoResultsThreshold')).toHaveLength(1)
 
-        fireEvent.click(screen.getByRole('checkbox'))
+        const semanticToggle = (screen.getAllByRole('checkbox') as HTMLInputElement[])[0]
+        fireEvent.click(semanticToggle)
 
         expect(compareRequests).toHaveLength(1)
         expect(await screen.findByText('混合检索总结.pdf')).toBeInTheDocument()
@@ -778,12 +784,12 @@ describe('KnowledgeConfigure retrieval tab', () => {
         fireEvent.click(screen.getByRole('button', { name: 'knowledge.retrievalRun' }))
 
         expect(await screen.findByText('knowledge.retrievalCompareWarningSemanticInactive')).toBeInTheDocument()
-        expect(screen.getAllByText('knowledge.retrievalLexicalScoreLabel 0.61')).toHaveLength(3)
-        expect(screen.getAllByText('knowledge.retrievalSemanticScoreLabel 0.00')).toHaveLength(3)
-        expect(screen.getAllByText('knowledge.retrievalFusionScoreLabel 0.61')).toHaveLength(3)
+        expect(screen.getAllByText('knowledge.retrievalLexicalScoreLabel 0.61')).toHaveLength(1)
+        expect(screen.getAllByText('knowledge.retrievalSemanticScoreLabel 0.00')).toHaveLength(1)
+        expect(screen.getAllByText('knowledge.retrievalFusionScoreLabel 0.61')).toHaveLength(1)
     })
 
-    it('replays retrieval history without restoring test-only threshold settings', async () => {
+    it('replays retrieval history without overriding the current local filter settings', async () => {
         render(
             <MemoryRouter initialEntries={['/knowledge/src_001?tab=retrieval']}>
                 <Routes>
@@ -793,13 +799,16 @@ describe('KnowledgeConfigure retrieval tab', () => {
         )
 
         await screen.findByText('knowledge.retrievalTitle')
-        expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true)
-        expect((screen.getByLabelText('knowledge.retrievalFilterThresholdLabel') as HTMLInputElement).value).toBe('0.3')
+        const [semanticToggle, lexicalToggle] = screen.getAllByRole('checkbox') as HTMLInputElement[]
+        expect(lexicalToggle.checked).toBe(true)
+        expect(semanticToggle.checked).toBe(true)
+        expect((screen.getByLabelText('knowledge.retrievalLexicalThresholdLabel') as HTMLInputElement).value).toBe('0.3')
+        expect((screen.getByLabelText('knowledge.retrievalSemanticThresholdLabel') as HTMLInputElement).value).toBe('0.3')
 
         fireEvent.change(screen.getByRole('textbox', { name: 'knowledge.retrievalQueryLabel' }), {
             target: { value: 'history-check' },
         })
-        fireEvent.change(screen.getByLabelText('knowledge.retrievalFilterThresholdLabel'), {
+        fireEvent.change(screen.getByLabelText('knowledge.retrievalLexicalThresholdLabel'), {
             target: { value: '0.77' },
         })
         fireEvent.click(screen.getByRole('button', { name: 'knowledge.retrievalRun' }))
@@ -811,8 +820,11 @@ describe('KnowledgeConfigure retrieval tab', () => {
         fireEvent.change(screen.getByRole('textbox', { name: 'knowledge.retrievalQueryLabel' }), {
             target: { value: 'different query' },
         })
-        fireEvent.change(screen.getByLabelText('knowledge.retrievalFilterThresholdLabel'), {
+        fireEvent.change(screen.getByLabelText('knowledge.retrievalLexicalThresholdLabel'), {
             target: { value: '0.33' },
+        })
+        fireEvent.change(screen.getByLabelText('knowledge.retrievalSemanticThresholdLabel'), {
+            target: { value: '0.66' },
         })
 
         fireEvent.click(screen.getByRole('button', { name: /history-check/i }))
@@ -821,7 +833,8 @@ describe('KnowledgeConfigure retrieval tab', () => {
             expect(compareRequests).toHaveLength(1)
         })
 
-        expect((screen.getByLabelText('knowledge.retrievalFilterThresholdLabel') as HTMLInputElement).value).toBe('0.33')
+        expect((screen.getByLabelText('knowledge.retrievalLexicalThresholdLabel') as HTMLInputElement).value).toBe('0.33')
+        expect((screen.getByLabelText('knowledge.retrievalSemanticThresholdLabel') as HTMLInputElement).value).toBe('0.66')
         expect((screen.getByRole('textbox', { name: 'knowledge.retrievalQueryLabel' }) as HTMLTextAreaElement).value).toBe('history-check')
     })
 
@@ -858,6 +871,65 @@ describe('KnowledgeConfigure retrieval tab', () => {
         expect(screen.getByRole('button', { name: 'knowledge.retrievalRunCurrent' })).toBeDisabled()
     })
 
+    it('restores cached compare results and local filter settings after leaving and re-entering the retrieval tab', async () => {
+        const firstRender = render(
+            <MemoryRouter initialEntries={['/knowledge/src_001?tab=retrieval']}>
+                <Routes>
+                    <Route path="/knowledge/:sourceId" element={<KnowledgeConfigure />} />
+                </Routes>
+            </MemoryRouter>
+        )
+
+        await screen.findByText('knowledge.retrievalTitle')
+
+        fireEvent.change(screen.getByRole('textbox', { name: 'knowledge.retrievalQueryLabel' }), {
+            target: { value: 'persisted-query' },
+        })
+        fireEvent.click(screen.getByRole('button', { name: 'knowledge.retrievalRun' }))
+
+        expect(await screen.findByText('混合检索总结.pdf')).toBeInTheDocument()
+
+        await waitFor(() => {
+            expect(compareRequests).toHaveLength(1)
+        })
+
+        fireEvent.change(screen.getByLabelText('knowledge.retrievalDisplayCountLabel'), {
+            target: { value: '1' },
+        })
+        const lexicalPersistToggle = (screen.getAllByRole('checkbox') as HTMLInputElement[])[1]
+        fireEvent.click(lexicalPersistToggle)
+        fireEvent.change(screen.getByLabelText('knowledge.retrievalLexicalThresholdLabel'), {
+            target: { value: '0.95' },
+        })
+        fireEvent.change(screen.getByLabelText('knowledge.retrievalSemanticThresholdLabel'), {
+            target: { value: '0.88' },
+        })
+
+        firstRender.unmount()
+
+        render(
+            <MemoryRouter initialEntries={['/knowledge/src_001?tab=retrieval']}>
+                <Routes>
+                    <Route path="/knowledge/:sourceId" element={<KnowledgeConfigure />} />
+                </Routes>
+            </MemoryRouter>
+        )
+
+        await screen.findByText('knowledge.retrievalTitle')
+
+        expect((screen.getByRole('textbox', { name: 'knowledge.retrievalQueryLabel' }) as HTMLTextAreaElement).value).toBe('persisted-query')
+        expect(screen.getByText('混合检索总结.pdf')).toBeInTheDocument()
+        expect(screen.getByText('关键词命中说明.pdf')).toBeInTheDocument()
+        expect(screen.getByText('knowledge.retrievalNoResultsThreshold')).toBeInTheDocument()
+        expect((screen.getByLabelText('knowledge.retrievalDisplayCountLabel') as HTMLInputElement).value).toBe('1')
+        expect((screen.getAllByRole('checkbox') as HTMLInputElement[])[1].checked).toBe(false)
+        expect((screen.getAllByRole('checkbox') as HTMLInputElement[])[0].checked).toBe(true)
+        expect((screen.getByLabelText('knowledge.retrievalLexicalThresholdLabel') as HTMLInputElement).value).toBe('0.95')
+        expect((screen.getByLabelText('knowledge.retrievalSemanticThresholdLabel') as HTMLInputElement).value).toBe('0.88')
+        expect(compareRequests).toHaveLength(1)
+        expect(screen.getByRole('button', { name: 'knowledge.retrievalRunCurrent' })).toBeDisabled()
+    })
+
     it('keeps test-only controls available when request override is disabled', async () => {
         allowRequestOverride = false
 
@@ -871,8 +943,11 @@ describe('KnowledgeConfigure retrieval tab', () => {
 
         await screen.findByText('knowledge.retrievalTitle')
 
-        expect(screen.getByRole('checkbox')).not.toBeDisabled()
-        expect(screen.getByLabelText('knowledge.retrievalFilterThresholdLabel')).not.toBeDisabled()
+        const [semanticDisabledToggle, lexicalDisabledToggle] = screen.getAllByRole('checkbox') as HTMLInputElement[]
+        expect(lexicalDisabledToggle).not.toBeDisabled()
+        expect(semanticDisabledToggle).not.toBeDisabled()
+        expect(screen.getByLabelText('knowledge.retrievalLexicalThresholdLabel')).not.toBeDisabled()
+        expect(screen.getByLabelText('knowledge.retrievalSemanticThresholdLabel')).not.toBeDisabled()
     })
 
     it('shows backend empty-state results without client-side filtering', async () => {

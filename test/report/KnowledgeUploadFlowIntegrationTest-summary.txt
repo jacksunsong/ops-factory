@@ -1,0 +1,15 @@
+Test class: com.huawei.opsfactory.knowledge.api.KnowledgeUploadFlowIntegrationTest
+Module: knowledge-service
+Command: mvn -Dtest=KnowledgeUploadFlowIntegrationTest test
+Finished at: 2026-03-27 16:18:39 +08:00
+Result: BUILD SUCCESS
+Tests run: 5
+Failures: 0
+Errors: 0
+Skipped: 0
+
+Export/import scenario covered:
+- import all files from knowledge-service/src/test/resources/inputFiles
+- create source named for-test
+- clear knowledge-service/src/test/resources/outputFiles before export
+- export converted markdown artifacts into knowledge-service/src/test/resources/outputFiles

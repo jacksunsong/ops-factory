@@ -116,6 +116,12 @@ class KnowledgeCoverageIntegrationTest {
                 .getContentAsByteArray();
             assertThat(markdown).isNotBlank();
             assertThat(markdown).containsIgnoringCase(expectedMarkers.get(item.path("name").asText()));
+            if ("SLA_Violation_Analysis_Report_CN.html".equals(item.path("name").asText())) {
+                assertThat(markdown)
+                    .doesNotContain("<html")
+                    .doesNotContain("<style")
+                    .contains("# SLA违约归因分析报告");
+            }
             assertThat(original).isNotEmpty();
 
             JsonNode documentStats = readJson(mockMvc.perform(get("/ops-knowledge/documents/{documentId}/stats", documentId))

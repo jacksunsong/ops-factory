@@ -165,6 +165,60 @@ class KnowledgeUploadFlowIntegrationTest {
     }
 
     @Test
+    void shouldImportInputFilesIntoForTestSourceAndExportAllMarkdownArtifacts() throws Exception {
+        Files.writeString(OUTPUT_FILES_DIR.resolve("stale-file.md"), "stale");
+        recreateDirectory(OUTPUT_FILES_DIR);
+        try (Stream<Path> files = Files.list(OUTPUT_FILES_DIR)) {
+            assertThat(files).isEmpty();
+        }
+
+        String sourceId = createSource("for-test");
+        JsonNode sourceDetail = readJson(mockMvc.perform(get("/ops-knowledge/sources/{sourceId}", sourceId))
+            .andExpect(status().isOk())
+            .andReturn());
+        assertThat(sourceDetail.path("name").asText()).isEqualTo("for-test");
+
+        JsonNode ingestResult = uploadInputFiles(sourceId);
+        List<Path> sampleFiles = inputFiles();
+        assertThat(ingestResult.path("documentCount").asInt()).isEqualTo(sampleFiles.size());
+        assertThat(ingestResult.path("status").asText()).isEqualTo("SUCCEEDED");
+
+        JsonNode documentList = readJson(mockMvc.perform(get("/ops-knowledge/documents")
+                .param("sourceId", sourceId))
+            .andExpect(status().isOk())
+            .andReturn());
+        assertThat(documentList.path("total").asInt()).isEqualTo(sampleFiles.size());
+
+        for (JsonNode item : documentList.path("items")) {
+            String documentId = item.path("id").asText();
+            String fileName = item.path("name").asText();
+            String markdown = mockMvc.perform(get("/ops-knowledge/documents/{documentId}/artifacts/markdown", documentId))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+            Path outputFile = OUTPUT_FILES_DIR.resolve(toMarkdownFileName(fileName));
+            Files.writeString(outputFile, markdown);
+            assertThat(markdown).isNotBlank();
+            if ("SLA_Violation_Analysis_Report_CN.html".equals(fileName)) {
+                assertThat(markdown)
+                    .contains("# SLA违约归因分析报告")
+                    .doesNotContain("<html")
+                    .doesNotContain("<style");
+            }
+        }
+
+        try (Stream<Path> files = Files.list(OUTPUT_FILES_DIR)) {
+            List<Path> exportedFiles = files
+                .filter(Files::isRegularFile)
+                .sorted(Comparator.comparing(path -> path.getFileName().toString()))
+                .toList();
+            assertThat(exportedFiles).hasSize(sampleFiles.size());
+            assertThat(exportedFiles).allSatisfy(path -> assertThat(Files.size(path)).isGreaterThan(0L));
+        }
+    }
+
+    @Test
     void shouldSupportChunkCrudAndReflectChangesInSearch() throws Exception {
         String sourceId = createSource();
         uploadInputFiles(sourceId);
@@ -234,26 +288,31 @@ class KnowledgeUploadFlowIntegrationTest {
     }
 
     private String createSource() throws Exception {
+        return createSource("report-agent-docs");
+    }
+
+    private String createSource(String sourceName) throws Exception {
         MvcResult result = mockMvc.perform(post("/ops-knowledge/sources")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "name": "report-agent-docs",
+                      "name": "%s",
                       "description": "integration test source"
                     }
-                    """))
+                    """.formatted(sourceName)))
             .andExpect(status().isOk())
             .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).path("id").asText();
     }
 
-    private void uploadInputFiles(String sourceId) throws Exception {
+    private JsonNode uploadInputFiles(String sourceId) throws Exception {
         var ingestRequest = multipart("/ops-knowledge/sources/{sourceId}/documents:ingest", sourceId);
         for (Path file : inputFiles()) {
             ingestRequest.file(toMultipartFile(file));
         }
-        mockMvc.perform(ingestRequest)
-            .andExpect(status().isOk());
+        return readJson(mockMvc.perform(ingestRequest)
+            .andExpect(status().isOk())
+            .andReturn());
     }
 
     private List<Path> inputFiles() throws IOException {

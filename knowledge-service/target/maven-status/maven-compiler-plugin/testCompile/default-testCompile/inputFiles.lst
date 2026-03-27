@@ -6,4 +6,5 @@
 /Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service/src/test/java/com/huawei/opsfactory/knowledge/api/KnowledgeCoverageIntegrationTest.java
 /Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service/src/test/java/com/huawei/opsfactory/knowledge/service/VectorIndexServiceTest.java
 /Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service/src/test/java/com/huawei/opsfactory/knowledge/api/system/SystemControllerTest.java
+/Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service/src/test/java/com/huawei/opsfactory/knowledge/service/TikaConversionServiceTest.java
 /Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service/src/test/java/com/huawei/opsfactory/knowledge/config/KnowledgePropertiesTest.java

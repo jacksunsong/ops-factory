@@ -211,9 +211,20 @@ public class ReplyController {
                             @RequestBody String body,
                             ServerWebExchange exchange) {
         String userId = exchange.getAttribute(UserContextFilter.USER_ID_ATTR);
+        String sessionId = JsonUtil.extractSessionId(body);
+        log.info("[STOP] request received agentId={} userId={} sessionId={} bodyLen={}",
+                agentId, userId, sessionId, body.length());
         return instanceManager.getOrSpawn(agentId, userId)
+                .doOnNext(instance -> log.info("[STOP] instance resolved agentId={} userId={} sessionId={} port={} pid={}",
+                        agentId, userId, sessionId, instance.getPort(), instance.getPid()))
                 .flatMap(instance -> goosedProxy.proxyWithBody(
                         exchange.getResponse(), instance.getPort(), "/agent/stop",
-                        HttpMethod.POST, body, instance.getSecretKey()));
+                        HttpMethod.POST, body, instance.getSecretKey())
+                        .doOnSubscribe(sub -> log.info("[STOP] forwarding to goosed agentId={} userId={} sessionId={} port={}",
+                                agentId, userId, sessionId, instance.getPort()))
+                        .doOnSuccess(ignored -> log.info("[STOP] goosed stop completed agentId={} userId={} sessionId={} status={}",
+                                agentId, userId, sessionId, exchange.getResponse().getStatusCode()))
+                        .doOnError(err -> log.warn("[STOP] goosed stop failed agentId={} userId={} sessionId={} port={} error={}",
+                                agentId, userId, sessionId, instance.getPort(), err.getMessage()))));
     }
 }

@@ -22,6 +22,19 @@ yaml_val() {
 yaml_nested_val() {
     local section="$1" key="$2" file="${SERVICE_DIR}/config.yaml"
     [ -f "${file}" ] || return 0
+    local inline
+    inline="$(awk -v section="${section}" '
+      $0 ~ "^" section ":[[:space:]]*\\{" { print; exit }
+    ' "${file}")"
+    if [ -n "${inline}" ]; then
+        echo "${inline}" \
+          | sed -E "s/^${section}:[[:space:]]*\\{//; s/}[[:space:]]*$//" \
+          | tr ',' '\n' \
+          | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+          | awk -F': *' -v key="${key}" '$1==key {print $2; exit}' \
+          | sed 's/^["'"'"']//;s/["'"'"']$//'
+        return 0
+    fi
     awk -F': ' -v section="${section}" -v key="${key}" '
       $0 ~ "^" section ":" { in_section=1; next }
       in_section && $0 ~ "^[^[:space:]]" { in_section=0 }
