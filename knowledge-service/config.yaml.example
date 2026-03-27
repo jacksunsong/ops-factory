@@ -54,13 +54,16 @@ ops-knowledge:
     model: "qwen/qwen3-embedding-4b"
     timeout-ms: 30000
     batch-size: 32
-    dimensions: 2560
+    dimensions: 1024
 
   indexing:
     title-boost: 4.0
     title-path-boost: 2.5
     keyword-boost: 2.0
     content-boost: 1.0
+    bm25:
+      k1: 1.2
+      b: 0.75
     store-raw-text: true
     store-markdown: true
 
@@ -69,11 +72,8 @@ ops-knowledge:
     lexical-top-k: 50
     semantic-top-k: 50
     final-top-k: 10
-    max-top-k: 50
-    fusion-mode: rrf
+    max-top-k: 64
     rrf-k: 60
-    lexical-weight: 0.5
-    semantic-weight: 0.5
     snippet-length: 180
 
   fetch:

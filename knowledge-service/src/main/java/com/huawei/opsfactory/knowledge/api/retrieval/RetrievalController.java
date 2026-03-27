@@ -25,6 +25,11 @@ public class RetrievalController {
         return facade.search(request);
     }
 
+    @PostMapping("/search/compare")
+    public CompareSearchResponse compare(@RequestBody CompareSearchRequest request) {
+        return facade.compare(request);
+    }
+
     @GetMapping("/fetch/{chunkId}")
     public FetchResponse fetch(
         @PathVariable("chunkId") String chunkId,
@@ -64,8 +69,8 @@ public class RetrievalController {
         String mode,
         Integer lexicalTopK,
         Integer semanticTopK,
-        String fusionMode,
         Integer rrfK,
+        Double scoreThreshold,
         Boolean includeScores,
         Boolean includeExplain,
         Integer snippetLength
@@ -73,6 +78,28 @@ public class RetrievalController {
     }
 
     public record SearchResponse(String query, List<SearchHit> hits, int total) {
+    }
+
+    public record CompareSearchRequest(
+        String query,
+        List<String> sourceIds,
+        List<String> documentIds,
+        String retrievalProfileId,
+        SearchFilters filters,
+        List<String> modes
+    ) {
+    }
+
+    public record CompareSearchResponse(
+        String query,
+        int fetchedTopK,
+        CompareModeResponse hybrid,
+        CompareModeResponse semantic,
+        CompareModeResponse lexical
+    ) {
+    }
+
+    public record CompareModeResponse(List<SearchHit> hits, int total) {
     }
 
     public record SearchHit(

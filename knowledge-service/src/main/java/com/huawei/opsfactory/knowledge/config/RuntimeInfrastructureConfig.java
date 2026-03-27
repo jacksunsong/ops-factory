@@ -11,6 +11,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.util.StringUtils;
 
 @Configuration
 @EnableConfigurationProperties(KnowledgeRuntimeProperties.class)
@@ -40,12 +41,23 @@ public class RuntimeInfrastructureConfig {
     public SchemaInitializer schemaInitializer(DataSource dataSource) {
         ResourceDatabasePopulator populator =
             new ResourceDatabasePopulator(false, false, "UTF-8", new ClassPathResource("db/schema-sqlite.sql"));
-        return new SchemaInitializer(dataSource, populator);
+        return new SchemaInitializer(dataSource, populator, jdbcTemplate(dataSource));
     }
 
     public static final class SchemaInitializer {
-        public SchemaInitializer(DataSource dataSource, ResourceDatabasePopulator populator) {
+        public SchemaInitializer(DataSource dataSource, ResourceDatabasePopulator populator, JdbcTemplate jdbcTemplate) {
             populator.execute(dataSource);
+            ensureColumn(jdbcTemplate, "embedding_record", "vector_json", "alter table embedding_record add column vector_json TEXT NOT NULL DEFAULT '[]'");
+        }
+
+        private void ensureColumn(JdbcTemplate jdbcTemplate, String tableName, String columnName, String alterSql) {
+            boolean exists = jdbcTemplate.query(
+                "pragma table_info(" + tableName + ")",
+                (rs, rowNum) -> rs.getString("name")
+            ).stream().anyMatch(columnName::equals);
+            if (!exists && StringUtils.hasText(alterSql)) {
+                jdbcTemplate.execute(alterSql);
+            }
         }
     }
 }

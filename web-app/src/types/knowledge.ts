@@ -37,7 +37,6 @@ export interface KnowledgeFeatureFlags {
 
 export interface KnowledgeCapabilities {
     retrievalModes: string[]
-    fusionModes: string[]
     chunkModes: string[]
     expandModes: string[]
     analyzers: string[]
@@ -64,7 +63,6 @@ export interface KnowledgeDefaults {
         lexicalTopK: number
         semanticTopK: number
         finalTopK: number
-        fusionMode: string
         rrfK: number
     }
     features: KnowledgeFeatureFlags

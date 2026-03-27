@@ -225,7 +225,6 @@ describe('KnowledgeConfigure chunks tab', () => {
                     ok: true,
                     json: async () => ({
                         retrievalModes: ['lexical', 'hybrid'],
-                        fusionModes: ['rrf'],
                         chunkModes: ['hierarchical'],
                         expandModes: ['ordinal_neighbors'],
                         analyzers: ['smartcn'],
@@ -262,7 +261,6 @@ describe('KnowledgeConfigure chunks tab', () => {
                             lexicalTopK: 50,
                             semanticTopK: 50,
                             finalTopK: 10,
-                            fusionMode: 'rrf',
                             rrfK: 60,
                         },
                         features: {
@@ -297,7 +295,7 @@ describe('KnowledgeConfigure chunks tab', () => {
                         id: 'rp_default',
                         name: '默认召回配置',
                         config: {
-                            retrieval: { mode: 'hybrid', fusionMode: 'rrf' },
+                            retrieval: { mode: 'hybrid', lexicalTopK: 50, semanticTopK: 50, rrfK: 60 },
                         },
                         createdAt: '2026-03-24T10:00:00Z',
                         updatedAt: '2026-03-24T10:00:00Z',

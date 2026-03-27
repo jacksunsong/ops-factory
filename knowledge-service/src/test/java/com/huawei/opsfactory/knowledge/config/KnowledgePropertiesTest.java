@@ -28,11 +28,15 @@ class KnowledgePropertiesTest {
 
         assertThat(properties.getEmbedding().getBaseUrl()).isEqualTo("https://openrouter.ai/api/v1");
         assertThat(properties.getEmbedding().getModel()).isEqualTo("qwen/qwen3-embedding-4b");
-        assertThat(properties.getEmbedding().getDimensions()).isEqualTo(2560);
+        assertThat(properties.getEmbedding().getDimensions()).isEqualTo(1024);
+        assertThat(properties.getIndexing().getBm25().getK1()).isEqualTo(1.2f);
+        assertThat(properties.getIndexing().getBm25().getB()).isEqualTo(0.75f);
 
         assertThat(properties.getRetrieval().getMode()).isEqualTo("hybrid");
-        assertThat(properties.getRetrieval().getFusionMode()).isEqualTo("rrf");
+        assertThat(properties.getRetrieval().getLexicalTopK()).isEqualTo(50);
+        assertThat(properties.getRetrieval().getSemanticTopK()).isEqualTo(50);
         assertThat(properties.getRetrieval().getFinalTopK()).isEqualTo(10);
+        assertThat(properties.getRetrieval().getRrfK()).isEqualTo(60);
 
         assertThat(properties.getFeatures().isAllowChunkEdit()).isTrue();
         assertThat(properties.getFeatures().isAllowChunkDelete()).isTrue();

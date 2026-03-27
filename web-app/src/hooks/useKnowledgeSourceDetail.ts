@@ -21,6 +21,12 @@ interface DeleteSourceResult {
     error?: string
 }
 
+interface SaveProfileResult {
+    success: boolean
+    data?: KnowledgeProfileDetail
+    error?: string
+}
+
 interface UseKnowledgeSourceDetailResult {
     source: KnowledgeSource | null
     stats: KnowledgeSourceStats | null
@@ -33,6 +39,8 @@ interface UseKnowledgeSourceDetailResult {
     hasSupportingDataError: boolean
     reload: () => Promise<void>
     saveSource: (updates: KnowledgeSourceUpdateRequest) => Promise<SaveSourceResult>
+    saveIndexProfile: (updates: { name?: string; config?: Record<string, unknown> }) => Promise<SaveProfileResult>
+    saveRetrievalProfile: (updates: { name?: string; config?: Record<string, unknown> }) => Promise<SaveProfileResult>
     deleteSource: () => Promise<DeleteSourceResult>
 }
 
@@ -198,6 +206,88 @@ export function useKnowledgeSourceDetail(sourceId: string | undefined): UseKnowl
         }
     }, [sourceId])
 
+    const saveIndexProfile = useCallback(async (updates: { name?: string; config?: Record<string, unknown> }): Promise<SaveProfileResult> => {
+        const profileId = source?.indexProfileId
+        if (!profileId) {
+            return {
+                success: false,
+                error: 'Missing index profile id',
+            }
+        }
+
+        setError(null)
+
+        try {
+            await requestJson<{ id: string; name: string; updatedAt: string }>(
+                `${KNOWLEDGE_SERVICE_URL}/ops-knowledge/profiles/index/${profileId}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updates),
+                }
+            )
+
+            const detail = await requestJson<KnowledgeProfileDetail>(
+                `${KNOWLEDGE_SERVICE_URL}/ops-knowledge/profiles/index/${profileId}`
+            )
+            setIndexProfileDetail(detail)
+            return {
+                success: true,
+                data: detail,
+            }
+        } catch (err) {
+            const message = getErrorMessage(err)
+            setError(message)
+            return {
+                success: false,
+                error: message,
+            }
+        }
+    }, [source?.indexProfileId])
+
+    const saveRetrievalProfile = useCallback(async (updates: { name?: string; config?: Record<string, unknown> }): Promise<SaveProfileResult> => {
+        const profileId = source?.retrievalProfileId
+        if (!profileId) {
+            return {
+                success: false,
+                error: 'Missing retrieval profile id',
+            }
+        }
+
+        setError(null)
+
+        try {
+            await requestJson<{ id: string; name: string; updatedAt: string }>(
+                `${KNOWLEDGE_SERVICE_URL}/ops-knowledge/profiles/retrieval/${profileId}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updates),
+                }
+            )
+
+            const detail = await requestJson<KnowledgeProfileDetail>(
+                `${KNOWLEDGE_SERVICE_URL}/ops-knowledge/profiles/retrieval/${profileId}`
+            )
+            setRetrievalProfileDetail(detail)
+            return {
+                success: true,
+                data: detail,
+            }
+        } catch (err) {
+            const message = getErrorMessage(err)
+            setError(message)
+            return {
+                success: false,
+                error: message,
+            }
+        }
+    }, [source?.retrievalProfileId])
+
     const deleteSource = useCallback(async (): Promise<DeleteSourceResult> => {
         if (!sourceId) {
             return {
@@ -239,6 +329,8 @@ export function useKnowledgeSourceDetail(sourceId: string | undefined): UseKnowl
         hasSupportingDataError,
         reload,
         saveSource,
+        saveIndexProfile,
+        saveRetrievalProfile,
         deleteSource,
     }
 }

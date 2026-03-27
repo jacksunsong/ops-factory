@@ -1,6 +1,5 @@
 package com.huawei.opsfactory.knowledge.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.huawei.opsfactory.knowledge.config.KnowledgeProperties;
 import com.huawei.opsfactory.knowledge.repository.ProfileRepository;
 import java.time.Instant;
@@ -20,7 +19,7 @@ public class ProfileBootstrapService {
     private final ProfileRepository profileRepository;
     private final KnowledgeProperties properties;
 
-    public ProfileBootstrapService(ProfileRepository profileRepository, KnowledgeProperties properties, ObjectMapper objectMapper) {
+    public ProfileBootstrapService(ProfileRepository profileRepository, KnowledgeProperties properties) {
         this.profileRepository = profileRepository;
         this.properties = properties;
         ensureDefaults();
@@ -44,6 +43,7 @@ public class ProfileBootstrapService {
 
     private void ensureDefaults() {
         Instant now = Instant.now();
+        Map<String, Object> defaultRetrievalConfig = defaultRetrievalConfig();
         profileRepository.findIndexByName(DEFAULT_INDEX_PROFILE_NAME).orElseGet(() -> {
             ProfileRepository.ProfileRecord record = new ProfileRepository.ProfileRecord(
                 com.huawei.opsfactory.knowledge.common.util.Ids.newId("ip"),
@@ -56,11 +56,22 @@ public class ProfileBootstrapService {
             profileRepository.insertIndex(record);
             return record;
         });
-        profileRepository.findRetrievalByName(DEFAULT_RETRIEVAL_PROFILE_NAME).orElseGet(() -> {
+        profileRepository.findRetrievalByName(DEFAULT_RETRIEVAL_PROFILE_NAME).map(existing -> {
+            ProfileRepository.ProfileRecord updated = new ProfileRepository.ProfileRecord(
+                existing.id(),
+                existing.name(),
+                defaultRetrievalConfig,
+                existing.type(),
+                existing.createdAt(),
+                now
+            );
+            profileRepository.updateRetrieval(updated);
+            return updated;
+        }).orElseGet(() -> {
             ProfileRepository.ProfileRecord record = new ProfileRepository.ProfileRecord(
                 com.huawei.opsfactory.knowledge.common.util.Ids.newId("rp"),
                 DEFAULT_RETRIEVAL_PROFILE_NAME,
-                defaultRetrievalConfig(),
+                defaultRetrievalConfig,
                 "retrieval",
                 now,
                 now
@@ -93,7 +104,13 @@ public class ProfileBootstrapService {
         ));
         root.put("indexing", Map.of(
             "titleBoost", properties.getIndexing().getTitleBoost(),
-            "contentBoost", properties.getIndexing().getContentBoost()
+            "titlePathBoost", properties.getIndexing().getTitlePathBoost(),
+            "keywordBoost", properties.getIndexing().getKeywordBoost(),
+            "contentBoost", properties.getIndexing().getContentBoost(),
+            "bm25", Map.of(
+                "k1", properties.getIndexing().getBm25().getK1(),
+                "b", properties.getIndexing().getBm25().getB()
+            )
         ));
         return root;
     }
@@ -102,8 +119,10 @@ public class ProfileBootstrapService {
         return Map.of(
             "retrieval", Map.of(
                 "mode", properties.getRetrieval().getMode(),
-                "fusionMode", properties.getRetrieval().getFusionMode(),
-                "rrfK", properties.getRetrieval().getRrfK()
+                "lexicalTopK", properties.getRetrieval().getLexicalTopK(),
+                "semanticTopK", properties.getRetrieval().getSemanticTopK(),
+                "rrfK", properties.getRetrieval().getRrfK(),
+                "strategy", "rrf"
             ),
             "result", Map.of(
                 "finalTopK", properties.getRetrieval().getFinalTopK(),

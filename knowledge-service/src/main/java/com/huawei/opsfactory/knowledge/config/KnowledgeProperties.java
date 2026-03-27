@@ -156,7 +156,7 @@ public class KnowledgeProperties {
         private String model = "qwen/qwen3-embedding-4b";
         private int timeoutMs = 30000;
         private int batchSize = 32;
-        private int dimensions = 2560;
+        private int dimensions = 1024;
         public String getBaseUrl() { return baseUrl; }
         public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
         public String getApiKey() { return apiKey; }
@@ -176,6 +176,7 @@ public class KnowledgeProperties {
         private double titlePathBoost = 2.5;
         private double keywordBoost = 2.0;
         private double contentBoost = 1.0;
+        private Bm25 bm25 = new Bm25();
         private boolean storeRawText = true;
         private boolean storeMarkdown = true;
         public double getTitleBoost() { return titleBoost; }
@@ -186,10 +187,21 @@ public class KnowledgeProperties {
         public void setKeywordBoost(double keywordBoost) { this.keywordBoost = keywordBoost; }
         public double getContentBoost() { return contentBoost; }
         public void setContentBoost(double contentBoost) { this.contentBoost = contentBoost; }
+        public Bm25 getBm25() { return bm25; }
+        public void setBm25(Bm25 bm25) { this.bm25 = bm25; }
         public boolean isStoreRawText() { return storeRawText; }
         public void setStoreRawText(boolean storeRawText) { this.storeRawText = storeRawText; }
         public boolean isStoreMarkdown() { return storeMarkdown; }
         public void setStoreMarkdown(boolean storeMarkdown) { this.storeMarkdown = storeMarkdown; }
+    }
+
+    public static class Bm25 {
+        private float k1 = 1.2f;
+        private float b = 0.75f;
+        public float getK1() { return k1; }
+        public void setK1(float k1) { this.k1 = k1; }
+        public float getB() { return b; }
+        public void setB(float b) { this.b = b; }
     }
 
     public static class Retrieval {
@@ -197,11 +209,8 @@ public class KnowledgeProperties {
         private int lexicalTopK = 50;
         private int semanticTopK = 50;
         private int finalTopK = 10;
-        private int maxTopK = 50;
-        private String fusionMode = "rrf";
+        private int maxTopK = 64;
         private int rrfK = 60;
-        private double lexicalWeight = 0.5;
-        private double semanticWeight = 0.5;
         private int snippetLength = 180;
         public String getMode() { return mode; }
         public void setMode(String mode) { this.mode = mode; }
@@ -213,14 +222,8 @@ public class KnowledgeProperties {
         public void setFinalTopK(int finalTopK) { this.finalTopK = finalTopK; }
         public int getMaxTopK() { return maxTopK; }
         public void setMaxTopK(int maxTopK) { this.maxTopK = maxTopK; }
-        public String getFusionMode() { return fusionMode; }
-        public void setFusionMode(String fusionMode) { this.fusionMode = fusionMode; }
         public int getRrfK() { return rrfK; }
         public void setRrfK(int rrfK) { this.rrfK = rrfK; }
-        public double getLexicalWeight() { return lexicalWeight; }
-        public void setLexicalWeight(double lexicalWeight) { this.lexicalWeight = lexicalWeight; }
-        public double getSemanticWeight() { return semanticWeight; }
-        public void setSemanticWeight(double semanticWeight) { this.semanticWeight = semanticWeight; }
         public int getSnippetLength() { return snippetLength; }
         public void setSnippetLength(int snippetLength) { this.snippetLength = snippetLength; }
     }

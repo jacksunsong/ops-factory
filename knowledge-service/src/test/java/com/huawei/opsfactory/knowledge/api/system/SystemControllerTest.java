@@ -26,7 +26,6 @@ class SystemControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.retrievalModes[0]").value("lexical"))
             .andExpect(jsonPath("$.retrievalModes[2]").value("hybrid"))
-            .andExpect(jsonPath("$.fusionModes[0]").value("rrf"))
             .andExpect(jsonPath("$.chunkModes[2]").value("hierarchical"))
             .andExpect(jsonPath("$.analyzers[0]").value("smartcn"))
             .andExpect(jsonPath("$.featureFlags.allowChunkEdit").value(true))
@@ -42,7 +41,9 @@ class SystemControllerTest {
             .andExpect(jsonPath("$.chunking.mode").value("hierarchical"))
             .andExpect(jsonPath("$.chunking.targetTokens").value(500))
             .andExpect(jsonPath("$.retrieval.mode").value("hybrid"))
-            .andExpect(jsonPath("$.retrieval.fusionMode").value("rrf"))
+            .andExpect(jsonPath("$.retrieval.lexicalTopK").value(50))
+            .andExpect(jsonPath("$.retrieval.semanticTopK").value(50))
+            .andExpect(jsonPath("$.retrieval.rrfK").value(60))
             .andExpect(jsonPath("$.features.allowRequestOverride").value(true));
     }
 }

@@ -20,7 +20,6 @@ public class SystemController {
     public CapabilitiesResponse capabilities() {
         return new CapabilitiesResponse(
             List.of("lexical", "semantic", "hybrid"),
-            List.of("rrf", "weighted_sum"),
             List.of("fixed", "paragraph", "hierarchical"),
             List.of("ordinal_neighbors", "same_section"),
             List.of("smartcn", "standard"),
@@ -55,7 +54,6 @@ public class SystemController {
                 properties.getRetrieval().getLexicalTopK(),
                 properties.getRetrieval().getSemanticTopK(),
                 properties.getRetrieval().getFinalTopK(),
-                properties.getRetrieval().getFusionMode(),
                 properties.getRetrieval().getRrfK()
             ),
             new FeatureFlags(
@@ -69,7 +67,6 @@ public class SystemController {
 
     public record CapabilitiesResponse(
         List<String> retrievalModes,
-        List<String> fusionModes,
         List<String> chunkModes,
         List<String> expandModes,
         List<String> analyzers,
@@ -108,7 +105,6 @@ public class SystemController {
         int lexicalTopK,
         int semanticTopK,
         int finalTopK,
-        String fusionMode,
         int rrfK
     ) {
     }

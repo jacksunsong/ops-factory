@@ -57,6 +57,34 @@ let downloadOriginalResponse: () => Promise<Response>
 describe('KnowledgeConfigure page', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        let indexProfileDetail = {
+            id: 'ip_default',
+            name: '默认索引配置',
+            config: {
+                convert: { engine: 'tika' },
+                analysis: { language: 'zh', indexAnalyzer: 'smartcn', queryAnalyzer: 'smartcn' },
+                chunking: { mode: 'hierarchical', targetTokens: 512 },
+                indexing: {
+                    titleBoost: 4,
+                    titlePathBoost: 2.5,
+                    keywordBoost: 2,
+                    contentBoost: 1,
+                    bm25: { k1: 1.2, b: 0.75 },
+                },
+            },
+            createdAt: '2026-03-24T10:00:00Z',
+            updatedAt: '2026-03-24T10:00:00Z',
+        }
+        let retrievalProfileDetail = {
+            id: 'rp_default',
+            name: '默认召回配置',
+            config: {
+                retrieval: { mode: 'hybrid', lexicalTopK: 50, semanticTopK: 50, rrfK: 60 },
+                result: { finalTopK: 10, snippetLength: 180 },
+            },
+            createdAt: '2026-03-24T10:00:00Z',
+            updatedAt: '2026-03-24T10:00:00Z',
+        }
         let documents = [
             {
                 id: 'doc_001',
@@ -117,7 +145,6 @@ describe('KnowledgeConfigure page', () => {
                     ok: true,
                     json: async () => ({
                         retrievalModes: ['lexical', 'hybrid'],
-                        fusionModes: ['rrf'],
                         chunkModes: ['hierarchical'],
                         expandModes: ['ordinal_neighbors'],
                         analyzers: ['smartcn'],
@@ -154,7 +181,6 @@ describe('KnowledgeConfigure page', () => {
                             lexicalTopK: 50,
                             semanticTopK: 50,
                             finalTopK: 10,
-                            fusionMode: 'rrf',
                             rrfK: 60,
                         },
                         features: {
@@ -170,32 +196,55 @@ describe('KnowledgeConfigure page', () => {
             if (method === 'GET' && url.endsWith('/ops-knowledge/profiles/index/ip_default')) {
                 return Promise.resolve({
                     ok: true,
-                    json: async () => ({
-                        id: 'ip_default',
-                        name: '默认索引配置',
-                        config: {
-                            convert: { engine: 'tika' },
-                            analysis: { language: 'zh', indexAnalyzer: 'smartcn' },
-                            chunking: { mode: 'hierarchical', targetTokens: 512 },
-                        },
-                        createdAt: '2026-03-24T10:00:00Z',
-                        updatedAt: '2026-03-24T10:00:00Z',
-                    }),
+                    json: async () => indexProfileDetail,
                 } as Response)
             }
 
             if (method === 'GET' && url.endsWith('/ops-knowledge/profiles/retrieval/rp_default')) {
                 return Promise.resolve({
                     ok: true,
+                    json: async () => retrievalProfileDetail,
+                } as Response)
+            }
+
+            if (method === 'PATCH' && url.endsWith('/ops-knowledge/profiles/index/ip_default')) {
+                const body = JSON.parse(String(init?.body || '{}'))
+                indexProfileDetail = {
+                    ...indexProfileDetail,
+                    name: body.name ?? indexProfileDetail.name,
+                    config: {
+                        ...indexProfileDetail.config,
+                        ...body.config,
+                    },
+                    updatedAt: '2026-03-25T13:10:00Z',
+                }
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({
+                        id: 'ip_default',
+                        name: indexProfileDetail.name,
+                        updatedAt: indexProfileDetail.updatedAt,
+                    }),
+                } as Response)
+            }
+
+            if (method === 'PATCH' && url.endsWith('/ops-knowledge/profiles/retrieval/rp_default')) {
+                const body = JSON.parse(String(init?.body || '{}'))
+                retrievalProfileDetail = {
+                    ...retrievalProfileDetail,
+                    name: body.name ?? retrievalProfileDetail.name,
+                    config: {
+                        ...retrievalProfileDetail.config,
+                        ...body.config,
+                    },
+                    updatedAt: '2026-03-25T13:12:00Z',
+                }
+                return Promise.resolve({
+                    ok: true,
                     json: async () => ({
                         id: 'rp_default',
-                        name: '默认召回配置',
-                        config: {
-                            retrieval: { mode: 'hybrid', fusionMode: 'rrf' },
-                            result: { finalTopK: 10, snippetLength: 180 },
-                        },
-                        createdAt: '2026-03-24T10:00:00Z',
-                        updatedAt: '2026-03-24T10:00:00Z',
+                        name: retrievalProfileDetail.name,
+                        updatedAt: retrievalProfileDetail.updatedAt,
                     }),
                 } as Response)
             }
@@ -387,7 +436,7 @@ describe('KnowledgeConfigure page', () => {
         )
     })
 
-    it('renders config params as grouped lists', async () => {
+    it('renders config editors and saves profile changes', async () => {
         render(
             <MemoryRouter initialEntries={['/knowledge/src_001?tab=config']}>
                 <Routes>
@@ -397,13 +446,35 @@ describe('KnowledgeConfigure page', () => {
         )
 
         await screen.findByText('knowledge.currentBindingsTitle')
-        expect(screen.getByText('knowledge.indexProfileParamsTitle')).toBeInTheDocument()
-        expect(screen.getByText('knowledge.retrievalProfileParamsTitle')).toBeInTheDocument()
-        expect(screen.getByText('Convert')).toBeInTheDocument()
-        expect(screen.getByText('engine')).toBeInTheDocument()
-        expect(screen.getByText('tika')).toBeInTheDocument()
+        expect(screen.getByText('knowledge.indexProfileEditorTitle')).toBeInTheDocument()
+        expect(screen.getByText('knowledge.retrievalProfileEditorTitle')).toBeInTheDocument()
+        expect(screen.getAllByText('默认索引配置').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('默认召回配置').length).toBeGreaterThan(0)
+        expect(screen.getAllByRole('button', { name: 'knowledge.editConfig' }).length).toBe(2)
+        expect(screen.getAllByText('knowledge.configSourceBoundProfile').length).toBe(2)
         expect(screen.getAllByText('knowledge.configSourceLabel').length).toBeGreaterThan(0)
-        expect(screen.getAllByText('knowledge.configEffectLabel').length).toBeGreaterThan(0)
+
+        fireEvent.click(screen.getAllByRole('button', { name: 'knowledge.editConfig' })[0])
+        await screen.findByDisplayValue('默认索引配置')
+
+        fireEvent.change(screen.getByDisplayValue('默认索引配置'), {
+            target: { value: '索引配置 v2' },
+        })
+        fireEvent.change(screen.getByDisplayValue('4'), {
+            target: { value: '5' },
+        })
+        fireEvent.click(screen.getByRole('button', { name: 'knowledge.saveConfig' }))
+
+        await waitFor(() => {
+            expect(showToast).toHaveBeenCalledWith('success', 'knowledge.configSaveSuccess')
+        })
+
+        expect(fetch).toHaveBeenCalledWith(
+            'http://127.0.0.1:8092/ops-knowledge/profiles/index/ip_default',
+            expect.objectContaining({
+                method: 'PATCH',
+            }),
+        )
     })
 
     it('renders documents tab with upload modal', async () => {

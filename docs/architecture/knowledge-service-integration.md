@@ -153,6 +153,8 @@ knowledge:
 - `title-path-boost`
 - `keyword-boost`
 - `content-boost`
+- `bm25.k1`
+- `bm25.b`
 - `store-raw-text`
 - `store-markdown`
 
@@ -170,11 +172,10 @@ knowledge:
 - `semantic-top-k`
 - `final-top-k`
 - `max-top-k`
-- `fusion-mode`：`rrf | weighted_sum`
 - `rrf-k`
-- `lexical-weight`
-- `semantic-weight`
 - `snippet-length`
+
+默认 `max-top-k = 64`，用于限制运行态检索与召回测试 compare 采样的最大候选数。
 
 #### `ops-knowledge.fetch`
 
@@ -588,8 +589,8 @@ knowledge:
     "mode": "hybrid",
     "lexicalTopK": 50,
     "semanticTopK": 50,
-    "fusionMode": "rrf",
     "rrfK": 60,
+    "scoreThreshold": 0.3,
     "includeScores": true,
     "includeExplain": false,
     "snippetLength": 180
@@ -600,9 +601,12 @@ knowledge:
 当前实现说明：
 
 - `topK` 必须大于 0 且不能超过 `ops-knowledge.retrieval.max-top-k`
-- 当前真正生效的是词法召回
 - `filters.contentTypes` 会按 document 的 `contentType` 过滤
-- `override` 与 `retrievalProfileId` 已预留，但当前大部分字段尚未实际参与计算
+- `retrievalProfileId` 与 `override` 会共同参与运行时检索参数解析，优先级为 `override > profile > system defaults`
+- `mode=lexical` 返回关键词分数路径
+- `mode=semantic` 返回语义分数路径
+- `mode=hybrid` 固定使用 `RRF` 融合 BM25 / semantic 两路排序，`rrfK` 控制 reciprocal rank fusion 的平滑程度
+- `scoreThreshold` 由后端按当前模式的最终分数进行筛选
 
 返回中的关键字段：
 

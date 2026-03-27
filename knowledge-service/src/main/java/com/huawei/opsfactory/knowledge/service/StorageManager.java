@@ -39,6 +39,10 @@ public class StorageManager {
         return baseDir.resolve("upload").resolve(sourceId);
     }
 
+    public Path indexDir(String name) {
+        return baseDir.resolve("indexes").resolve(name);
+    }
+
     public byte[] readBytes(Path path) {
         try {
             if (!Files.exists(path)) {

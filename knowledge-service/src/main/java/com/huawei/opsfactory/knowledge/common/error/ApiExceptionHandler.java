@@ -27,6 +27,14 @@ public class ApiExceptionHandler {
         ));
     }
 
+    @ExceptionHandler(RetrievalConfigurationException.class)
+    public ResponseEntity<Map<String, Object>> handleRetrievalConfiguration(RetrievalConfigurationException ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+            "code", "RETRIEVAL_CONFIGURATION_ERROR",
+            "message", ex.getMessage()
+        ));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()

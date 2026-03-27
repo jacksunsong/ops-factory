@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS embedding_record (
     model TEXT NOT NULL,
     dimension INTEGER NOT NULL,
     vector_hash TEXT NOT NULL,
+    vector_json TEXT NOT NULL,
     created_at TEXT NOT NULL,
     FOREIGN KEY (chunk_id) REFERENCES document_chunk(id)
 );

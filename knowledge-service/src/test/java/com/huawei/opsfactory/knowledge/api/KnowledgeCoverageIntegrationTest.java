@@ -199,6 +199,294 @@ class KnowledgeCoverageIntegrationTest {
     }
 
     @Test
+    void shouldDifferentiateLexicalSemanticAndHybridRrfSearch() throws Exception {
+        String sourceId = createSource(null, null);
+        uploadInputFiles(sourceId);
+        JsonNode documents = listDocuments(sourceId);
+        String documentId = documents.path("items").get(0).path("id").asText();
+
+        createChunk(documentId, 900, "cpu alert exact", List.of("Operations", "cpu alert exact"), List.of("exact-alert"),
+            "cpu alert exact is the authoritative incident trigger");
+        createChunk(documentId, 901, "alert for cpu spikes", List.of("Operations", "alert for cpu spikes"), List.of("alert", "cpu"),
+            "when cpu usage spikes, the oncall should receive an alert notification");
+
+        JsonNode lexical = searchWithOverride(sourceId, "cpu alert", """
+            {
+              "mode": "lexical",
+              "includeScores": true
+            }
+            """);
+        JsonNode semantic = searchWithOverride(sourceId, "cpu alert", """
+            {
+              "mode": "semantic",
+              "includeScores": true
+            }
+            """);
+        JsonNode hybrid = searchWithOverride(sourceId, "cpu alert", """
+            {
+              "mode": "hybrid",
+              "rrfK": 10,
+              "includeScores": true
+            }
+            """);
+
+        assertThat(lexical.path("hits").get(0).path("title").asText()).contains("cpu alert exact");
+        assertThat(lexical.path("hits").get(0).path("lexicalScore").asDouble()).isGreaterThan(0);
+
+        assertThat(semantic.path("hits").get(0).path("title").asText()).contains("alert for cpu spikes");
+        assertThat(semantic.path("hits").get(0).path("semanticScore").asDouble()).isGreaterThan(0);
+
+        List<String> hybridTopTitles = stream(hybrid.path("hits"))
+            .limit(2)
+            .map(hit -> hit.path("title").asText())
+            .toList();
+        assertThat(hybridTopTitles).contains("cpu alert exact", "alert for cpu spikes");
+    }
+
+    @Test
+    void shouldReturnRawCompareResultsForAllRequestedModes() throws Exception {
+        String sourceId = createSource(null, null);
+        uploadInputFiles(sourceId);
+        JsonNode documents = listDocuments(sourceId);
+        String documentId = documents.path("items").get(0).path("id").asText();
+
+        createChunk(documentId, 900, "cpu alert exact", List.of("Operations", "cpu alert exact"), List.of("exact-alert"),
+            "cpu alert exact is the authoritative incident trigger");
+        createChunk(documentId, 901, "alert for cpu spikes", List.of("Operations", "alert for cpu spikes"), List.of("alert", "cpu"),
+            "when cpu usage spikes, the oncall should receive an alert notification");
+
+        JsonNode compare = compareSearch(sourceId, "cpu alert", List.of("hybrid", "semantic", "lexical"));
+
+        assertThat(compare.path("fetchedTopK").asInt()).isEqualTo(64);
+        assertThat(compare.path("hybrid").path("hits").size()).isGreaterThan(0);
+        assertThat(compare.path("semantic").path("hits").size()).isGreaterThan(0);
+        assertThat(compare.path("lexical").path("hits").size()).isGreaterThan(0);
+        assertThat(compare.path("hybrid").path("hits").get(0).path("fusionScore").asDouble()).isGreaterThan(0);
+        assertThat(compare.path("semantic").path("hits").get(0).path("semanticScore").asDouble()).isGreaterThan(0);
+        assertThat(compare.path("lexical").path("hits").get(0).path("lexicalScore").asDouble()).isGreaterThan(0);
+    }
+
+    @Test
+    void shouldDefaultCompareModesAndReturnEmptyHitsForBlankQuery() throws Exception {
+        String sourceId = createSource(null, null);
+        uploadInputFiles(sourceId);
+
+        JsonNode compare = compareSearch(sourceId, "   ", null, null, null);
+
+        assertThat(compare.path("fetchedTopK").asInt()).isEqualTo(64);
+        assertThat(compare.path("hybrid").path("total").asInt()).isZero();
+        assertThat(compare.path("semantic").path("total").asInt()).isZero();
+        assertThat(compare.path("lexical").path("total").asInt()).isZero();
+    }
+
+    @Test
+    void shouldReturnOnlyRequestedCompareModesAndFilterByDocumentAndContentType() throws Exception {
+        String sourceId = createSource(null, null);
+        uploadInputFiles(sourceId);
+        JsonNode documents = listDocuments(sourceId);
+
+        String csvDocumentId = documentIdByName(documents, "sample-metrics.csv");
+        String csvContentType = contentTypeByName(documents, "sample-metrics.csv");
+
+        JsonNode compare = compareSearch(sourceId, "retrieval_mode", List.of(" lexical ", "LEXICAL", "unknown"), List.of(csvDocumentId), List.of(csvContentType));
+
+        assertThat(compare.path("lexical").path("hits").size()).isGreaterThan(0);
+        assertThat(compare.path("lexical").path("hits").get(0).path("documentId").asText()).isEqualTo(csvDocumentId);
+        assertThat(compare.path("hybrid").path("total").asInt()).isZero();
+        assertThat(compare.path("semantic").path("total").asInt()).isZero();
+    }
+
+    @Test
+    void shouldApplyScoreThresholdToSemanticAndHybridFinalScores() throws Exception {
+        String sourceId = createSource(null, null);
+        uploadInputFiles(sourceId);
+        JsonNode documents = listDocuments(sourceId);
+        String documentId = documents.path("items").get(0).path("id").asText();
+
+        createChunk(documentId, 900, "cpu alert exact", List.of("Operations", "cpu alert exact"), List.of("exact-alert"),
+            "cpu alert exact is the authoritative incident trigger");
+        createChunk(documentId, 901, "alert for cpu spikes", List.of("Operations", "alert for cpu spikes"), List.of("alert", "cpu"),
+            "when cpu usage spikes, the oncall should receive an alert notification");
+
+        JsonNode semantic = readJson(mockMvc.perform(post("/ops-knowledge/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "query": "cpu alert",
+                      "sourceIds": ["%s"],
+                      "documentIds": ["%s"],
+                      "topK": 10,
+                      "override": {
+                        "mode": "semantic",
+                        "includeScores": true
+                      }
+                    }
+                    """.formatted(sourceId, documentId)))
+            .andExpect(status().isOk())
+            .andReturn());
+        double semanticTop = semantic.path("hits").get(0).path("semanticScore").asDouble();
+        double semanticSecond = semantic.path("hits").get(1).path("semanticScore").asDouble();
+        double semanticThreshold = (semanticTop + semanticSecond) / 2.0;
+
+        JsonNode semanticThresholded = readJson(mockMvc.perform(post("/ops-knowledge/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "query": "cpu alert",
+                      "sourceIds": ["%s"],
+                      "documentIds": ["%s"],
+                      "topK": 10,
+                      "override": {
+                        "mode": "semantic",
+                        "includeScores": true,
+                        "scoreThreshold": %s
+                      }
+                    }
+                    """.formatted(sourceId, documentId, semanticThreshold)))
+            .andExpect(status().isOk())
+            .andReturn());
+
+        assertThat(semanticThresholded.path("hits").size()).isEqualTo(1);
+        assertThat(semanticThresholded.path("hits").get(0).path("semanticScore").asDouble()).isGreaterThanOrEqualTo(semanticThreshold);
+
+        createChunk(documentId, 902, "cpu capacity planning", List.of("Operations", "cpu capacity planning"), List.of("capacity", "cpu"),
+            "capacity planning helps predict cpu saturation before alert thresholds are crossed");
+
+        JsonNode hybrid = readJson(mockMvc.perform(post("/ops-knowledge/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "query": "cpu alert",
+                      "sourceIds": ["%s"],
+                      "documentIds": ["%s"],
+                      "topK": 10,
+                      "override": {
+                        "mode": "hybrid",
+                        "rrfK": 10,
+                        "includeScores": true
+                      }
+                    }
+                    """.formatted(sourceId, documentId)))
+            .andExpect(status().isOk())
+            .andReturn());
+        double hybridTop = hybrid.path("hits").get(0).path("fusionScore").asDouble();
+        double hybridThird = hybrid.path("hits").get(2).path("fusionScore").asDouble();
+        double hybridThreshold = (hybridTop + hybridThird) / 2.0;
+
+        JsonNode hybridThresholded = readJson(mockMvc.perform(post("/ops-knowledge/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "query": "cpu alert",
+                      "sourceIds": ["%s"],
+                      "documentIds": ["%s"],
+                      "topK": 10,
+                      "override": {
+                        "mode": "hybrid",
+                        "rrfK": 10,
+                        "includeScores": true,
+                        "scoreThreshold": %s
+                      }
+                    }
+                    """.formatted(sourceId, documentId, hybridThreshold)))
+            .andExpect(status().isOk())
+            .andReturn());
+
+        assertThat(hybridThresholded.path("hits").size()).isEqualTo(2);
+        assertThat(hybridThresholded.path("hits").get(0).path("fusionScore").asDouble()).isGreaterThanOrEqualTo(hybridThreshold);
+    }
+
+    @Test
+    void shouldRespectBoundRetrievalProfileModeWithoutOverride() throws Exception {
+        JsonNode retrievalProfile = readJson(mockMvc.perform(post("/ops-knowledge/profiles/retrieval")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "name": "semantic-default-%s",
+                      "config": {
+                        "retrieval": {
+                          "mode": "semantic",
+                          "semanticTopK": 10,
+                          "rrfK": 10
+                        }
+                      }
+                    }
+                    """.formatted(UUID.randomUUID())))
+            .andExpect(status().isOk())
+            .andReturn());
+        String sourceId = createSource(null, retrievalProfile.path("id").asText());
+        uploadInputFiles(sourceId);
+        JsonNode documents = listDocuments(sourceId);
+        String documentId = documents.path("items").get(0).path("id").asText();
+
+        createChunk(documentId, 900, "cpu alert exact", List.of("Operations", "cpu alert exact"), List.of("exact-alert"),
+            "cpu alert exact is the authoritative incident trigger");
+        createChunk(documentId, 901, "alert for cpu spikes", List.of("Operations", "alert for cpu spikes"), List.of("alert", "cpu"),
+            "when cpu usage spikes, the oncall should receive an alert notification");
+
+        JsonNode response = readJson(mockMvc.perform(post("/ops-knowledge/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "query": "cpu alert",
+                      "sourceIds": ["%s"],
+                      "documentIds": ["%s"],
+                      "topK": 10
+                    }
+                    """.formatted(sourceId, documentId)))
+            .andExpect(status().isOk())
+            .andReturn());
+
+        assertThat(response.path("hits").get(0).path("title").asText()).contains("alert for cpu spikes");
+        assertThat(response.path("hits").get(0).path("score").asDouble())
+            .isEqualTo(response.path("hits").get(0).path("semanticScore").asDouble());
+    }
+
+    @Test
+    void shouldComputeHybridRrfFusionFromLexicalAndSemanticRanks() throws Exception {
+        String sourceId = createSource(null, null);
+        uploadInputFiles(sourceId);
+        JsonNode documents = listDocuments(sourceId);
+        String documentId = documents.path("items").get(0).path("id").asText();
+
+        createChunk(documentId, 900, "cpu alert exact", List.of("Operations", "cpu alert exact"), List.of("exact-alert"),
+            "cpu alert exact is the authoritative incident trigger");
+        createChunk(documentId, 901, "alert for cpu spikes", List.of("Operations", "alert for cpu spikes"), List.of("alert", "cpu"),
+            "when cpu usage spikes, the oncall should receive an alert notification");
+        createChunk(documentId, 902, "cpu capacity planning", List.of("Operations", "cpu capacity planning"), List.of("capacity", "cpu"),
+            "capacity planning helps predict cpu saturation before alert thresholds are crossed");
+
+        int rrfK = 10;
+        JsonNode rrf = readJson(mockMvc.perform(post("/ops-knowledge/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "query": "cpu alert",
+                      "sourceIds": ["%s"],
+                      "documentIds": ["%s"],
+                      "topK": 10,
+                      "override": {
+                        "mode": "hybrid",
+                        "rrfK": %d,
+                        "includeScores": true
+                      }
+                    }
+                    """.formatted(sourceId, documentId, rrfK)))
+            .andExpect(status().isOk())
+            .andReturn());
+
+        List<JsonNode> hits = stream(rrf.path("hits")).toList();
+        Map<String, Integer> lexicalRanks = rankByDescendingScore(hits, "lexicalScore");
+        Map<String, Integer> semanticRanks = rankByDescendingScore(hits, "semanticScore");
+
+        for (JsonNode hit : hits) {
+            String chunkId = hit.path("chunkId").asText();
+            double expectedFusion = reciprocalRank(lexicalRanks.get(chunkId), rrfK) + reciprocalRank(semanticRanks.get(chunkId), rrfK);
+            assertThat(hit.path("fusionScore").asDouble()).isCloseTo(expectedFusion, org.assertj.core.data.Offset.offset(1e-9));
+        }
+    }
+
+    @Test
     void shouldCoverSourceProfileAndBindingManagement() throws Exception {
         JsonNode createdIndexProfile = readJson(mockMvc.perform(post("/ops-knowledge/profiles/index")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -382,6 +670,11 @@ class KnowledgeCoverageIntegrationTest {
         assertThat(jdbcTemplate.queryForObject("select count(*) from knowledge_source where id = ?", Integer.class, sourceId)).isEqualTo(1);
         assertThat(jdbcTemplate.queryForObject("select count(*) from knowledge_document where source_id = ?", Integer.class, sourceId)).isGreaterThan(0);
         assertThat(jdbcTemplate.queryForObject("select count(*) from document_chunk where source_id = ?", Integer.class, sourceId)).isGreaterThan(0);
+        assertThat(jdbcTemplate.queryForObject(
+            "select count(*) from embedding_record where chunk_id in (select id from document_chunk where source_id = ?)",
+            Integer.class,
+            sourceId
+        )).isGreaterThan(0);
         assertThat(jdbcTemplate.queryForObject("select count(*) from source_profile_binding where source_id = ?", Integer.class, sourceId)).isEqualTo(1);
 
         JsonNode deleteResponse = readJson(mockMvc.perform(delete("/ops-knowledge/sources/{sourceId}", sourceId))
@@ -393,6 +686,11 @@ class KnowledgeCoverageIntegrationTest {
         assertThat(jdbcTemplate.queryForObject("select count(*) from knowledge_source where id = ?", Integer.class, sourceId)).isZero();
         assertThat(jdbcTemplate.queryForObject("select count(*) from knowledge_document where source_id = ?", Integer.class, sourceId)).isZero();
         assertThat(jdbcTemplate.queryForObject("select count(*) from document_chunk where source_id = ?", Integer.class, sourceId)).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+            "select count(*) from embedding_record where chunk_id in (select id from document_chunk where source_id = ?)",
+            Integer.class,
+            sourceId
+        )).isZero();
         assertThat(jdbcTemplate.queryForObject("select count(*) from source_profile_binding where source_id = ?", Integer.class, sourceId)).isZero();
         assertThat(Files.exists(uploadSourceDir)).isFalse();
         assertThat(Files.exists(artifactSourceDir)).isFalse();
@@ -472,6 +770,11 @@ class KnowledgeCoverageIntegrationTest {
 
         int beforeDeleteDocumentCount = jdbcTemplate.queryForObject("select count(*) from knowledge_document", Integer.class);
         int beforeDeleteChunkCount = jdbcTemplate.queryForObject("select count(*) from document_chunk where document_id = ?", Integer.class, documentId);
+        int beforeDeleteEmbeddingCount = jdbcTemplate.queryForObject(
+            "select count(*) from embedding_record where chunk_id in (select id from document_chunk where document_id = ?)",
+            Integer.class,
+            documentId
+        );
 
         mockMvc.perform(delete("/ops-knowledge/documents/{documentId}", documentId))
             .andExpect(status().isOk());
@@ -481,7 +784,13 @@ class KnowledgeCoverageIntegrationTest {
 
         assertThat(jdbcTemplate.queryForObject("select count(*) from knowledge_document", Integer.class)).isEqualTo(beforeDeleteDocumentCount - 1);
         assertThat(jdbcTemplate.queryForObject("select count(*) from document_chunk where document_id = ?", Integer.class, documentId)).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+            "select count(*) from embedding_record where chunk_id in (select id from document_chunk where document_id = ?)",
+            Integer.class,
+            documentId
+        )).isZero();
         assertThat(beforeDeleteChunkCount).isGreaterThan(0);
+        assertThat(beforeDeleteEmbeddingCount).isGreaterThan(0);
         assertThat(Files.exists(RUNTIME_BASE_DIR.resolve("artifacts").resolve(sourceId).resolve(documentId))).isFalse();
         assertThat(Files.exists(RUNTIME_BASE_DIR.resolve("upload").resolve(sourceId).resolve(documentId))).isFalse();
     }
@@ -690,6 +999,39 @@ class KnowledgeCoverageIntegrationTest {
             .andReturn());
     }
 
+    private JsonNode createChunk(
+        String documentId,
+        int ordinal,
+        String title,
+        List<String> titlePath,
+        List<String> keywords,
+        String text
+    ) throws Exception {
+        return readJson(mockMvc.perform(post("/ops-knowledge/documents/{documentId}/chunks", documentId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "ordinal": %d,
+                      "title": "%s",
+                      "titlePath": %s,
+                      "keywords": %s,
+                      "text": "%s",
+                      "markdown": "%s",
+                      "pageFrom": 1,
+                      "pageTo": 1
+                    }
+                    """.formatted(
+                    ordinal,
+                    title,
+                    objectMapper.writeValueAsString(titlePath),
+                    objectMapper.writeValueAsString(keywords),
+                    text,
+                    text
+                )))
+            .andExpect(status().isOk())
+            .andReturn());
+    }
+
     private JsonNode search(String sourceId, String query, List<String> documentIds, Integer topK, List<String> contentTypes) throws Exception {
         String documentIdsJson = documentIds == null ? "[]" : objectMapper.writeValueAsString(documentIds);
         String filtersJson = contentTypes == null ? "null" : "{\"contentTypes\":" + objectMapper.writeValueAsString(contentTypes) + "}";
@@ -704,6 +1046,50 @@ class KnowledgeCoverageIntegrationTest {
                       "filters": %s
                     }
                     """.formatted(query, sourceId, documentIdsJson, topK == null ? 10 : topK, filtersJson)))
+            .andExpect(status().isOk())
+            .andReturn());
+    }
+
+    private JsonNode searchWithOverride(String sourceId, String query, String overrideJson) throws Exception {
+        return readJson(mockMvc.perform(post("/ops-knowledge/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "query": "%s",
+                      "sourceIds": ["%s"],
+                      "topK": 10,
+                      "override": %s
+                    }
+                    """.formatted(query, sourceId, overrideJson)))
+            .andExpect(status().isOk())
+            .andReturn());
+    }
+
+    private JsonNode compareSearch(String sourceId, String query, List<String> modes) throws Exception {
+        return compareSearch(sourceId, query, modes, null, null);
+    }
+
+    private JsonNode compareSearch(
+        String sourceId,
+        String query,
+        List<String> modes,
+        List<String> documentIds,
+        List<String> contentTypes
+    ) throws Exception {
+        String modesJson = modes == null ? "null" : objectMapper.writeValueAsString(modes);
+        String documentIdsJson = documentIds == null ? "[]" : objectMapper.writeValueAsString(documentIds);
+        String filtersJson = contentTypes == null ? "null" : "{\"contentTypes\":" + objectMapper.writeValueAsString(contentTypes) + "}";
+        return readJson(mockMvc.perform(post("/ops-knowledge/search/compare")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "query": "%s",
+                      "sourceIds": ["%s"],
+                      "documentIds": %s,
+                      "filters": %s,
+                      "modes": %s
+                    }
+                    """.formatted(query, sourceId, documentIdsJson, filtersJson, modesJson)))
             .andExpect(status().isOk())
             .andReturn());
     }
@@ -766,6 +1152,25 @@ class KnowledgeCoverageIntegrationTest {
 
     private Stream<JsonNode> stream(JsonNode array) {
         return java.util.stream.StreamSupport.stream(array.spliterator(), false);
+    }
+
+    private Map<String, Integer> rankByDescendingScore(List<JsonNode> hits, String scoreField) {
+        List<JsonNode> sorted = hits.stream()
+            .filter(hit -> hit.path(scoreField).asDouble() > 0)
+            .sorted((left, right) -> Double.compare(right.path(scoreField).asDouble(), left.path(scoreField).asDouble()))
+            .toList();
+        java.util.LinkedHashMap<String, Integer> ranks = new java.util.LinkedHashMap<>();
+        for (int index = 0; index < sorted.size(); index++) {
+            ranks.put(sorted.get(index).path("chunkId").asText(), index + 1);
+        }
+        return ranks;
+    }
+
+    private double reciprocalRank(Integer rank, int rrfK) {
+        if (rank == null || rank <= 0) {
+            return 0;
+        }
+        return 1.0 / (rrfK + rank);
     }
 
     private void resetDatabase() {

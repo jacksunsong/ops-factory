@@ -22,7 +22,6 @@ type KnowledgeConfigRow = { key: string; value: unknown }
 type KnowledgeConfigGroup = { title: string; rows: KnowledgeConfigRow[] }
 type KnowledgeConfigMeta = {
     sourceKey: string
-    effectKey: string
 }
 type KnowledgeDocumentFilterStatus = 'ALL' | 'READY' | 'ATTENTION' | 'PROCESSING' | 'ERROR'
 type UploadQueueStatus = 'pending' | 'uploading' | 'completed' | 'failed'
@@ -184,6 +183,99 @@ function renderConfigValue(value: unknown, t: (key: string) => string) {
     return formatConfigPrimitive(value, t)
 }
 
+function getConfigSection(config: Record<string, unknown> | null | undefined, key: string): Record<string, unknown> {
+    const value = config?.[key]
+    return isPlainRecord(value) ? value : {}
+}
+
+function getConfigString(
+    config: Record<string, unknown> | null | undefined,
+    section: string,
+    key: string,
+    fallback = ''
+): string {
+    const value = getConfigSection(config, section)[key]
+    return typeof value === 'string' ? value : fallback
+}
+
+function getConfigNumber(
+    config: Record<string, unknown> | null | undefined,
+    section: string,
+    key: string,
+    fallback: number
+): number {
+    const value = getConfigSection(config, section)[key]
+    return typeof value === 'number' ? value : fallback
+}
+
+function ProfileReadonlyCard({
+    title,
+    description,
+    bindingName,
+    bindingId,
+    groups,
+    sourceLabel,
+    actionLabel,
+    onEdit,
+}: {
+    title: string
+    description?: string
+    bindingName: string
+    bindingId: string
+    groups: KnowledgeConfigGroup[]
+    sourceLabel: string
+    actionLabel: string
+    onEdit: () => void
+}) {
+    const { t } = useTranslation()
+
+    return (
+        <section className="knowledge-section-card">
+            <div className="knowledge-section-header">
+                <div>
+                    <h2 className="knowledge-section-title">{title}</h2>
+                    {description ? <p className="knowledge-section-description">{description}</p> : null}
+                </div>
+                <button type="button" className="btn btn-secondary knowledge-section-action" onClick={onEdit}>
+                    {actionLabel}
+                </button>
+            </div>
+
+            <div className="knowledge-kv-grid knowledge-kv-grid-compact">
+                <div className="knowledge-kv-item">
+                    <span className="knowledge-kv-label">{t('knowledge.profileName')}</span>
+                    <span className="knowledge-kv-value">{bindingName}</span>
+                </div>
+                <div className="knowledge-kv-item">
+                    <span className="knowledge-kv-label">{t('knowledge.profileId')}</span>
+                    <span className="knowledge-kv-meta">{bindingId}</span>
+                </div>
+            </div>
+
+            <div className="knowledge-config-readonly-groups">
+                {groups.map(group => (
+                    <section key={`${title}-${group.title}`} className="knowledge-config-readonly-group">
+                        <h3 className="knowledge-config-group-title">{group.title}</h3>
+                        <div className="knowledge-config-readonly-rows">
+                            {group.rows.map(row => (
+                                <div key={`${group.title}-${row.key}`} className="knowledge-config-readonly-row">
+                                    <span className="knowledge-config-key">{row.key}</span>
+                                    <div className="knowledge-config-value">{renderConfigValue(row.value, t)}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                ))}
+            </div>
+
+            <div className="knowledge-config-source-note">
+                <span className="knowledge-kv-label">{t('knowledge.configSourceLabel')}</span>
+                <span className="knowledge-config-meta-cell">{sourceLabel}</span>
+            </div>
+        </section>
+    )
+}
+
 function ConfigGroupRows({
     title,
     rows,
@@ -202,7 +294,6 @@ function ConfigGroupRows({
                 <span className="knowledge-config-head-cell">{t('knowledge.configColumnParameter')}</span>
                 <span className="knowledge-config-head-cell">{t('knowledge.configColumnValue')}</span>
                 <span className="knowledge-config-head-cell">{t('knowledge.configSourceLabel')}</span>
-                <span className="knowledge-config-head-cell">{t('knowledge.configEffectLabel')}</span>
             </div>
             <div className="knowledge-config-rows">
                 {rows.map(row => (
@@ -212,7 +303,6 @@ function ConfigGroupRows({
                             {renderConfigValue(row.value, t)}
                         </div>
                         <span className="knowledge-config-meta-cell">{t(meta.sourceKey)}</span>
-                        <span className="knowledge-config-meta-cell">{t(meta.effectKey)}</span>
                     </div>
                 ))}
             </div>
@@ -450,6 +540,218 @@ function EditBasicInfoModal({
                         disabled={saving || !name.trim()}
                     >
                         {saving ? t('knowledge.saving') : t('common.save')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function EditIndexProfileModal({
+    name,
+    analyzerOptions,
+    indexAnalyzer,
+    queryAnalyzer,
+    titleBoost,
+    titlePathBoost,
+    keywordBoost,
+    contentBoost,
+    bm25K1,
+    bm25B,
+    saving,
+    onClose,
+    onNameChange,
+    onIndexAnalyzerChange,
+    onQueryAnalyzerChange,
+    onTitleBoostChange,
+    onTitlePathBoostChange,
+    onKeywordBoostChange,
+    onContentBoostChange,
+    onBm25K1Change,
+    onBm25BChange,
+    onSave,
+}: {
+    name: string
+    analyzerOptions: string[]
+    indexAnalyzer: string
+    queryAnalyzer: string
+    titleBoost: string
+    titlePathBoost: string
+    keywordBoost: string
+    contentBoost: string
+    bm25K1: string
+    bm25B: string
+    saving: boolean
+    onClose: () => void
+    onNameChange: (value: string) => void
+    onIndexAnalyzerChange: (value: string) => void
+    onQueryAnalyzerChange: (value: string) => void
+    onTitleBoostChange: (value: string) => void
+    onTitlePathBoostChange: (value: string) => void
+    onKeywordBoostChange: (value: string) => void
+    onContentBoostChange: (value: string) => void
+    onBm25K1Change: (value: string) => void
+    onBm25BChange: (value: string) => void
+    onSave: () => void
+}) {
+    const { t } = useTranslation()
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal knowledge-profile-config-modal" onClick={event => event.stopPropagation()}>
+                <div className="modal-header">
+                    <h2 className="modal-title">{t('knowledge.indexProfileEditorTitle')}</h2>
+                    <button className="modal-close" onClick={onClose}>&times;</button>
+                </div>
+
+                <div className="modal-body">
+                    <div className="knowledge-profile-editor-grid">
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.profileName')}</span>
+                            <input className="form-input" value={name} onChange={event => onNameChange(event.target.value)} />
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.indexAnalyzerLabel')}</span>
+                            <select className="form-input" value={indexAnalyzer} onChange={event => onIndexAnalyzerChange(event.target.value)}>
+                                {analyzerOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                            </select>
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.queryAnalyzerLabel')}</span>
+                            <select className="form-input" value={queryAnalyzer} onChange={event => onQueryAnalyzerChange(event.target.value)}>
+                                {analyzerOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                            </select>
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.titleBoostLabel')}</span>
+                            <input className="form-input" inputMode="decimal" value={titleBoost} onChange={event => onTitleBoostChange(event.target.value)} />
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.titlePathBoostLabel')}</span>
+                            <input className="form-input" inputMode="decimal" value={titlePathBoost} onChange={event => onTitlePathBoostChange(event.target.value)} />
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.keywordBoostLabel')}</span>
+                            <input className="form-input" inputMode="decimal" value={keywordBoost} onChange={event => onKeywordBoostChange(event.target.value)} />
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.contentBoostLabel')}</span>
+                            <input className="form-input" inputMode="decimal" value={contentBoost} onChange={event => onContentBoostChange(event.target.value)} />
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.bm25K1Label')}</span>
+                            <input className="form-input" inputMode="decimal" value={bm25K1} onChange={event => onBm25K1Change(event.target.value)} />
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.bm25BLabel')}</span>
+                            <input className="form-input" inputMode="decimal" value={bm25B} onChange={event => onBm25BChange(event.target.value)} />
+                        </label>
+                    </div>
+                </div>
+
+                <div className="modal-footer">
+                    <button className="btn btn-secondary" onClick={onClose} disabled={saving}>
+                        {t('common.cancel')}
+                    </button>
+                    <button className="btn btn-primary" onClick={onSave} disabled={saving}>
+                        {saving ? t('knowledge.savingConfig') : t('knowledge.saveConfig')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function EditRetrievalProfileModal({
+    name,
+    retrievalModes,
+    retrievalMode,
+    lexicalTopK,
+    semanticTopK,
+    finalTopK,
+    rrfK,
+    snippetLength,
+    saving,
+    onClose,
+    onNameChange,
+    onModeChange,
+    onLexicalTopKChange,
+    onSemanticTopKChange,
+    onFinalTopKChange,
+    onRrfKChange,
+    onSnippetLengthChange,
+    onSave,
+}: {
+    name: string
+    retrievalModes: string[]
+    retrievalMode: string
+    lexicalTopK: string
+    semanticTopK: string
+    finalTopK: string
+    rrfK: string
+    snippetLength: string
+    saving: boolean
+    onClose: () => void
+    onNameChange: (value: string) => void
+    onModeChange: (value: string) => void
+    onLexicalTopKChange: (value: string) => void
+    onSemanticTopKChange: (value: string) => void
+    onFinalTopKChange: (value: string) => void
+    onRrfKChange: (value: string) => void
+    onSnippetLengthChange: (value: string) => void
+    onSave: () => void
+}) {
+    const { t } = useTranslation()
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal knowledge-profile-config-modal" onClick={event => event.stopPropagation()}>
+                <div className="modal-header">
+                    <h2 className="modal-title">{t('knowledge.retrievalProfileEditorTitle')}</h2>
+                    <button className="modal-close" onClick={onClose}>&times;</button>
+                </div>
+
+                <div className="modal-body">
+                    <div className="knowledge-profile-editor-grid">
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.profileName')}</span>
+                            <input className="form-input" value={name} onChange={event => onNameChange(event.target.value)} />
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.retrievalMode')}</span>
+                            <select className="form-input" value={retrievalMode} onChange={event => onModeChange(event.target.value)}>
+                                {retrievalModes.map(mode => <option key={mode} value={mode}>{mode}</option>)}
+                            </select>
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.lexicalTopKLabel')}</span>
+                            <input className="form-input" inputMode="numeric" value={lexicalTopK} onChange={event => onLexicalTopKChange(event.target.value)} />
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.semanticTopKLabel')}</span>
+                            <input className="form-input" inputMode="numeric" value={semanticTopK} onChange={event => onSemanticTopKChange(event.target.value)} />
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.finalTopKLabel')}</span>
+                            <input className="form-input" inputMode="numeric" value={finalTopK} onChange={event => onFinalTopKChange(event.target.value)} />
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.rrfKLabel')}</span>
+                            <input className="form-input" inputMode="numeric" value={rrfK} onChange={event => onRrfKChange(event.target.value)} />
+                        </label>
+                        <label className="knowledge-profile-field">
+                            <span className="knowledge-kv-label">{t('knowledge.snippetLengthLabel')}</span>
+                            <input className="form-input" inputMode="numeric" value={snippetLength} onChange={event => onSnippetLengthChange(event.target.value)} />
+                        </label>
+                    </div>
+                </div>
+
+                <div className="modal-footer">
+                    <button className="btn btn-secondary" onClick={onClose} disabled={saving}>
+                        {t('common.cancel')}
+                    </button>
+                    <button className="btn btn-primary" onClick={onSave} disabled={saving}>
+                        {saving ? t('knowledge.savingConfig') : t('knowledge.saveConfig')}
                     </button>
                 </div>
             </div>
@@ -847,6 +1149,8 @@ export default function KnowledgeConfigure() {
         hasSupportingDataError,
         reload,
         saveSource,
+        saveIndexProfile,
+        saveRetrievalProfile,
         deleteSource,
     } = useKnowledgeSourceDetail(sourceId)
     const [showEditBasicInfoModal, setShowEditBasicInfoModal] = useState(false)
@@ -868,6 +1172,26 @@ export default function KnowledgeConfigure() {
     const [renamingDocumentId, setRenamingDocumentId] = useState<string | null>(null)
     const [downloadingDocumentId, setDownloadingDocumentId] = useState<string | null>(null)
     const [isRebuildingSource, setIsRebuildingSource] = useState(false)
+    const [showEditIndexProfileModal, setShowEditIndexProfileModal] = useState(false)
+    const [showEditRetrievalProfileModal, setShowEditRetrievalProfileModal] = useState(false)
+    const [indexProfileName, setIndexProfileName] = useState('')
+    const [indexAnalyzer, setIndexAnalyzer] = useState('smartcn')
+    const [queryAnalyzer, setQueryAnalyzer] = useState('smartcn')
+    const [titleBoost, setTitleBoost] = useState('4')
+    const [titlePathBoost, setTitlePathBoost] = useState('2.5')
+    const [keywordBoost, setKeywordBoost] = useState('2')
+    const [contentBoost, setContentBoost] = useState('1')
+    const [bm25K1, setBm25K1] = useState('1.2')
+    const [bm25B, setBm25B] = useState('0.75')
+    const [isSavingIndexProfile, setIsSavingIndexProfile] = useState(false)
+    const [retrievalProfileName, setRetrievalProfileName] = useState('')
+    const [retrievalMode, setRetrievalMode] = useState('hybrid')
+    const [lexicalTopKInput, setLexicalTopKInput] = useState('50')
+    const [semanticTopKInput, setSemanticTopKInput] = useState('50')
+    const [finalTopKInput, setFinalTopKInput] = useState('10')
+    const [rrfKInput, setRrfKInput] = useState('60')
+    const [snippetLengthInput, setSnippetLengthInput] = useState('180')
+    const [isSavingRetrievalProfile, setIsSavingRetrievalProfile] = useState(false)
 
     const activeTab = parseTab(searchParams.get('tab'))
 
@@ -879,22 +1203,89 @@ export default function KnowledgeConfigure() {
         { key: 'config', label: t('knowledge.tabConfigParams') },
     ]
 
-    const indexProfileConfigGroups = useMemo(
-        () => buildConfigGroups(indexProfileDetail?.config),
-        [indexProfileDetail?.config]
-    )
-    const retrievalProfileConfigGroups = useMemo(
-        () => buildConfigGroups(retrievalProfileDetail?.config),
-        [retrievalProfileDetail?.config]
-    )
     const defaultsConfigGroups = useMemo(
         () => defaults ? buildConfigGroups(defaults as unknown as Record<string, unknown>) : [],
         [defaults]
     )
+    const indexReadonlyGroups = useMemo<KnowledgeConfigGroup[]>(() => ([
+        {
+            title: 'Analysis',
+            rows: [
+                { key: 'indexAnalyzer', value: getConfigString(indexProfileDetail?.config, 'analysis', 'indexAnalyzer', 'smartcn') },
+                { key: 'queryAnalyzer', value: getConfigString(indexProfileDetail?.config, 'analysis', 'queryAnalyzer', 'smartcn') },
+            ],
+        },
+        {
+            title: 'BM25',
+            rows: [
+                { key: 'k1', value: getConfigSection(getConfigSection(indexProfileDetail?.config, 'indexing'), 'bm25').k1 ?? 1.2 },
+                { key: 'b', value: getConfigSection(getConfigSection(indexProfileDetail?.config, 'indexing'), 'bm25').b ?? 0.75 },
+            ],
+        },
+        {
+            title: 'Field Boosts',
+            rows: [
+                { key: 'titleBoost', value: getConfigNumber(indexProfileDetail?.config, 'indexing', 'titleBoost', 4) },
+                { key: 'titlePathBoost', value: getConfigNumber(indexProfileDetail?.config, 'indexing', 'titlePathBoost', 2.5) },
+                { key: 'keywordBoost', value: getConfigNumber(indexProfileDetail?.config, 'indexing', 'keywordBoost', 2) },
+                { key: 'contentBoost', value: getConfigNumber(indexProfileDetail?.config, 'indexing', 'contentBoost', 1) },
+            ],
+        },
+    ]), [indexProfileDetail?.config])
+    const retrievalReadonlyGroups = useMemo<KnowledgeConfigGroup[]>(() => ([
+        {
+            title: 'Retrieval',
+            rows: [
+                { key: 'mode', value: getConfigString(retrievalProfileDetail?.config, 'retrieval', 'mode', 'hybrid') },
+                { key: 'lexicalTopK', value: getConfigNumber(retrievalProfileDetail?.config, 'retrieval', 'lexicalTopK', 50) },
+                { key: 'semanticTopK', value: getConfigNumber(retrievalProfileDetail?.config, 'retrieval', 'semanticTopK', 50) },
+                { key: 'rrfK', value: getConfigNumber(retrievalProfileDetail?.config, 'retrieval', 'rrfK', 60) },
+            ],
+        },
+        {
+            title: 'Result',
+            rows: [
+                { key: 'finalTopK', value: getConfigNumber(retrievalProfileDetail?.config, 'result', 'finalTopK', 10) },
+                { key: 'snippetLength', value: getConfigNumber(retrievalProfileDetail?.config, 'result', 'snippetLength', 180) },
+            ],
+        },
+    ]), [retrievalProfileDetail?.config])
     const capabilityGroups = useMemo(
         () => capabilities ? buildConfigGroups(capabilities as unknown as Record<string, unknown>) : [],
         [capabilities]
     )
+    const retrievalModes = capabilities?.retrievalModes?.length
+        ? capabilities.retrievalModes
+        : ['hybrid', 'semantic', 'lexical']
+    const analyzerOptions = capabilities?.analyzers?.length
+        ? capabilities.analyzers
+        : ['smartcn', 'standard', 'keyword']
+
+    useEffect(() => {
+        if (!indexProfileDetail) return
+        setIndexProfileName(indexProfileDetail.name || '')
+        setIndexAnalyzer(getConfigString(indexProfileDetail.config, 'analysis', 'indexAnalyzer', 'smartcn'))
+        setQueryAnalyzer(getConfigString(indexProfileDetail.config, 'analysis', 'queryAnalyzer', 'smartcn'))
+        setTitleBoost(String(getConfigNumber(indexProfileDetail.config, 'indexing', 'titleBoost', 4)))
+        setTitlePathBoost(String(getConfigNumber(indexProfileDetail.config, 'indexing', 'titlePathBoost', 2.5)))
+        setKeywordBoost(String(getConfigNumber(indexProfileDetail.config, 'indexing', 'keywordBoost', 2)))
+        setContentBoost(String(getConfigNumber(indexProfileDetail.config, 'indexing', 'contentBoost', 1)))
+        const bm25Config = getConfigSection(getConfigSection(indexProfileDetail.config, 'indexing'), 'bm25')
+        setBm25K1(String(typeof bm25Config.k1 === 'number' ? bm25Config.k1 : 1.2))
+        setBm25B(String(typeof bm25Config.b === 'number' ? bm25Config.b : 0.75))
+    }, [indexProfileDetail])
+
+    useEffect(() => {
+        if (!retrievalProfileDetail) return
+        setRetrievalProfileName(retrievalProfileDetail.name || '')
+        setRetrievalMode(getConfigString(retrievalProfileDetail.config, 'retrieval', 'mode', 'hybrid'))
+        setLexicalTopKInput(String(getConfigNumber(retrievalProfileDetail.config, 'retrieval', 'lexicalTopK', 50)))
+        setSemanticTopKInput(String(getConfigNumber(retrievalProfileDetail.config, 'retrieval', 'semanticTopK', 50)))
+        setFinalTopKInput(String(getConfigNumber(retrievalProfileDetail.config, 'result', 'finalTopK', 10)))
+        setRrfKInput(String(getConfigNumber(retrievalProfileDetail.config, 'retrieval', 'rrfK', 60)))
+        setSnippetLengthInput(String(getConfigNumber(retrievalProfileDetail.config, 'result', 'snippetLength', 180)))
+    }, [retrievalProfileDetail])
+
     const documentTypeOptions = useMemo(
         () => Array.from(new Set(documents.map(document => getDocumentType(document)))).sort(),
         [documents]
@@ -947,6 +1338,114 @@ export default function KnowledgeConfigure() {
         showToast('error', result.error || t('knowledge.saveFailed'))
         return false
     }, [saveSource, showToast, t])
+
+    const handleSaveIndexProfile = useCallback(async (): Promise<boolean> => {
+        const nextTitleBoost = Number(titleBoost)
+        const nextTitlePathBoost = Number(titlePathBoost)
+        const nextKeywordBoost = Number(keywordBoost)
+        const nextContentBoost = Number(contentBoost)
+        const nextBm25K1 = Number(bm25K1)
+        const nextBm25B = Number(bm25B)
+
+        if ([nextTitleBoost, nextTitlePathBoost, nextKeywordBoost, nextContentBoost, nextBm25K1, nextBm25B].some(value => Number.isNaN(value))) {
+            showToast('error', t('knowledge.configInvalidNumber'))
+            return false
+        }
+
+        setIsSavingIndexProfile(true)
+        const result = await saveIndexProfile({
+            name: indexProfileName.trim() || undefined,
+            config: {
+                analysis: {
+                    indexAnalyzer,
+                    queryAnalyzer,
+                },
+                indexing: {
+                    titleBoost: nextTitleBoost,
+                    titlePathBoost: nextTitlePathBoost,
+                    keywordBoost: nextKeywordBoost,
+                    contentBoost: nextContentBoost,
+                    bm25: {
+                        k1: nextBm25K1,
+                        b: nextBm25B,
+                    },
+                },
+            },
+        })
+        setIsSavingIndexProfile(false)
+
+        if (result.success) {
+            showToast('success', t('knowledge.configSaveSuccess'))
+            return true
+        }
+
+        showToast('error', result.error || t('knowledge.saveFailed'))
+        return false
+    }, [
+        bm25B,
+        bm25K1,
+        contentBoost,
+        indexAnalyzer,
+        indexProfileName,
+        keywordBoost,
+        queryAnalyzer,
+        saveIndexProfile,
+        showToast,
+        t,
+        titleBoost,
+        titlePathBoost,
+    ])
+
+    const handleSaveRetrievalProfile = useCallback(async (): Promise<boolean> => {
+        const nextLexicalTopK = Number(lexicalTopKInput)
+        const nextSemanticTopK = Number(semanticTopKInput)
+        const nextFinalTopK = Number(finalTopKInput)
+        const nextRrfK = Number(rrfKInput)
+        const nextSnippetLength = Number(snippetLengthInput)
+
+        if ([nextLexicalTopK, nextSemanticTopK, nextFinalTopK, nextRrfK, nextSnippetLength].some(value => Number.isNaN(value))) {
+            showToast('error', t('knowledge.configInvalidNumber'))
+            return false
+        }
+
+        setIsSavingRetrievalProfile(true)
+        const result = await saveRetrievalProfile({
+            name: retrievalProfileName.trim() || undefined,
+            config: {
+                retrieval: {
+                    mode: retrievalMode,
+                    lexicalTopK: nextLexicalTopK,
+                    semanticTopK: nextSemanticTopK,
+                    rrfK: nextRrfK,
+                    strategy: 'rrf',
+                },
+                result: {
+                    finalTopK: nextFinalTopK,
+                    snippetLength: nextSnippetLength,
+                },
+            },
+        })
+        setIsSavingRetrievalProfile(false)
+
+        if (result.success) {
+            showToast('success', t('knowledge.configSaveSuccess'))
+            return true
+        }
+
+        showToast('error', result.error || t('knowledge.saveFailed'))
+        return false
+    }, [
+        finalTopKInput,
+        lexicalTopKInput,
+        retrievalMode,
+        retrievalProfileName,
+        rrfKInput,
+        saveRetrievalProfile,
+        semanticTopKInput,
+        showToast,
+        snippetLengthInput,
+        t,
+    ])
 
     const loadDocuments = useCallback(async () => {
         if (!sourceId) return
@@ -1244,28 +1743,36 @@ export default function KnowledgeConfigure() {
                 <div className="knowledge-detail-main">
                     {activeTab === 'basic' && (
                         <>
-                            <div className="knowledge-summary-strip knowledge-summary-strip-standalone">
-                                <div className="knowledge-summary-chip">
-                                    <span className="knowledge-summary-label">{t('knowledge.documents')}</span>
-                                    <span className="knowledge-summary-value">{stats.documentCount}</span>
+                            <section className="knowledge-section-card">
+                                <div className="knowledge-section-header knowledge-section-header-compact">
+                                    <div>
+                                        <h2 className="knowledge-section-title">{t('knowledge.overviewMetricsTitle')}</h2>
+                                    </div>
                                 </div>
-                                <div className="knowledge-summary-chip">
-                                    <span className="knowledge-summary-label">{t('knowledge.chunks')}</span>
-                                    <span className="knowledge-summary-value">{stats.chunkCount}</span>
-                                </div>
-                                <div className="knowledge-summary-chip">
-                                    <span className="knowledge-summary-label">{t('knowledge.failedDocuments')}</span>
-                                    <span className="knowledge-summary-value">{stats.failedDocumentCount}</span>
-                                </div>
-                                <div className="knowledge-summary-chip knowledge-summary-chip-wide">
-                                    <span className="knowledge-summary-label">{t('knowledge.lastIngestion')}</span>
-                                    <span className="knowledge-summary-value knowledge-summary-value-small">
-                                        {stats.lastIngestionAt ? formatDateTime(stats.lastIngestionAt) : t('knowledge.noIngestionYet')}
-                                    </span>
-                                </div>
-                            </div>
 
-                            <div className="knowledge-settings-grid">
+                                <div className="knowledge-kv-grid knowledge-kv-grid-compact">
+                                    <div className="knowledge-kv-item">
+                                        <span className="knowledge-kv-label">{t('knowledge.documents')}</span>
+                                        <span className="knowledge-kv-value">{stats.documentCount}</span>
+                                    </div>
+                                    <div className="knowledge-kv-item">
+                                        <span className="knowledge-kv-label">{t('knowledge.chunks')}</span>
+                                        <span className="knowledge-kv-value">{stats.chunkCount}</span>
+                                    </div>
+                                    <div className="knowledge-kv-item">
+                                        <span className="knowledge-kv-label">{t('knowledge.failedDocuments')}</span>
+                                        <span className="knowledge-kv-value">{stats.failedDocumentCount}</span>
+                                    </div>
+                                    <div className="knowledge-kv-item">
+                                        <span className="knowledge-kv-label">{t('knowledge.lastIngestion')}</span>
+                                        <span className="knowledge-kv-value">
+                                            {stats.lastIngestionAt ? formatDateTime(stats.lastIngestionAt) : t('knowledge.noIngestionYet')}
+                                        </span>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <div className="knowledge-config-stack">
                                 <section className="knowledge-section-card">
                                     <div className="knowledge-section-header">
                                         <div>
@@ -1280,18 +1787,14 @@ export default function KnowledgeConfigure() {
                                         </button>
                                     </div>
 
-                                    <div className="knowledge-kv-grid">
-                                        <div className="knowledge-kv-item">
-                                            <span className="knowledge-kv-label">{t('knowledge.name')}</span>
-                                            <span className="knowledge-kv-value">{source.name}</span>
-                                        </div>
+                                    <div className="knowledge-kv-grid knowledge-kv-grid-compact">
                                         <div className="knowledge-kv-item">
                                             <span className="knowledge-kv-label">{t('knowledge.storageMode')}</span>
                                             <span className="knowledge-kv-value">{source.storageMode}</span>
                                         </div>
                                         <div className="knowledge-kv-item">
-                                            <span className="knowledge-kv-label">{t('knowledge.description')}</span>
-                                            <span className="knowledge-kv-value">{source.description?.trim() || t('knowledge.noDescription')}</span>
+                                            <span className="knowledge-kv-label">{t('knowledge.createdAt')}</span>
+                                            <span className="knowledge-kv-value">{formatDateTime(source.createdAt)}</span>
                                         </div>
                                         <div className="knowledge-kv-item">
                                             <span className="knowledge-kv-label">{t('knowledge.updatedAt')}</span>
@@ -1325,7 +1828,7 @@ export default function KnowledgeConfigure() {
                                     </div>
                                 </section>
 
-                                <section className="knowledge-section-card knowledge-section-card-danger knowledge-section-card-span-2">
+                                <section className="knowledge-section-card knowledge-section-card-danger">
                                     <div className="knowledge-section-header">
                                         <div>
                                             <h2 className="knowledge-section-title">{t('knowledge.dangerZoneTitle')}</h2>
@@ -1354,113 +1857,48 @@ export default function KnowledgeConfigure() {
 
                     {activeTab === 'config' && (
                         <div className="knowledge-config-stack">
-                            <section className="knowledge-section-card knowledge-config-readonly-card">
-                                <div className="knowledge-section-header">
-                                    <div>
-                                        <h2 className="knowledge-section-title">{t('knowledge.configReadOnlyTitle')}</h2>
-                                        <p className="knowledge-section-description">{t('knowledge.configReadOnlyDescription')}</p>
-                                    </div>
-                                </div>
-                            </section>
-
                             <section className="knowledge-section-card">
                                 <div className="knowledge-section-header">
                                     <div>
                                         <h2 className="knowledge-section-title">{t('knowledge.currentBindingsTitle')}</h2>
-                                        <p className="knowledge-section-description">{t('knowledge.currentBindingsDescription')}</p>
                                     </div>
                                 </div>
 
-                                <div className="knowledge-config-groups">
-                                    <ConfigGroupRows
-                                        title={t('knowledge.indexProfile')}
-                                        rows={[
-                                            {
-                                                key: 'name',
-                                                value: getProfileName(indexProfileDetail, source.indexProfileId, t('knowledge.profileUnavailable')),
-                                            },
-                                            {
-                                                key: 'id',
-                                                value: source.indexProfileId || t('knowledge.notBound'),
-                                            },
-                                        ]}
-                                        meta={{
-                                            sourceKey: 'knowledge.configSourceKnowledgeBase',
-                                            effectKey: 'knowledge.configEffectBindingChange',
-                                        }}
-                                    />
-                                    <ConfigGroupRows
-                                        title={t('knowledge.retrievalProfile')}
-                                        rows={[
-                                            {
-                                                key: 'name',
-                                                value: getProfileName(retrievalProfileDetail, source.retrievalProfileId, t('knowledge.profileUnavailable')),
-                                            },
-                                            {
-                                                key: 'id',
-                                                value: source.retrievalProfileId || t('knowledge.notBound'),
-                                            },
-                                        ]}
-                                        meta={{
-                                            sourceKey: 'knowledge.configSourceKnowledgeBase',
-                                            effectKey: 'knowledge.configEffectBindingChange',
-                                        }}
-                                    />
+                                <div className="knowledge-kv-grid knowledge-kv-grid-compact">
+                                    <div className="knowledge-kv-item">
+                                        <span className="knowledge-kv-label">{t('knowledge.indexProfile')}</span>
+                                        <span className="knowledge-kv-value">{getProfileName(indexProfileDetail, source.indexProfileId, t('knowledge.profileUnavailable'))}</span>
+                                        <span className="knowledge-kv-meta">{source.indexProfileId || t('knowledge.notBound')}</span>
+                                    </div>
+                                    <div className="knowledge-kv-item">
+                                        <span className="knowledge-kv-label">{t('knowledge.retrievalProfile')}</span>
+                                        <span className="knowledge-kv-value">{getProfileName(retrievalProfileDetail, source.retrievalProfileId, t('knowledge.profileUnavailable'))}</span>
+                                        <span className="knowledge-kv-meta">{source.retrievalProfileId || t('knowledge.notBound')}</span>
+                                    </div>
                                 </div>
                             </section>
 
-                            <section className="knowledge-section-card">
-                                <div className="knowledge-section-header">
-                                    <div>
-                                        <h2 className="knowledge-section-title">{t('knowledge.indexProfileParamsTitle')}</h2>
-                                        <p className="knowledge-section-description">{t('knowledge.indexProfileParamsDescription')}</p>
-                                    </div>
-                                </div>
-                                {indexProfileConfigGroups.length > 0 ? (
-                                    <div className="knowledge-config-groups">
-                                        {indexProfileConfigGroups.map(group => (
-                                            <ConfigGroupRows
-                                                key={`index-group-${group.title}`}
-                                                title={group.title}
-                                                rows={group.rows}
-                                                meta={{
-                                                    sourceKey: 'knowledge.configSourceProfileDb',
-                                                    effectKey: 'knowledge.configEffectRebuildRequired',
-                                                }}
-                                            />
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="knowledge-section-empty">{t('knowledge.profileConfigUnavailable')}</p>
-                                )}
-                            </section>
+                            <ProfileReadonlyCard
+                                title={t('knowledge.indexProfileEditorTitle')}
+                                description={t('knowledge.indexProfileEditorDescription')}
+                                bindingName={getProfileName(indexProfileDetail, source.indexProfileId, t('knowledge.profileUnavailable'))}
+                                bindingId={source.indexProfileId || t('knowledge.notBound')}
+                                groups={indexReadonlyGroups}
+                                sourceLabel={t('knowledge.configSourceBoundProfile')}
+                                actionLabel={t('knowledge.editConfig')}
+                                onEdit={() => setShowEditIndexProfileModal(true)}
+                            />
 
-                            <section className="knowledge-section-card">
-                                <div className="knowledge-section-header">
-                                    <div>
-                                        <h2 className="knowledge-section-title">{t('knowledge.retrievalProfileParamsTitle')}</h2>
-                                        <p className="knowledge-section-description">{t('knowledge.retrievalProfileParamsDescription')}</p>
-                                    </div>
-                                </div>
-
-                                {retrievalProfileConfigGroups.length > 0 ? (
-                                    <div className="knowledge-config-groups">
-                                        {retrievalProfileConfigGroups.map(group => (
-                                            <ConfigGroupRows
-                                                key={`retrieval-group-${group.title}`}
-                                                title={group.title}
-                                                rows={group.rows}
-                                                meta={{
-                                                    sourceKey: 'knowledge.configSourceProfileDb',
-                                                    effectKey: 'knowledge.configEffectSearchRequest',
-                                                }}
-                                            />
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="knowledge-section-empty">{t('knowledge.profileConfigUnavailable')}</p>
-                                )}
-                            </section>
+                            <ProfileReadonlyCard
+                                title={t('knowledge.retrievalProfileEditorTitle')}
+                                description={t('knowledge.retrievalProfileEditorDescription')}
+                                bindingName={getProfileName(retrievalProfileDetail, source.retrievalProfileId, t('knowledge.profileUnavailable'))}
+                                bindingId={source.retrievalProfileId || t('knowledge.notBound')}
+                                groups={retrievalReadonlyGroups}
+                                sourceLabel={t('knowledge.configSourceBoundProfile')}
+                                actionLabel={t('knowledge.editConfig')}
+                                onEdit={() => setShowEditRetrievalProfileModal(true)}
+                            />
 
                             <section className="knowledge-section-card">
                                 <div className="knowledge-section-header">
@@ -1479,7 +1917,6 @@ export default function KnowledgeConfigure() {
                                                 rows={group.rows}
                                                 meta={{
                                                     sourceKey: 'knowledge.configSourceConfigYaml',
-                                                    effectKey: 'knowledge.configEffectRestartService',
                                                 }}
                                             />
                                         ))}
@@ -1506,7 +1943,6 @@ export default function KnowledgeConfigure() {
                                                 rows={group.rows}
                                                 meta={{
                                                     sourceKey: 'knowledge.configSourceRuntimeView',
-                                                    effectKey: 'knowledge.configEffectRuntimeSnapshot',
                                                 }}
                                             />
                                         ))}
@@ -1701,6 +2137,72 @@ export default function KnowledgeConfigure() {
                     source={source}
                     onClose={() => setShowEditBasicInfoModal(false)}
                     onSave={handleSaveBasicInfo}
+                />
+            )}
+
+            {showEditIndexProfileModal && (
+                <EditIndexProfileModal
+                    name={indexProfileName}
+                    analyzerOptions={analyzerOptions}
+                    indexAnalyzer={indexAnalyzer}
+                    queryAnalyzer={queryAnalyzer}
+                    titleBoost={titleBoost}
+                    titlePathBoost={titlePathBoost}
+                    keywordBoost={keywordBoost}
+                    contentBoost={contentBoost}
+                    bm25K1={bm25K1}
+                    bm25B={bm25B}
+                    saving={isSavingIndexProfile}
+                    onClose={() => {
+                        if (!isSavingIndexProfile) {
+                            setShowEditIndexProfileModal(false)
+                        }
+                    }}
+                    onNameChange={setIndexProfileName}
+                    onIndexAnalyzerChange={setIndexAnalyzer}
+                    onQueryAnalyzerChange={setQueryAnalyzer}
+                    onTitleBoostChange={setTitleBoost}
+                    onTitlePathBoostChange={setTitlePathBoost}
+                    onKeywordBoostChange={setKeywordBoost}
+                    onContentBoostChange={setContentBoost}
+                    onBm25K1Change={setBm25K1}
+                    onBm25BChange={setBm25B}
+                    onSave={() => void handleSaveIndexProfile().then(success => {
+                        if (success) {
+                            setShowEditIndexProfileModal(false)
+                        }
+                    })}
+                />
+            )}
+
+            {showEditRetrievalProfileModal && (
+                <EditRetrievalProfileModal
+                    name={retrievalProfileName}
+                    retrievalModes={retrievalModes}
+                    retrievalMode={retrievalMode}
+                    lexicalTopK={lexicalTopKInput}
+                    semanticTopK={semanticTopKInput}
+                    finalTopK={finalTopKInput}
+                    rrfK={rrfKInput}
+                    snippetLength={snippetLengthInput}
+                    saving={isSavingRetrievalProfile}
+                    onClose={() => {
+                        if (!isSavingRetrievalProfile) {
+                            setShowEditRetrievalProfileModal(false)
+                        }
+                    }}
+                    onNameChange={setRetrievalProfileName}
+                    onModeChange={setRetrievalMode}
+                    onLexicalTopKChange={setLexicalTopKInput}
+                    onSemanticTopKChange={setSemanticTopKInput}
+                    onFinalTopKChange={setFinalTopKInput}
+                    onRrfKChange={setRrfKInput}
+                    onSnippetLengthChange={setSnippetLengthInput}
+                    onSave={() => void handleSaveRetrievalProfile().then(success => {
+                        if (success) {
+                            setShowEditRetrievalProfileModal(false)
+                        }
+                    })}
                 />
             )}
 

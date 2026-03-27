@@ -1,6 +1,5 @@
 package com.huawei.opsfactory.knowledge.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.huawei.opsfactory.knowledge.api.chunk.ChunkController;
 import com.huawei.opsfactory.knowledge.api.document.DocumentController;
 import com.huawei.opsfactory.knowledge.api.job.JobController;
@@ -9,6 +8,7 @@ import com.huawei.opsfactory.knowledge.api.retrieval.RetrievalController;
 import com.huawei.opsfactory.knowledge.api.source.SourceController;
 import com.huawei.opsfactory.knowledge.common.model.PageResponse;
 import com.huawei.opsfactory.knowledge.common.util.Ids;
+import com.huawei.opsfactory.knowledge.config.KnowledgeProperties;
 import com.huawei.opsfactory.knowledge.repository.BindingRepository;
 import com.huawei.opsfactory.knowledge.repository.ChunkRepository;
 import com.huawei.opsfactory.knowledge.repository.DocumentRepository;
@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
@@ -32,6 +33,8 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class KnowledgeServiceFacade {
 
+    private static final int COMPARE_FETCH_TOP_K = 64;
+
     private final SourceRepository sourceRepository;
     private final DocumentRepository documentRepository;
     private final ChunkRepository chunkRepository;
@@ -42,8 +45,10 @@ public class KnowledgeServiceFacade {
     private final TikaConversionService conversionService;
     private final ChunkingService chunkingService;
     private final SearchService searchService;
+    private final EmbeddingService embeddingService;
+    private final LexicalIndexService lexicalIndexService;
+    private final VectorIndexService vectorIndexService;
     private final ProfileBootstrapService profileBootstrapService;
-    private final ObjectMapper objectMapper;
 
     public KnowledgeServiceFacade(
         SourceRepository sourceRepository,
@@ -56,8 +61,10 @@ public class KnowledgeServiceFacade {
         TikaConversionService conversionService,
         ChunkingService chunkingService,
         SearchService searchService,
-        ProfileBootstrapService profileBootstrapService,
-        ObjectMapper objectMapper
+        EmbeddingService embeddingService,
+        LexicalIndexService lexicalIndexService,
+        VectorIndexService vectorIndexService,
+        ProfileBootstrapService profileBootstrapService
     ) {
         this.sourceRepository = sourceRepository;
         this.documentRepository = documentRepository;
@@ -69,8 +76,10 @@ public class KnowledgeServiceFacade {
         this.conversionService = conversionService;
         this.chunkingService = chunkingService;
         this.searchService = searchService;
+        this.embeddingService = embeddingService;
+        this.lexicalIndexService = lexicalIndexService;
+        this.vectorIndexService = vectorIndexService;
         this.profileBootstrapService = profileBootstrapService;
-        this.objectMapper = objectMapper;
     }
 
     public PageResponse<SourceController.SourceResponse> listSources(int page, int pageSize) {
@@ -132,6 +141,9 @@ public class KnowledgeServiceFacade {
             storageManager.deleteRecursively(storageManager.artifactDir(sourceId, document.id()));
             storageManager.deleteRecursively(storageManager.uploadDocumentDir(sourceId, document.id()));
         }
+        embeddingService.deleteBySourceId(sourceId);
+        lexicalIndexService.deleteSource(sourceId);
+        vectorIndexService.deleteSource(sourceId);
         chunkRepository.deleteBySourceId(sourceId);
         documentRepository.deleteBySourceId(sourceId);
         jobRepository.deleteBySourceId(sourceId);
@@ -215,6 +227,9 @@ public class KnowledgeServiceFacade {
     public DocumentController.DeleteDocumentResponse deleteDocument(String documentId) {
         DocumentRepository.DocumentRecord existing = documentRepository.findById(documentId)
             .orElseThrow(() -> new IllegalArgumentException("Document not found: " + documentId));
+        embeddingService.deleteByDocumentId(documentId);
+        lexicalIndexService.deleteDocument(existing.sourceId(), documentId);
+        vectorIndexService.deleteDocument(documentId);
         chunkRepository.deleteByDocumentId(documentId);
         documentRepository.delete(documentId);
         storageManager.deleteRecursively(storageManager.artifactDir(existing.sourceId(), existing.id()));
@@ -315,6 +330,10 @@ public class KnowledgeServiceFacade {
             hash(request.text() + request.markdown()), "USER_EDITED", "system", Instant.now(), Instant.now()
         );
         chunkRepository.insert(record);
+        SearchService.SearchableChunk searchableChunk = toSearchableChunk(record);
+        Map<String, List<Double>> vectors = embeddingService.ensureChunkEmbeddings(List.of(searchableChunk));
+        lexicalIndexService.upsertChunks(List.of(searchableChunk));
+        vectorIndexService.upsertChunks(List.of(searchableChunk), vectors);
         refreshDocumentChunkStats(documentId);
         return new ChunkController.ChunkMutationResponse(record.id(), documentId, true, true, record.editStatus(), record.updatedAt());
     }
@@ -342,6 +361,10 @@ public class KnowledgeServiceFacade {
             Instant.now()
         );
         chunkRepository.update(updated);
+        SearchService.SearchableChunk searchableChunk = toSearchableChunk(updated);
+        Map<String, List<Double>> vectors = embeddingService.ensureChunkEmbeddings(List.of(searchableChunk));
+        lexicalIndexService.upsertChunks(List.of(searchableChunk));
+        vectorIndexService.upsertChunks(List.of(searchableChunk), vectors);
         refreshDocumentChunkStats(existing.documentId());
         return new ChunkController.ChunkMutationResponse(chunkId, existing.documentId(), true, true, updated.editStatus(), updated.updatedAt());
     }
@@ -356,6 +379,10 @@ public class KnowledgeServiceFacade {
             "USER_EDITED", "system", existing.createdAt(), Instant.now()
         );
         chunkRepository.update(updated);
+        SearchService.SearchableChunk searchableChunk = toSearchableChunk(updated);
+        Map<String, List<Double>> vectors = embeddingService.ensureChunkEmbeddings(List.of(searchableChunk));
+        lexicalIndexService.upsertChunks(List.of(searchableChunk));
+        vectorIndexService.upsertChunks(List.of(searchableChunk), vectors);
         refreshDocumentChunkStats(existing.documentId());
         return new ChunkController.ChunkKeywordsResponse(chunkId, keywords, true, true, updated.updatedAt());
     }
@@ -363,6 +390,9 @@ public class KnowledgeServiceFacade {
     public ChunkController.DeleteChunkResponse deleteChunk(String chunkId) {
         ChunkRepository.ChunkRecord existing = chunkRepository.findById(chunkId)
             .orElseThrow(() -> new IllegalArgumentException("Chunk not found: " + chunkId));
+        embeddingService.deleteByChunkId(chunkId);
+        lexicalIndexService.deleteChunk(existing.sourceId(), chunkId);
+        vectorIndexService.deleteChunk(chunkId);
         chunkRepository.delete(chunkId);
         refreshDocumentChunkStats(existing.documentId());
         return new ChunkController.DeleteChunkResponse(chunkId, true);
@@ -383,25 +413,47 @@ public class KnowledgeServiceFacade {
     }
 
     public ChunkController.ChunkReindexResponse reindexChunk(String chunkId) {
+        ChunkRepository.ChunkRecord chunk = chunkRepository.findById(chunkId)
+            .orElseThrow(() -> new IllegalArgumentException("Chunk not found: " + chunkId));
+        SearchService.SearchableChunk searchableChunk = toSearchableChunk(chunk);
+        Map<String, List<Double>> vectors = embeddingService.ensureChunkEmbeddings(List.of(searchableChunk));
+        lexicalIndexService.upsertChunks(List.of(searchableChunk));
+        vectorIndexService.upsertChunks(List.of(searchableChunk), vectors);
         return new ChunkController.ChunkReindexResponse(chunkId, true, Instant.now());
     }
 
     public RetrievalController.SearchResponse search(RetrievalController.SearchRequest request) {
-        int topK = request.topK() != null ? request.topK() : 10;
-        if (topK <= 0 || topK > profileBootstrapService.properties().getRetrieval().getMaxTopK()) {
-            throw new IllegalStateException("Invalid topK: " + topK);
-        }
+        String retrievalProfileId = resolveSearchRetrievalProfileId(request.retrievalProfileId(), request.sourceIds());
+        ResolvedRetrievalSettings settings = resolveRetrievalSettings(retrievalProfileId, request.topK(), request.override());
         List<SearchService.SearchableChunk> searchableChunks = filterChunks(request.sourceIds(), request.documentIds(), request.filters());
-        List<SearchService.SearchMatch> matches = searchService.search(searchableChunks, request.query(), topK);
-        List<RetrievalController.SearchHit> hits = matches.stream().map(match -> {
-            SearchService.SearchableChunk chunk = match.chunk();
-            String snippet = chunk.text().length() > 180 ? chunk.text().substring(0, 180) : chunk.text();
-            return new RetrievalController.SearchHit(
-                chunk.id(), chunk.documentId(), chunk.sourceId(), chunk.title(), chunk.titlePath(), snippet,
-                match.score(), match.score(), 0.0, match.score(), chunk.pageFrom(), chunk.pageTo()
-            );
-        }).toList();
+        List<SearchService.SearchMatch> matches = searchService.search(searchableChunks, request.query(), settings.toSearchOptions());
+        List<RetrievalController.SearchHit> hits = toSearchHits(matches, settings.snippetLength());
         return new RetrievalController.SearchResponse(request.query(), hits, hits.size());
+    }
+
+    public RetrievalController.CompareSearchResponse compare(RetrievalController.CompareSearchRequest request) {
+        String retrievalProfileId = resolveSearchRetrievalProfileId(request.retrievalProfileId(), request.sourceIds());
+        ResolvedRetrievalSettings baseSettings = resolveRetrievalSettings(retrievalProfileId, COMPARE_FETCH_TOP_K, null);
+        List<SearchService.SearchableChunk> searchableChunks = filterChunks(request.sourceIds(), request.documentIds(), request.filters());
+        List<String> modes = normalizeCompareModes(request.modes());
+
+        RetrievalController.CompareModeResponse hybrid = modes.contains("hybrid")
+            ? compareModeResponse(searchableChunks, request.query(), baseSettings.withMode("hybrid", COMPARE_FETCH_TOP_K, null))
+            : emptyCompareModeResponse();
+        RetrievalController.CompareModeResponse semantic = modes.contains("semantic")
+            ? compareModeResponse(searchableChunks, request.query(), baseSettings.withMode("semantic", COMPARE_FETCH_TOP_K, null))
+            : emptyCompareModeResponse();
+        RetrievalController.CompareModeResponse lexical = modes.contains("lexical")
+            ? compareModeResponse(searchableChunks, request.query(), baseSettings.withMode("lexical", COMPARE_FETCH_TOP_K, null))
+            : emptyCompareModeResponse();
+
+        return new RetrievalController.CompareSearchResponse(
+            request.query(),
+            COMPARE_FETCH_TOP_K,
+            hybrid,
+            semantic,
+            lexical
+        );
     }
 
     public RetrievalController.FetchResponse fetch(String chunkId, boolean includeNeighbors, int neighborWindow) {
@@ -444,14 +496,42 @@ public class KnowledgeServiceFacade {
     public RetrievalController.ExplainResponse explain(RetrievalController.ExplainRequest request) {
         ChunkRepository.ChunkRecord chunk = chunkRepository.findById(request.chunkId())
             .orElseThrow(() -> new IllegalArgumentException("Chunk not found: " + request.chunkId()));
-        SearchService.ExplainResult explain = searchService.explain(toSearchableChunk(chunk), request.query());
+        String retrievalProfileId = resolveSearchRetrievalProfileId(request.retrievalProfileId(), List.of(chunk.sourceId()));
+        ResolvedRetrievalSettings settings = resolveRetrievalSettings(retrievalProfileId, null, null);
+        SearchService.ExplainResult explain = searchService.explain(toSearchableChunk(chunk), request.query(), settings.toSearchOptions());
         return new RetrievalController.ExplainResponse(
             request.query(),
             request.chunkId(),
-            new RetrievalController.LexicalExplain(explain.matchedFields(), explain.score(), 1),
-            new RetrievalController.SemanticExplain(0.0, 0),
-            new RetrievalController.FusionExplain("rrf", explain.score())
+            new RetrievalController.LexicalExplain(explain.matchedFields(), explain.lexicalScore(), 1),
+            new RetrievalController.SemanticExplain(explain.semanticScore(), 1),
+            new RetrievalController.FusionExplain(explain.fusionMode(), explain.fusionScore())
         );
+    }
+
+    private RetrievalController.CompareModeResponse compareModeResponse(
+        List<SearchService.SearchableChunk> searchableChunks,
+        String query,
+        ResolvedRetrievalSettings settings
+    ) {
+        List<SearchService.SearchMatch> matches = searchService.search(searchableChunks, query, settings.toSearchOptions());
+        List<RetrievalController.SearchHit> hits = toSearchHits(matches, settings.snippetLength());
+        return new RetrievalController.CompareModeResponse(hits, hits.size());
+    }
+
+    private RetrievalController.CompareModeResponse emptyCompareModeResponse() {
+        return new RetrievalController.CompareModeResponse(List.of(), 0);
+    }
+
+    private List<RetrievalController.SearchHit> toSearchHits(List<SearchService.SearchMatch> matches, int snippetLength) {
+        return matches.stream().map(match -> {
+            SearchService.SearchableChunk chunk = match.chunk();
+            String text = chunk.text() == null ? "" : chunk.text();
+            String snippet = text.length() > snippetLength ? text.substring(0, snippetLength) : text;
+            return new RetrievalController.SearchHit(
+                chunk.id(), chunk.documentId(), chunk.sourceId(), chunk.title(), chunk.titlePath(), snippet,
+                match.score(), match.lexicalScore(), match.semanticScore(), match.fusionScore(), chunk.pageFrom(), chunk.pageTo()
+            );
+        }).toList();
     }
 
     public PageResponse<ProfileController.ProfileSummary> listIndexProfiles(int page, int pageSize) {
@@ -618,13 +698,19 @@ public class KnowledgeServiceFacade {
             Path artifactDir = storageManager.artifactDir(sourceId, documentId);
             storageManager.writeString(artifactDir.resolve("content.md"), conversion.markdown());
             List<ChunkingService.ChunkDraft> chunks = chunkingService.chunk(conversion.title(), conversion.text(), conversion.markdown());
+            List<SearchService.SearchableChunk> insertedChunks = new ArrayList<>();
             for (ChunkingService.ChunkDraft draft : chunks) {
-                chunkRepository.insert(new ChunkRepository.ChunkRecord(
+                ChunkRepository.ChunkRecord chunkRecord = new ChunkRepository.ChunkRecord(
                     Ids.newId("chk"), documentId, sourceId, draft.ordinal(), draft.title(), draft.titlePath(), draft.keywords(),
                     draft.text(), draft.markdown(), 1, 1, draft.tokenCount(), draft.textLength(), hash(draft.text() + draft.markdown()),
                     "SYSTEM_GENERATED", "system", now, now
-                ));
+                );
+                chunkRepository.insert(chunkRecord);
+                insertedChunks.add(toSearchableChunk(chunkRecord));
             }
+            Map<String, List<Double>> vectors = embeddingService.ensureChunkEmbeddings(insertedChunks);
+            lexicalIndexService.upsertChunks(insertedChunks);
+            vectorIndexService.upsertChunks(insertedChunks, vectors);
             refreshDocumentChunkStats(documentId);
             return true;
         } catch (Exception e) {
@@ -778,11 +864,165 @@ public class KnowledgeServiceFacade {
         return merged;
     }
 
+    private ResolvedRetrievalSettings resolveRetrievalSettings(
+        String retrievalProfileId,
+        Integer requestTopK,
+        RetrievalController.SearchOverride override
+    ) {
+        KnowledgeProperties.Retrieval defaults = profileBootstrapService.properties().getRetrieval();
+        Map<String, Object> profileConfig = retrievalProfileId == null
+            ? Map.of()
+            : profileRepository.findRetrievalById(retrievalProfileId).map(ProfileRepository.ProfileRecord::config).orElse(Map.of());
+
+        String mode = firstNonBlank(
+            override != null ? override.mode() : null,
+            nestedString(profileConfig, "retrieval", "mode"),
+            defaults.getMode()
+        );
+        int finalTopK = requestTopK != null
+            ? requestTopK
+            : nestedInt(profileConfig, "result", "finalTopK").orElse(defaults.getFinalTopK());
+        if (finalTopK <= 0 || finalTopK > defaults.getMaxTopK()) {
+            throw new IllegalStateException("Invalid topK: " + finalTopK);
+        }
+
+        int lexicalTopK = override != null && override.lexicalTopK() != null
+            ? override.lexicalTopK()
+            : nestedInt(profileConfig, "retrieval", "lexicalTopK").orElse(defaults.getLexicalTopK());
+        int semanticTopK = override != null && override.semanticTopK() != null
+            ? override.semanticTopK()
+            : nestedInt(profileConfig, "retrieval", "semanticTopK").orElse(defaults.getSemanticTopK());
+        int rrfK = override != null && override.rrfK() != null
+            ? override.rrfK()
+            : nestedInt(profileConfig, "retrieval", "rrfK").orElse(defaults.getRrfK());
+        Double scoreThreshold = override != null ? override.scoreThreshold() : null;
+        int snippetLength = override != null && override.snippetLength() != null
+            ? override.snippetLength()
+            : nestedInt(profileConfig, "result", "snippetLength").orElse(defaults.getSnippetLength());
+
+        return new ResolvedRetrievalSettings(
+            mode == null ? "hybrid" : mode,
+            Math.max(lexicalTopK, finalTopK),
+            Math.max(semanticTopK, finalTopK),
+            finalTopK,
+            Math.max(rrfK, 1),
+            scoreThreshold != null ? clamp(scoreThreshold) : null,
+            Math.max(snippetLength, 1)
+        );
+    }
+
+    private String resolveSearchRetrievalProfileId(String explicitRetrievalProfileId, List<String> sourceIds) {
+        if (explicitRetrievalProfileId != null && !explicitRetrievalProfileId.isBlank()) {
+            return explicitRetrievalProfileId;
+        }
+        if (sourceIds != null && sourceIds.size() == 1) {
+            return sourceRepository.findById(sourceIds.get(0))
+                .map(SourceRepository.SourceRecord::retrievalProfileId)
+                .orElse(profileBootstrapService.defaultRetrievalProfileId());
+        }
+        return profileBootstrapService.defaultRetrievalProfileId();
+    }
+
+    private List<String> normalizeCompareModes(List<String> modes) {
+        List<String> normalized = modes == null
+            ? List.of()
+            : modes.stream()
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .map(String::toLowerCase)
+                .filter(mode -> mode.equals("hybrid") || mode.equals("semantic") || mode.equals("lexical"))
+                .distinct()
+                .toList();
+        if (!normalized.isEmpty()) {
+            return normalized;
+        }
+        return List.of("hybrid", "semantic", "lexical");
+    }
+
+    private Optional<Integer> nestedInt(Map<String, Object> root, String parentKey, String key) {
+        Object value = nestedValue(root, parentKey, key);
+        if (value instanceof Number number) {
+            return Optional.of(number.intValue());
+        }
+        return Optional.empty();
+    }
+
+    private Optional<Double> nestedDouble(Map<String, Object> root, String parentKey, String key) {
+        Object value = nestedValue(root, parentKey, key);
+        if (value instanceof Number number) {
+            return Optional.of(number.doubleValue());
+        }
+        return Optional.empty();
+    }
+
+    private String nestedString(Map<String, Object> root, String parentKey, String key) {
+        Object value = nestedValue(root, parentKey, key);
+        return value instanceof String string && StringUtils.hasText(string) ? string : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object nestedValue(Map<String, Object> root, String parentKey, String key) {
+        if (root == null || root.isEmpty()) {
+            return null;
+        }
+        Object nested = root.get(parentKey);
+        if (!(nested instanceof Map<?, ?> nestedMap)) {
+            return null;
+        }
+        return ((Map<String, Object>) nestedMap).get(key);
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private double clamp(double value) {
+        return Math.max(0, Math.min(1, value));
+    }
+
     private <T> PageResponse<T> page(List<T> items, int page, int pageSize) {
         int safePage = Math.max(page, 1);
         int safePageSize = Math.max(pageSize, 1);
         int from = Math.min((safePage - 1) * safePageSize, items.size());
         int to = Math.min(from + safePageSize, items.size());
         return new PageResponse<>(items.subList(from, to), safePage, safePageSize, items.size());
+    }
+
+    private record ResolvedRetrievalSettings(
+        String mode,
+        int lexicalTopK,
+        int semanticTopK,
+        int finalTopK,
+        int rrfK,
+        Double scoreThreshold,
+        int snippetLength
+    ) {
+        private SearchService.SearchOptions toSearchOptions() {
+            return new SearchService.SearchOptions(
+                mode,
+                lexicalTopK,
+                semanticTopK,
+                finalTopK,
+                rrfK,
+                scoreThreshold
+            );
+        }
+
+        private ResolvedRetrievalSettings withMode(String nextMode, int nextFinalTopK, Double nextScoreThreshold) {
+            return new ResolvedRetrievalSettings(
+                nextMode,
+                Math.max(lexicalTopK, nextFinalTopK),
+                Math.max(semanticTopK, nextFinalTopK),
+                nextFinalTopK,
+                rrfK,
+                nextScoreThreshold,
+                snippetLength
+            );
+        }
     }
 }

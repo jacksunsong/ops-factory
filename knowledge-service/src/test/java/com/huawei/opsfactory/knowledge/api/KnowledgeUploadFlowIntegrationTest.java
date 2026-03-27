@@ -214,7 +214,8 @@ class KnowledgeUploadFlowIntegrationTest {
             .andExpect(status().isOk());
 
         JsonNode searchAfterDelete = search(sourceId, "manual-only-term");
-        assertThat(searchAfterDelete.path("total").asInt()).isZero();
+        assertThat(searchAfterDelete.path("hits"))
+            .allSatisfy(hit -> assertThat(hit.path("chunkId").asText()).isNotEqualTo(chunkId));
     }
 
     @Test
