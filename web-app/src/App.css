@@ -1398,8 +1398,23 @@ textarea {
 .home-title {
     font-size: 3rem;
     font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3em;
+    flex-wrap: wrap;
     margin-bottom: var(--spacing-4);
     color: var(--color-text-primary);
+}
+
+.home-title-icon {
+    width: 0.95em;
+    height: 0.95em;
+    display: block;
+    color: #ff6b4a;
+    filter: drop-shadow(0 6px 12px rgba(255, 107, 74, 0.22));
+    flex-shrink: 0;
+    object-fit: contain;
 }
 
 .home-description {
