@@ -6,6 +6,7 @@ import { useToast } from '../contexts/ToastContext'
 import ChatInput from '../components/ChatInput'
 import { PROMPT_TEMPLATES, CATEGORIES, type PromptTemplateConfig } from '../config/promptTemplates'
 import { iconMap } from '../config/iconMap'
+import opsclawIcon from '../assets/opsclaw.svg'
 
 interface ModelInfo {
     provider: string
@@ -88,7 +89,16 @@ export default function Home() {
     return (
         <div className="home-container">
             <div className="home-hero">
-                <h1 className="home-title">{t('home.greeting')}</h1>
+                <h1 className="home-title">
+                    <span>{t('home.greeting')}</span>
+                    <img
+                        src={opsclawIcon}
+                        alt=""
+                        aria-hidden="true"
+                        className="home-title-icon"
+                        data-testid="home-title-icon"
+                    />
+                </h1>
                 <p className="home-description">
                     {t('home.description')}
                 </p>
