@@ -5,6 +5,7 @@ import { useToast } from '../../contexts/ToastContext'
 import KnowledgeChunkDetailModal from './KnowledgeChunkDetailModal'
 import type {
     KnowledgeCapabilities,
+    KnowledgeChunkDetail,
     KnowledgeChunkMutationResponse,
     KnowledgeDefaults,
     KnowledgeDocumentSummary,
@@ -48,21 +49,6 @@ interface RetrievalCompareResponse {
     hybrid: RetrievalCompareModeResponse
     semantic: RetrievalCompareModeResponse
     lexical: RetrievalCompareModeResponse
-}
-
-interface RetrievalFetchResponse {
-    chunkId: string
-    documentId: string
-    sourceId: string
-    title: string
-    titlePath: string[]
-    text: string
-    markdown: string
-    keywords: string[]
-    pageFrom: number | null
-    pageTo: number | null
-    previousChunkId: string | null
-    nextChunkId: string | null
 }
 
 interface RetrievalHistoryEntry {
@@ -157,6 +143,32 @@ function clamp(value: number, min: number, max: number): number {
 
 function formatScore(value: number): string {
     return value.toFixed(2)
+}
+
+function formatDateTime(value?: string | null): string {
+    if (!value) return '—'
+
+    return new Date(value).toLocaleString(undefined, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+}
+
+function getChunkEditStatusLabel(
+    editStatus: string | null | undefined,
+    t: (key: string) => string
+): string {
+    switch (editStatus?.toUpperCase()) {
+    case 'USER_EDITED':
+        return t('knowledge.chunkEditStatusUserEdited')
+    case 'SYSTEM_GENERATED':
+        return t('knowledge.chunkEditStatusSystemGenerated')
+    default:
+        return editStatus || t('knowledge.statusUnknown')
+    }
 }
 
 function normalizeRetrievalMode(value: string | null | undefined): RetrievalMode | null {
@@ -729,7 +741,7 @@ function RetrievalDetailPanel({
     onClear,
 }: {
     selection: RetrievalSelection | null
-    detail: RetrievalFetchResponse | null
+    detail: KnowledgeChunkDetail | null
     loading: boolean
     error: string | null
     canEdit: boolean
@@ -761,6 +773,7 @@ function RetrievalDetailPanel({
     const { hit } = selection
     const content = detail?.text || detail?.markdown || hit.snippet || ''
     const isEditing = panelMode === 'edit'
+    const detailTitle = detail?.title?.trim() || hit.title?.trim() || t('knowledge.chunkUntitled')
     const retrievalContextItems = [
         {
             label: t('knowledge.retrievalDetailMode'),
@@ -805,6 +818,30 @@ function RetrievalDetailPanel({
         {
             label: t('knowledge.retrievalDetailPageRange'),
             value: buildPageRange(detail?.pageFrom ?? hit.pageFrom, detail?.pageTo ?? hit.pageTo, t('knowledge.notAvailable')),
+        },
+        {
+            label: t('knowledge.chunkOrdinal'),
+            value: detail?.ordinal ?? t('knowledge.notAvailable'),
+        },
+        {
+            label: t('knowledge.chunkEditStatusLabel'),
+            value: getChunkEditStatusLabel(detail?.editStatus, t),
+        },
+        {
+            label: t('knowledge.updatedAt'),
+            value: formatDateTime(detail?.updatedAt),
+        },
+        {
+            label: t('knowledge.chunkUpdatedBy'),
+            value: detail?.updatedBy || t('knowledge.notAvailable'),
+        },
+        {
+            label: t('common.tokens'),
+            value: detail?.tokenCount ?? t('knowledge.notAvailable'),
+        },
+        {
+            label: t('knowledge.chunkTextLength'),
+            value: detail?.textLength ?? t('knowledge.notAvailable'),
         },
     ]
 
@@ -886,8 +923,11 @@ function RetrievalDetailPanel({
 
     return (
         <KnowledgeChunkDetailModal
-            title={hit.documentName}
+            title={detailTitle}
             subtitle={hit.chunkId}
+            headerMeta={(
+                <span className="resource-card-tag">{hit.documentName}</span>
+            )}
             badges={[
                 `${t('knowledge.retrievalDetailMode')} ${t(getModeLabelKey(selection.mode))}`,
                 ...(selection.mode === 'hybrid' ? [] : [`${t('knowledge.retrievalModeScoreLabel')} ${formatScore(hit.displayScore)}`]),
@@ -1115,9 +1155,24 @@ export default function KnowledgeRetrievalTab({
     const [activeSearchModes, setActiveSearchModes] = useState<RetrievalMode[]>([])
     const [searchError, setSearchError] = useState<string | null>(null)
     const [selection, setSelection] = useState<RetrievalSelection | null>(null)
-    const [detail, setDetail] = useState<RetrievalFetchResponse | null>(null)
+    const [detail, setDetail] = useState<KnowledgeChunkDetail | null>(null)
     const [detailLoading, setDetailLoading] = useState(false)
     const [detailError, setDetailError] = useState<string | null>(null)
+
+    const loadChunkDetail = useCallback(async (chunkId: string): Promise<KnowledgeChunkDetail> => {
+        const response = await fetch(`${KNOWLEDGE_SERVICE_URL}/ops-knowledge/chunks/${chunkId}`)
+        const data = await response.json().catch(() => null) as KnowledgeChunkDetail | { message?: string } | null
+
+        if (!response.ok) {
+            throw new Error(
+                data && typeof data === 'object' && 'message' in data
+                    ? String(data.message || response.statusText)
+                    : response.statusText
+            )
+        }
+
+        return data as KnowledgeChunkDetail
+    }, [])
 
     useEffect(() => {
         setHistory(loadHistory(storageKey))
@@ -1447,19 +1502,10 @@ export default function KnowledgeRetrievalTab({
             setDetailError(null)
 
             try {
-                const response = await fetch(`${KNOWLEDGE_SERVICE_URL}/ops-knowledge/fetch/${selection.hit.chunkId}?includeNeighbors=true&neighborWindow=1`)
-                const data = await response.json().catch(() => null) as RetrievalFetchResponse | { message?: string } | null
-
-                if (!response.ok) {
-                    throw new Error(
-                        data && typeof data === 'object' && 'message' in data
-                            ? String(data.message || response.statusText)
-                            : response.statusText
-                    )
-                }
+                const data = await loadChunkDetail(selection.hit.chunkId)
 
                 if (!cancelled) {
-                    setDetail(data as RetrievalFetchResponse)
+                    setDetail(data)
                 }
             } catch (err) {
                 if (!cancelled) {
@@ -1478,7 +1524,7 @@ export default function KnowledgeRetrievalTab({
         return () => {
             cancelled = true
         }
-    }, [selection, t])
+    }, [loadChunkDetail, selection, t])
 
     useEffect(() => {
         if (!selection) return
@@ -1766,18 +1812,7 @@ export default function KnowledgeRetrievalTab({
                 onReload={async () => {
                     if (!selection) return
 
-                    const response = await fetch(`${KNOWLEDGE_SERVICE_URL}/ops-knowledge/fetch/${selection.hit.chunkId}?includeNeighbors=true&neighborWindow=1`)
-                    const data = await response.json().catch(() => null) as RetrievalFetchResponse | { message?: string } | null
-
-                    if (!response.ok) {
-                        throw new Error(
-                            data && typeof data === 'object' && 'message' in data
-                                ? String(data.message || response.statusText)
-                                : response.statusText
-                        )
-                    }
-
-                    setDetail(data as RetrievalFetchResponse)
+                    setDetail(await loadChunkDetail(selection.hit.chunkId))
                 }}
                 onClear={() => setSelection(null)}
             />

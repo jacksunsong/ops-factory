@@ -55,9 +55,10 @@ const baseSource = {
 
 const detailByChunkId = {
     chk_hyb_001: {
-        chunkId: 'chk_hyb_001',
+        id: 'chk_hyb_001',
         documentId: 'doc_hybrid',
         sourceId: 'src_001',
+        ordinal: 1,
         title: '混合结论',
         titlePath: ['召回评估', '混合结论'],
         text: '混合检索把语义相关和关键词命中放在一起，整体排序更均衡。',
@@ -65,13 +66,18 @@ const detailByChunkId = {
         keywords: ['hybrid', 'rank'],
         pageFrom: 6,
         pageTo: 6,
-        previousChunkId: null,
-        nextChunkId: null,
+        tokenCount: 64,
+        textLength: 23,
+        editStatus: 'SYSTEM_GENERATED',
+        updatedBy: null,
+        createdAt: '2026-03-25T10:00:00Z',
+        updatedAt: '2026-03-25T10:05:00Z',
     },
     chk_sem_001: {
-        chunkId: 'chk_sem_001',
+        id: 'chk_sem_001',
         documentId: 'doc_semantic',
         sourceId: 'src_001',
+        ordinal: 2,
         title: '语义覆盖',
         titlePath: ['召回评估', '语义覆盖'],
         text: '向量召回覆盖更多语义近邻段落，适合问题表达不稳定的场景。',
@@ -79,13 +85,18 @@ const detailByChunkId = {
         keywords: ['semantic', 'embedding'],
         pageFrom: 3,
         pageTo: 3,
-        previousChunkId: null,
-        nextChunkId: null,
+        tokenCount: 58,
+        textLength: 24,
+        editStatus: 'SYSTEM_GENERATED',
+        updatedBy: null,
+        createdAt: '2026-03-25T10:00:00Z',
+        updatedAt: '2026-03-25T10:05:00Z',
     },
     chk_lex_001: {
-        chunkId: 'chk_lex_001',
+        id: 'chk_lex_001',
         documentId: 'doc_lexical',
         sourceId: 'src_001',
+        ordinal: 3,
         title: '精确命中',
         titlePath: ['召回评估', '精确命中'],
         text: '关键词检索优先命中包含 Qwen3-32B 精确词项的结论段落。该段落适合验证词项召回。',
@@ -93,8 +104,12 @@ const detailByChunkId = {
         keywords: ['Qwen3-32B', 'keyword'],
         pageFrom: 8,
         pageTo: 8,
-        previousChunkId: null,
-        nextChunkId: null,
+        tokenCount: 72,
+        textLength: 39,
+        editStatus: 'SYSTEM_GENERATED',
+        updatedBy: null,
+        createdAt: '2026-03-25T10:00:00Z',
+        updatedAt: '2026-03-25T10:05:00Z',
     },
 } as const
 
@@ -119,6 +134,7 @@ describe('KnowledgeConfigure retrieval tab', () => {
 
         vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
             const url = String(input)
+            const parsedUrl = new URL(url, 'http://localhost')
             const method = init?.method ?? 'GET'
 
             if (method === 'GET' && url.endsWith('/ops-knowledge/sources/src_001')) {
@@ -254,9 +270,8 @@ describe('KnowledgeConfigure retrieval tab', () => {
                 return { ok: true, json: async () => ({ query: body.query, total: 1, hits: [hit] }) } as Response
             }
 
-            if (method === 'GET' && url.includes('/ops-knowledge/fetch/')) {
-                const match = url.match(/\/ops-knowledge\/fetch\/([^?]+)/)
-                const chunkId = match?.[1] as keyof typeof detailByChunkId | undefined
+            if (method === 'GET' && url.includes('/ops-knowledge/chunks/')) {
+                const chunkId = parsedUrl.pathname.split('/').at(-1) as keyof typeof detailByChunkId | undefined
                 return { ok: true, json: async () => (chunkId ? detailByChunkId[chunkId] : detailByChunkId.chk_hyb_001) } as Response
             }
 
