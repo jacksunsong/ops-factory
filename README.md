@@ -42,7 +42,7 @@ Web App (React/Vite :5173)
 Gateway (Node.js :3000)
     |
     +-- InstanceManager: spawns goosed processes per user on dynamic ports
-    |     +-- "sys" instances (always running, handles schedules)
+    |     +-- "admin" instances (always running, handles schedules)
     |     +-- per-user instances (spawned on demand, idle-reaped after 15 min)
     |
     +-- Routes: /agents/:id/agent/* -> proxy to user's goosed instance
@@ -51,7 +51,16 @@ Gateway (Node.js :3000)
     +-- Routes: /agents/:id/config -> agent config CRUD
 ```
 
-See [docs/architecture.md](./docs/architecture.md) for the full architecture documentation (in Chinese).
+See [docs/architecture/overview.md](./docs/architecture/overview.md) for the architecture overview and [docs/README.md](./docs/README.md) for the full documentation map.
+
+## Documentation
+
+Use these documents as the main entry points for collaboration:
+
+- [AGENTS.md](./AGENTS.md): short contributor rules and cross-team constraints
+- [docs/README.md](./docs/README.md): documentation map
+- [docs/architecture/overview.md](./docs/architecture/overview.md): system boundaries and module responsibilities
+- [docs/development/review-checklist.md](./docs/development/review-checklist.md): pull request and review checklist
 
 ## Components
 
@@ -187,6 +196,7 @@ Agent-specific configuration (LLM provider, model, extensions) remains in `gatew
 | ----- | ------- | ------- | -------- |
 | `gatewayUrl` | `GATEWAY_URL` | — | **Yes** |
 | `gatewaySecretKey` | `GATEWAY_SECRET_KEY` | — | **Yes** |
+| `knowledgeServiceUrl` | `KNOWLEDGE_SERVICE_URL` | `http://127.0.0.1:8092` | |
 | `port` | `VITE_PORT` | `5173` | |
 
 ### Prometheus Exporter (`prometheus-exporter/config.yaml`)

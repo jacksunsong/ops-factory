@@ -110,7 +110,7 @@ function decodeFileName(name: string): string {
     }
 }
 
-export default function FilePreview() {
+export default function FilePreview({ embedded = false }: { embedded?: boolean }) {
     const { t } = useTranslation()
     const { showToast } = useToast()
     const { previewFile, isLoading, error, closePreview } = usePreview()
@@ -138,6 +138,12 @@ export default function FilePreview() {
 
     const getDownloadUrl = useCallback(() => {
         if (!previewFile) return ''
+        if (previewFile.downloadUrl) {
+            return previewFile.downloadUrl
+        }
+        if (!previewFile.agentId) {
+            return ''
+        }
         let url = `${GATEWAY_URL}/agents/${previewFile.agentId}/files/${encodeURIComponent(previewFile.path)}?key=${GATEWAY_SECRET_KEY}`
         if (userId) url += `&uid=${encodeURIComponent(userId)}`
         return url
@@ -171,11 +177,10 @@ export default function FilePreview() {
     const previewKind = previewFile?.previewKind
     const canToggleSource = previewKind === 'html' || previewKind === 'markdown'
     const canCopyContent = !!previewFile?.content
+    const canDownload = !!getDownloadUrl()
     const displayType = previewFile ? inferFileType(previewFile) : ''
 
-    return (
-        <div className={`file-preview-panel ${isOpen ? 'open' : ''}`}>
-            {isOpen && previewFile && (
+    const content = isOpen && previewFile ? (
                 <>
                     <div className="file-preview-header">
                         <div className="file-preview-title">
@@ -223,18 +228,20 @@ export default function FilePreview() {
                                     )}
                                 </button>
                             )}
-                            <a
-                                href={getDownloadUrl() + '&download=true'}
-                                className="file-preview-btn"
-                                title="Download"
-                                download
-                            >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                    <polyline points="7 10 12 15 17 10" />
-                                    <line x1="12" y1="15" x2="12" y2="3" />
-                                </svg>
-                            </a>
+                            {canDownload && (
+                                <a
+                                    href={previewFile.downloadUrl ? getDownloadUrl() : `${getDownloadUrl()}&download=true`}
+                                    className="file-preview-btn"
+                                    title="Download"
+                                    download
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                        <polyline points="7 10 12 15 17 10" />
+                                        <line x1="12" y1="15" x2="12" y2="3" />
+                                    </svg>
+                                </a>
+                            )}
                             <button
                                 className="file-preview-btn file-preview-close"
                                 onClick={closePreview}
@@ -303,7 +310,7 @@ export default function FilePreview() {
                                     <OnlyOfficePreview
                                         name={previewFile.name}
                                         path={previewFile.path}
-                                        agentId={previewFile.agentId}
+                                        agentId={previewFile.agentId || ''}
                                         type={previewFile.type}
                                         onlyofficeUrl={previewFile.onlyofficeUrl}
                                         fileBaseUrl={previewFile.fileBaseUrl}
@@ -366,7 +373,13 @@ export default function FilePreview() {
                         )}
                     </div>
                 </>
-            )}
+    ) : null
+
+    if (embedded) return content
+
+    return (
+        <div className={`file-preview-panel ${isOpen ? 'open' : ''}`}>
+            {content}
         </div>
     )
 }

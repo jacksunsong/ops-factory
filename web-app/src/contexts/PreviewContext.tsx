@@ -14,7 +14,8 @@ export interface PreviewFile {
     name: string
     path: string
     type: string
-    agentId: string
+    agentId?: string
+    downloadUrl?: string
     previewKind: PreviewKind
     content?: string
     tableData?: string[][]
@@ -22,12 +23,23 @@ export interface PreviewFile {
     fileBaseUrl?: string
 }
 
-interface PreviewRequest {
+interface AgentPreviewRequest {
     name: string
     path: string
     type: string
     agentId: string
 }
+
+interface DirectPreviewRequest {
+    name: string
+    path: string
+    type: string
+    content: string
+    downloadUrl?: string
+    previewKind?: PreviewKind
+}
+
+type PreviewRequest = AgentPreviewRequest | DirectPreviewRequest
 
 interface PreviewContextType {
     previewFile: PreviewFile | null
@@ -79,6 +91,24 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
         setError(null)
 
         try {
+            if ('content' in file) {
+                const normalizedType = inferFileType(file)
+                const previewKind = file.previewKind ?? getPreviewKind(file)
+                if (previewKind === 'unsupported') {
+                    throw new Error(`Unsupported preview type: ${normalizedType}`)
+                }
+
+                setPreviewFile({
+                    name: file.name,
+                    path: file.path,
+                    type: normalizedType,
+                    content: file.content,
+                    downloadUrl: file.downloadUrl,
+                    previewKind,
+                })
+                return
+            }
+
             const normalizedType = inferFileType(file)
             const previewKind = getPreviewKind(file)
             if (previewKind === 'unsupported') {

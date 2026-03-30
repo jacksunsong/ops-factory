@@ -8,7 +8,7 @@ import { useChat, convertBackendMessage } from '../hooks/useChat'
 import MessageList from '../components/MessageList'
 import ChatInput from '../components/ChatInput'
 import type { Session, ImageData } from '@goosed/sdk'
-import type { AttachedFile } from '../components/Message'
+import type { AttachedFile } from '../types/message'
 import { isScheduledSession } from '../config/runtime'
 
 interface LocationState {
@@ -213,7 +213,8 @@ export default function Chat() {
         for (let i = messages.length - 1; i >= 0; i--) {
             const msg = messages[i]
             if (msg.role === 'user') {
-                const text = msg.content.find(c => c.type === 'text')?.text
+                const textContent = msg.content.find(c => c.type === 'text')
+                const text = textContent && 'text' in textContent ? textContent.text : undefined
                 if (text) {
                     sendMessage(text)
                     return

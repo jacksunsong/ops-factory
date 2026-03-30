@@ -12,7 +12,47 @@ export interface TextContent {
     text: string;
 }
 
-export interface MessageContent {
+export interface ImageContent {
+    type: 'image';
+    data: string;
+    mimeType: string;
+}
+
+export interface ToolRequestContent {
+    type: 'toolRequest';
+    id?: string;
+    toolCall?: Record<string, unknown>;
+}
+
+export interface ToolResponseContent {
+    type: 'toolResponse';
+    id?: string;
+    toolResult?: Record<string, unknown>;
+}
+
+export interface ReasoningContent {
+    type: 'reasoning';
+    text: string;
+}
+
+export interface ThinkingContent {
+    type: 'thinking';
+    thinking: string;
+    signature?: string;
+}
+
+export interface RedactedThinkingContent {
+    type: 'redactedThinking';
+    data: string;
+}
+
+export interface SystemNotificationContent {
+    type: 'systemNotification';
+    notificationType?: string;
+    msg?: string;
+}
+
+export interface GenericMessageContent {
     type: string;
     text?: string;
     data?: string;
@@ -20,7 +60,22 @@ export interface MessageContent {
     id?: string;
     toolCall?: Record<string, unknown>;
     toolResult?: Record<string, unknown>;
+    notificationType?: string;
+    msg?: string;
+    thinking?: string;
+    signature?: string;
 }
+
+export type MessageContent =
+    | TextContent
+    | ImageContent
+    | ToolRequestContent
+    | ToolResponseContent
+    | ReasoningContent
+    | ThinkingContent
+    | RedactedThinkingContent
+    | SystemNotificationContent
+    | GenericMessageContent;
 
 export interface Message {
     id?: string;

@@ -5,14 +5,18 @@ import { useGoosed } from '../contexts/GoosedContext'
 import { useUser } from '../contexts/UserContext'
 import { useMcp } from '../hooks/useMcp'
 import { GATEWAY_URL, gatewayHeaders, slugify } from '../config/runtime'
+import ResourceCard from '../components/ResourceCard'
 
 const DEFAULT_LLM = { provider: 'openai', model: 'qwen/qwen3.5-35b-a3b' }
 
-function formatModel(provider?: string, model?: string, unknownLabel = 'Unknown'): string {
-    if (provider && model) return `${model} (${provider})`
+function getModelSummary(model?: string, provider?: string, unknownLabel = 'Unknown'): string {
     if (model) return model
     if (provider) return provider
     return unknownLabel
+}
+
+function shouldShowProviderTag(provider?: string, model?: string): boolean {
+    return Boolean(provider && model && provider !== model)
 }
 
 // Component to fetch and display MCP count for an agent
@@ -247,13 +251,13 @@ export default function Agents() {
     }, [agents])
 
     return (
-        <div className="page-container agents-page">
+        <div className="page-container sidebar-top-page resource-page">
             <div className="page-header">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <h1 className="page-title">{t('agents.title')}</h1>
                     {isAdmin && (
                         <button
-                            className="action-btn-primary"
+                            className="action-btn-primary btn btn-primary"
                             onClick={() => setShowCreateModal(true)}
                         >
                             {t('agents.createAgent')}
@@ -280,60 +284,51 @@ export default function Agents() {
                     <p className="empty-state-description">{t('agents.noAgentsHint')}</p>
                 </div>
             ) : (
-                <div className="agents-grid">
+                <div className="resource-grid">
                     {agents.map(agent => {
                         const skills = agentSkillsMap.get(agent.id) || []
+                        const modelSummary = getModelSummary(agent.model, agent.provider, t('agents.unknown'))
                         return (
-                            <div key={agent.id} className="agent-card">
-                                <div className="agent-card-header">
-                                    <div className="agent-card-title">
-                                        <span className={`status-dot status-${agent.status}`}></span>
-                                        <div>
-                                            <div className="agent-name">{agent.name}</div>
-                                        </div>
+                            <ResourceCard
+                                key={agent.id}
+                                title={agent.name}
+                                summary={(
+                                    <div className="resource-card-summary-stack">
+                                        {shouldShowProviderTag(agent.provider, agent.model) && (
+                                            <div className="resource-card-tags">
+                                                <span className="resource-card-tag" title={agent.provider}>
+                                                    {agent.provider}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <p className="resource-card-summary-text resource-card-summary-code" title={modelSummary}>
+                                            {modelSummary}
+                                        </p>
                                     </div>
-                                    <span className={`status-pill status-${agent.status}`}>{agent.status}</span>
-                                </div>
-
-                                <div className="agent-meta">
-                                    <div className="agent-meta-row">
-                                        <span className="agent-meta-label">{t('agents.model')}</span>
-                                        <span className="agent-meta-value">{formatModel(agent.provider, agent.model, t('agents.unknown'))}</span>
-                                    </div>
-                                </div>
-
-                                <div className="agent-extensions">
-                                    <div className="agent-meta-row">
-                                        <span className="agent-meta-label">{t('agents.skills')}</span>
-                                        <span className={`agent-meta-value ${skills.length === 0 ? 'is-empty' : ''}`}>
-                                            {skills.length}
-                                        </span>
-                                    </div>
-                                    <div className="agent-meta-row">
-                                        <span className="agent-meta-label">{t('agents.mcp')}</span>
-                                        <span className="agent-meta-value">
-                                            <McpCount agentId={agent.id} />
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {isAdmin && <div className="agent-skill-cta">
-                                    <button
-                                        type="button"
-                                        className="agent-skill-button"
-                                        onClick={() => navigate(`/agents/${agent.id}/configure`)}
-                                    >
-                                        {t('agents.configure')}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="agent-skill-button agent-delete-button"
-                                        onClick={() => setDeleteTarget({ id: agent.id, name: agent.name })}
-                                    >
-                                        {t('agents.deleteAgent')}
-                                    </button>
-                                </div>}
-                            </div>
+                                )}
+                                metrics={[
+                                    { label: t('agents.skills'), value: skills.length },
+                                    { label: t('agents.mcp'), value: <McpCount agentId={agent.id} /> },
+                                ]}
+                                footer={isAdmin ? (
+                                    <>
+                                        <button
+                                            type="button"
+                                            className="resource-card-danger-action"
+                                            onClick={() => setDeleteTarget({ id: agent.id, name: agent.name })}
+                                        >
+                                            {t('agents.deleteAgent')}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="resource-card-primary-action"
+                                            onClick={() => navigate(`/agents/${agent.id}/configure`)}
+                                        >
+                                            {t('agents.configure')}
+                                        </button>
+                                    </>
+                                ) : undefined}
+                            />
                         )
                     })}
                 </div>

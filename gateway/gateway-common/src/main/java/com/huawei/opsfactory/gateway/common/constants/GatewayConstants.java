@@ -12,7 +12,7 @@ public final class GatewayConstants {
     public static final String QUERY_UID = "uid";
 
     // Default users
-    public static final String SYS_USER = "sys";
+    public static final String SYSTEM_USER = "admin";
     public static final String DEFAULT_USER = "__default__";
 
     // Process

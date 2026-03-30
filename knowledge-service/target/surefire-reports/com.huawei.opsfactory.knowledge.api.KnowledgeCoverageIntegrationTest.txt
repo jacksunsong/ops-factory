@@ -1,0 +1,56 @@
+-------------------------------------------------------------------------------
+Test set: com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 14, Failures: 1, Errors: 3, Skipped: 0, Time elapsed: 14.80 s <<< FAILURE! -- in com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest
+com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.shouldCoverRetrievalExplainAndContentTypeFilters -- Time elapsed: 2.326 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.documentIdByName(KnowledgeCoverageIntegrationTest.java:1145)
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.shouldCoverRetrievalExplainAndContentTypeFilters(KnowledgeCoverageIntegrationTest.java:152)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.shouldCoverChunkCrudReorderReindexAndPersistence -- Time elapsed: 0.740 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.documentIdByName(KnowledgeCoverageIntegrationTest.java:1145)
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.shouldCoverChunkCrudReorderReindexAndPersistence(KnowledgeCoverageIntegrationTest.java:809)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.shouldCoverSupportedFileMatrixAndArtifacts -- Time elapsed: 0.728 s <<< FAILURE!
+java.lang.AssertionError: 
+
+Expecting actual:
+  ["Major_Incident_Analysis_INC20250115001_EN.docx",
+    "sample-knowledge.pdf",
+    "Comprehensive_Quality_Report.xlsx",
+    "Qwen3-32+æ¨¡åæå¡æ§è½æµè¯ç»æï¼Agentåºæ¯ï¼.pdf",
+    "SLA_Violation_Analysis_Report_CN.html"]
+to contain exactly in any order:
+  ["Major_Incident_Analysis_INC20250115001_EN.docx",
+    "Qwen3-32+模型服务性能测试结果（Agent场景）.pdf",
+    "sample-knowledge.pdf",
+    "Comprehensive_Quality_Report.xlsx",
+    "SLA_Violation_Analysis_Report_CN.html"]
+elements not found:
+  ["Qwen3-32+模型服务性能测试结果（Agent场景）.pdf"]
+and elements not expected:
+  ["Qwen3-32+æ¨¡åæå¡æ§è½æµè¯ç»æï¼Agentåºæ¯ï¼.pdf"]
+
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.shouldCoverSupportedFileMatrixAndArtifacts(KnowledgeCoverageIntegrationTest.java:86)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.shouldReturnOnlyRequestedCompareModesAndFilterByDocumentAndContentType -- Time elapsed: 0.585 s <<< ERROR!
+java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.documentIdByName(KnowledgeCoverageIntegrationTest.java:1145)
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.shouldReturnOnlyRequestedCompareModesAndFilterByDocumentAndContentType(KnowledgeCoverageIntegrationTest.java:294)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+

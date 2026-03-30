@@ -1,3 +1,4 @@
 gatewayUrl: "https://192.168.200.136:38443"
 gatewaySecretKey: "test"
+knowledgeServiceUrl: "http://127.0.0.1:8092"
 port: 5173

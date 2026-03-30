@@ -6,7 +6,7 @@ gateway:
   secret-key: ${GATEWAY_SECRET_KEY:test}
   cors-origin: ${CORS_ORIGIN:http://127.0.0.1:5173}
   goosed-bin: ${GOOSED_BIN:goosed}
-  goosed-tls: ${GOOSED_TLS:false}
+  goose-tls: ${GOOSE_TLS:true}
 
   paths:
     project-root: ${PROJECT_ROOT:..}
@@ -22,7 +22,7 @@ gateway:
     max-image-size-mb: ${MAX_IMAGE_SIZE_MB:20}
 
   limits:
-    max-instances-per-user: ${MAX_INSTANCES_PER_USER:5}
+    max-instances-per-user: ${MAX_INSTANCES_PER_USER:20}
     max-instances-global: ${MAX_INSTANCES_GLOBAL:50}
 
   sse:

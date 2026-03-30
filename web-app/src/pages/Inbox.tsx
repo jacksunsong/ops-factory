@@ -26,7 +26,7 @@ export default function Inbox() {
     }
 
     return (
-        <div className="page-container inbox-page">
+        <div className="page-container sidebar-top-page inbox-page">
             <header className="page-header">
                 <h1 className="page-title">{t('inbox.title')}</h1>
                 <p className="page-subtitle">{t('inbox.subtitle')}</p>

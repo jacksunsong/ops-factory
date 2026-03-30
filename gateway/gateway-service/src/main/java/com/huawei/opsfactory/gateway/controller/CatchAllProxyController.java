@@ -54,8 +54,12 @@ public class CatchAllProxyController {
         if (parts.length < 4) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
+
         String agentId = parts[2];
         String remainderPath = "/" + parts[3];
+        if (remainderPath.isEmpty()) {
+            remainderPath = "/";
+        }
         String proxyTarget = remainderPath;
         if (query != null && !query.isEmpty()) {
             proxyTarget = remainderPath + "?" + query;

@@ -37,6 +37,7 @@ interface ToolCallDisplayProps {
     result?: unknown
     isError?: boolean
     isPending?: boolean
+    embedded?: boolean
 }
 
 // Extract content items from tool result, filtering by audience
@@ -71,13 +72,17 @@ export default function ToolCallDisplay({
     args,
     result,
     isError = false,
-    isPending = false
+    isPending = false,
+    embedded = false
 }: ToolCallDisplayProps) {
     const [showDetails, setShowDetails] = useState(false)
     const [showOutput, setShowOutput] = useState(false)
 
     const statusClass = isPending ? 'pending' : isError ? 'error' : 'success'
     const displayName = formatToolName(name)
+    const formattedResult = result !== undefined ? formatResult(result) : ''
+    const resultLineCount = formattedResult ? formattedResult.split('\n').length : 0
+    const isCompactOutput = formattedResult.length > 0 && formattedResult.length <= 220 && resultLineCount <= 4
 
     // Extract UI resources from result
     const uiResources = result !== undefined ? extractUIResources(result) : []
@@ -85,7 +90,7 @@ export default function ToolCallDisplay({
 
     return (
         <>
-            <div className="tool-call">
+            <div className={`tool-call tool-call-${statusClass}${embedded ? ' embedded' : ''}`}>
                 {/* Main Header - Tool Name (always visible, no collapse) */}
                 <div className="tool-call-header">
                     <span className={`tool-call-indicator ${statusClass}`} aria-hidden="true" />
@@ -109,7 +114,7 @@ export default function ToolCallDisplay({
                                 >
                                     <polyline points="9 18 15 12 9 6" />
                                 </svg>
-                                <span className="tool-call-section-title">Tool Details</span>
+                                <span className="tool-call-section-title">Tool details</span>
                             </div>
                             {showDetails && (
                                 <div className="tool-call-section-content">
@@ -146,8 +151,8 @@ export default function ToolCallDisplay({
                             </div>
                             {showOutput && (
                                 <div className="tool-call-section-content">
-                                    <pre className="tool-call-output">
-                                        {formatResult(result)}
+                                    <pre className={`tool-call-output${isCompactOutput ? ' compact' : ''}${isError ? ' error' : ''}`}>
+                                        {formattedResult}
                                     </pre>
                                 </div>
                             )}

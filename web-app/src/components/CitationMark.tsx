@@ -1,33 +1,86 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { KNOWLEDGE_SERVICE_URL } from '../config/runtime'
 import type { Citation } from '../utils/citationParser'
 
 interface CitationMarkProps {
     citation: Citation
 }
 
+interface CardStyle {
+    left: number
+    top: number
+    width: number
+}
+
+const sourceNameCache = new Map<string, string>()
+
 export default function CitationMark({ citation }: CitationMarkProps) {
     const [showCard, setShowCard] = useState(false)
     const [cardPosition, setCardPosition] = useState<'above' | 'below'>('above')
+    const [cardStyle, setCardStyle] = useState<CardStyle | null>(null)
+    const [sourceName, setSourceName] = useState<string | null>(citation.sourceId || null)
     const markRef = useRef<HTMLSpanElement>(null)
     const cardRef = useRef<HTMLDivElement>(null)
     const showTimeout = useRef<ReturnType<typeof setTimeout>>()
     const hideTimeout = useRef<ReturnType<typeof setTimeout>>()
 
+    const updateCardPosition = useCallback((cardHeight = 0) => {
+        if (!markRef.current) return
+
+        const rect = markRef.current.getBoundingClientRect()
+        const viewportPadding = 16
+        const gap = 8
+        const cardWidth = Math.min(360, window.innerWidth - viewportPadding * 2)
+        const centerLeft = rect.left + rect.width / 2 - cardWidth / 2
+        const left = Math.max(viewportPadding, Math.min(centerLeft, window.innerWidth - viewportPadding - cardWidth))
+        const spaceAbove = rect.top - viewportPadding
+        const spaceBelow = window.innerHeight - rect.bottom - viewportPadding
+        const shouldShowBelow = cardHeight > 0
+            ? (spaceAbove < cardHeight + gap && spaceBelow > spaceAbove)
+            : rect.top < 200
+        const top = shouldShowBelow
+            ? Math.min(rect.bottom + gap, window.innerHeight - viewportPadding - Math.max(cardHeight, 120))
+            : Math.max(viewportPadding, rect.top - gap - cardHeight)
+
+        setCardPosition(shouldShowBelow ? 'below' : 'above')
+        setCardStyle({
+            left,
+            top,
+            width: cardWidth,
+        })
+    }, [])
+
     const show = useCallback(() => {
         clearTimeout(hideTimeout.current)
         showTimeout.current = setTimeout(() => {
-            if (markRef.current) {
-                const rect = markRef.current.getBoundingClientRect()
-                setCardPosition(rect.top < 200 ? 'below' : 'above')
-            }
+            updateCardPosition()
             setShowCard(true)
         }, 200)
-    }, [])
+    }, [updateCardPosition])
 
     const hide = useCallback(() => {
         clearTimeout(showTimeout.current)
         hideTimeout.current = setTimeout(() => setShowCard(false), 150)
     }, [])
+
+    useEffect(() => {
+        if (!showCard) return
+
+        const handleViewportChange = () => updateCardPosition(cardRef.current?.offsetHeight || 0)
+        window.addEventListener('scroll', handleViewportChange, true)
+        window.addEventListener('resize', handleViewportChange)
+
+        return () => {
+            window.removeEventListener('scroll', handleViewportChange, true)
+            window.removeEventListener('resize', handleViewportChange)
+        }
+    }, [showCard, updateCardPosition])
+
+    useLayoutEffect(() => {
+        if (!showCard || !cardRef.current) return
+        updateCardPosition(cardRef.current.offsetHeight)
+    }, [showCard, citation, updateCardPosition])
 
     useEffect(() => {
         return () => {
@@ -36,28 +89,57 @@ export default function CitationMark({ citation }: CitationMarkProps) {
         }
     }, [])
 
-    const handleClick = () => {
-        if (citation.url) {
-            window.open(citation.url, '_blank', 'noopener,noreferrer')
+    useEffect(() => {
+        if (!citation.sourceId) {
+            setSourceName(null)
+            return
         }
-    }
+
+        const cached = sourceNameCache.get(citation.sourceId)
+        if (cached) {
+            setSourceName(cached)
+            return
+        }
+
+        let cancelled = false
+        fetch(`${KNOWLEDGE_SERVICE_URL}/ops-knowledge/sources/${citation.sourceId}`)
+            .then(async response => {
+                if (!response.ok) throw new Error(String(response.status))
+                return response.json() as Promise<{ name?: string }>
+            })
+            .then(data => {
+                const nextName = data.name?.trim() || citation.sourceId || ''
+                sourceNameCache.set(citation.sourceId as string, nextName)
+                if (!cancelled) setSourceName(nextName)
+            })
+            .catch(() => {
+                if (!cancelled) setSourceName(citation.sourceId)
+            })
+
+        return () => {
+            cancelled = true
+        }
+    }, [citation.sourceId])
 
     return (
         <span className="citation-mark-wrapper" ref={markRef}>
             <span
-                className={`citation-mark${citation.url ? ' clickable' : ''}`}
+                className="citation-mark"
                 onMouseEnter={show}
                 onMouseLeave={hide}
-                onClick={handleClick}
-                role={citation.url ? 'link' : undefined}
             >
                 {citation.index}
             </span>
 
-            {showCard && (
+            {showCard && cardStyle && createPortal(
                 <div
                     ref={cardRef}
-                    className={`citation-card ${cardPosition}`}
+                    className={`citation-card ${cardPosition} is-portal`}
+                    style={{
+                        left: `${cardStyle.left}px`,
+                        width: `${cardStyle.width}px`,
+                        top: `${cardStyle.top}px`,
+                    }}
                     onMouseEnter={show}
                     onMouseLeave={hide}
                 >
@@ -68,23 +150,22 @@ export default function CitationMark({ citation }: CitationMarkProps) {
                         </svg>
                         <span>{citation.title}</span>
                     </div>
-                    {citation.url && (
-                        <a
-                            className="citation-card-link"
-                            href={citation.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            Open source
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="12" height="12">
-                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                                <polyline points="15 3 21 3 21 9" />
-                                <line x1="10" y1="14" x2="21" y2="3" />
-                            </svg>
-                        </a>
-                    )}
-                </div>
+                    <div className="citation-card-meta">
+                        {sourceName ? (
+                            <span className="citation-card-pill">{sourceName}</span>
+                        ) : null}
+                        {citation.chunkId ? (
+                            <span className="citation-card-pill">Chunk {citation.chunkId}</span>
+                        ) : null}
+                        {citation.pageLabel ? (
+                            <span className="citation-card-pill">Page {citation.pageLabel}</span>
+                        ) : null}
+                    </div>
+                    {citation.snippet ? (
+                        <div className="citation-card-snippet">{citation.snippet}</div>
+                    ) : null}
+                </div>,
+                document.body,
             )}
         </span>
     )

@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -97,6 +98,36 @@ public class FileController {
         }).subscribeOn(Schedulers.boundedElastic())
                 .onErrorMap(IOException.class, e ->
                         new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to read file"));
+    }
+
+    @DeleteMapping("/**")
+    public Mono<ResponseEntity<Map<String, Object>>> deleteFile(@PathVariable("agentId") String agentId,
+                                                                ServerWebExchange exchange) {
+        String userId = exchange.getAttribute(UserContextFilter.USER_ID_ATTR);
+        Path workingDir = agentConfigService.getUserAgentDir(userId, agentId);
+
+        String fullPath = exchange.getRequest().getPath().value();
+        String prefix = "/ops-gateway/agents/" + agentId + "/files/";
+        String relativePath = URLDecoder.decode(fullPath.substring(prefix.length()), StandardCharsets.UTF_8);
+
+        if (!PathSanitizer.isSafe(workingDir, relativePath)) {
+            return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.<String, Object>of("error", "path traversal not allowed")));
+        }
+
+        return Mono.fromCallable(() -> {
+                    boolean deleted = fileService.deleteFile(workingDir, relativePath);
+                    if (!deleted) {
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .body(Map.<String, Object>of("error", "file not found"));
+                    }
+                    return ResponseEntity.ok(Map.<String, Object>of(
+                            "status", "deleted",
+                            "path", relativePath
+                    ));
+                }).subscribeOn(Schedulers.boundedElastic())
+                .onErrorMap(IOException.class, e ->
+                        new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete file"));
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

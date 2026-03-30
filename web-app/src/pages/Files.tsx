@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useGoosed } from '../contexts/GoosedContext'
 import { usePreview } from '../contexts/PreviewContext'
 import { useUser } from '../contexts/UserContext'
+import { useToast } from '../contexts/ToastContext'
 import { GATEWAY_URL, GATEWAY_SECRET_KEY, gatewayHeaders } from '../config/runtime'
 
 interface FileInfo {
@@ -118,13 +119,16 @@ function getDownloadUrl(file: AgentFile, userId?: string | null): string {
 export default function Files() {
     const { t } = useTranslation()
     const { agents, isConnected, error: connectionError } = useGoosed()
-    const { openPreview, isPreviewable } = usePreview()
+    const { openPreview, isPreviewable, previewFile, closePreview } = usePreview()
     const { userId } = useUser()
+    const { showToast } = useToast()
     const [files, setFiles] = useState<AgentFile[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
     const [error, setError] = useState<string | null>(null)
     const [activeCategory, setActiveCategory] = useState<FileCategory>('all')
+    const [deleteTarget, setDeleteTarget] = useState<AgentFile | null>(null)
+    const [deletingKey, setDeletingKey] = useState<string | null>(null)
 
     useEffect(() => {
         const loadFiles = async () => {
@@ -212,8 +216,35 @@ export default function Files() {
         return result
     }, [files, searchTerm, activeCategory])
 
+    const handleDelete = async (file: AgentFile) => {
+        const fileKey = `${file.agentId}-${file.path}`
+        setDeletingKey(fileKey)
+        try {
+            const res = await fetch(`${GATEWAY_URL}/agents/${file.agentId}/files/${encodeURIComponent(file.path)}`, {
+                method: 'DELETE',
+                headers: gatewayHeaders(userId),
+            })
+            if (!res.ok) {
+                const data = await res.json().catch(() => null)
+                throw new Error(data?.error || `Failed to delete file: ${res.status}`)
+            }
+
+            setFiles(prev => prev.filter(f => !(f.agentId === file.agentId && f.path === file.path)))
+            if (previewFile?.agentId === file.agentId && previewFile.path === file.path) {
+                closePreview()
+            }
+            setDeleteTarget(null)
+            showToast('success', `已删除 ${file.name}`)
+        } catch (err) {
+            console.error('Failed to delete file:', err)
+            showToast('error', err instanceof Error ? err.message : '删除文件失败')
+        } finally {
+            setDeletingKey(null)
+        }
+    }
+
     return (
-        <div className="page-container files-page">
+        <div className="page-container sidebar-top-page files-page">
             <header className="page-header">
                 <h1 className="page-title">{t('files.title')}</h1>
                 <p className="page-subtitle">
@@ -337,8 +368,15 @@ export default function Files() {
                     )}
 
                     <div className="file-list">
-                        {filteredFiles.map(file => (
-                            <div key={`${file.agentId}-${file.path}`} className="file-item animate-slide-in">
+                        {filteredFiles.map(file => {
+                            const fileKey = `${file.agentId}-${file.path}`
+                            const isDeleting = deletingKey === fileKey
+
+                            return (
+                            <div
+                                key={fileKey}
+                                className={`file-item animate-slide-in${isDeleting ? ' is-deleting' : ''}`}
+                            >
                                 <div className="file-icon">
                                     {getFileIcon(file.type)}
                                 </div>
@@ -380,9 +418,22 @@ export default function Files() {
                                             <line x1="12" y1="15" x2="12" y2="3" />
                                         </svg>
                                     </a>
+                                    <button
+                                        className="file-delete-btn"
+                                        title="删除文件"
+                                        onClick={() => setDeleteTarget(file)}
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                                            <polyline points="3 6 5 6 21 6" />
+                                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                            <line x1="10" y1="11" x2="10" y2="17" />
+                                            <line x1="14" y1="11" x2="14" y2="17" />
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
-                        ))}
+                        )})}
                     </div>
                 </>
             )}
@@ -396,6 +447,44 @@ export default function Files() {
                 }}>
                     {t('common.totalFiles', { count: files.length })}
                 </p>
+            )}
+
+            {deleteTarget && (
+                <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => setDeleteTarget(null)}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2 className="modal-title">删除文件</h2>
+                            <button className="modal-close" onClick={() => setDeleteTarget(null)} aria-label={t('common.close')}>
+                                &times;
+                            </button>
+                        </div>
+
+                        <div className="modal-body">
+                            <p style={{ fontSize: 'var(--font-size-base)', color: 'var(--color-text-primary)', marginBottom: 'var(--spacing-4)' }}>
+                                将永久删除 “{deleteTarget.name}”，此操作不可恢复。
+                            </p>
+                        </div>
+
+                        <div className="modal-footer">
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={deletingKey === `${deleteTarget.agentId}-${deleteTarget.path}`}
+                            >
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-danger"
+                                onClick={() => handleDelete(deleteTarget)}
+                                disabled={deletingKey === `${deleteTarget.agentId}-${deleteTarget.path}`}
+                            >
+                                {deletingKey === `${deleteTarget.agentId}-${deleteTarget.path}` ? '删除中...' : '确认删除'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )

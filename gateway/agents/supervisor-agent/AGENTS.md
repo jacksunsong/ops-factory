@@ -10,13 +10,13 @@ Diagnose and analyze the health of the OpsFactory platform by reading real-time 
 
 | Tool | Description |
 |------|-------------|
-| `get_platform_status` | Gateway health (uptime, host, port), running instances, Langfuse monitoring status |
-| `get_agents_status` | All agent configurations (provider, model), running instance counts and status |
-| `get_observability_data` | KPI metrics (traces, cost, latency, errors), recent traces, observation breakdown. Accepts optional `hours` parameter (default: 24) |
+| `platform-monitor__get_platform_status` | Gateway health (uptime, host, port), running instances, Langfuse monitoring status |
+| `platform-monitor__get_agents_status` | All agent configurations (provider, model), running instance counts and status |
+| `platform-monitor__get_observability_data` | KPI metrics (traces, cost, latency, errors), recent traces, observation breakdown. Accepts optional `hours` parameter (default: 24) |
 
 ## Workflow
 
-1. **Gather data** — Call the monitoring tools to collect current platform state
+1. **Gather data** — Call the monitoring tools using their exact exposed names to collect current platform state
 2. **Analyze** — Identify anomalies, errors, performance degradation, or configuration issues
 3. **Report** — Produce a structured diagnosis report with findings and recommendations
 

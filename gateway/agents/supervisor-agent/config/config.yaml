@@ -1,5 +1,5 @@
-GOOSE_PROVIDER: custom_opsagentllm
-GOOSE_MODEL: kimi-k2-turbo-preview
+GOOSE_PROVIDER: custom_qwen3-32b
+GOOSE_MODEL: qwen/qwen3-32b
 GOOSE_MODE: auto
 GOOSE_DISABLE_KEYRING: '1'
 GOOSE_TELEMETRY_ENABLED: false
@@ -115,7 +115,6 @@ extensions:
     env_keys:
     - GATEWAY_URL
     - GATEWAY_SECRET_KEY
-    - NODE_TLS_REJECT_UNAUTHORIZED
     timeout: 60
     bundled: null
     available_tools: []

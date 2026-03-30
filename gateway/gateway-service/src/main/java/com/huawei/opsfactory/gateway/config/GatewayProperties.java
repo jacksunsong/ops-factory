@@ -1,16 +1,22 @@
 package com.huawei.opsfactory.gateway.config;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
 
 @Component
 @ConfigurationProperties(prefix = "gateway")
 public class GatewayProperties {
 
+    private static final Logger log = LogManager.getLogger(GatewayProperties.class);
+
     private String secretKey = "test";
     private String corsOrigin = "http://127.0.0.1:5173";
     private String goosedBin = "goosed";
-    private boolean goosedTls = false;
+    private boolean gooseTls = true;
 
     private Paths paths = new Paths();
     private Idle idle = new Idle();
@@ -47,16 +53,16 @@ public class GatewayProperties {
         this.goosedBin = goosedBin;
     }
 
-    public boolean isGoosedTls() {
-        return goosedTls;
+    public boolean isGooseTls() {
+        return gooseTls;
     }
 
-    public void setGoosedTls(boolean goosedTls) {
-        this.goosedTls = goosedTls;
+    public void setGooseTls(boolean gooseTls) {
+        this.gooseTls = gooseTls;
     }
 
-    public String goosedScheme() {
-        return goosedTls ? "https" : "http";
+    public String gooseScheme() {
+        return gooseTls ? "https" : "http";
     }
 
     public Paths getPaths() {
@@ -221,5 +227,13 @@ public class GatewayProperties {
         public void setOnlyofficeUrl(String onlyofficeUrl) { this.onlyofficeUrl = onlyofficeUrl; }
         public String getFileBaseUrl() { return fileBaseUrl; }
         public void setFileBaseUrl(String fileBaseUrl) { this.fileBaseUrl = fileBaseUrl; }
+    }
+
+    // ---- PostConstruct for logging configuration values ----
+
+    @PostConstruct
+    public void logConfiguration() {
+        log.info("GatewayProperties loaded: gooseTls={}, gooseScheme={}, goosedBin={}",
+                gooseTls, gooseScheme(), goosedBin);
     }
 }

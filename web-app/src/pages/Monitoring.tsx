@@ -671,7 +671,7 @@ export default function Monitoring() {
   ]
 
   return (
-    <div className="page-container monitoring-page">
+    <div className="page-container sidebar-top-page monitoring-page">
       {/* Header */}
       <div className="mon-page-header">
         <div className="mon-header-left">

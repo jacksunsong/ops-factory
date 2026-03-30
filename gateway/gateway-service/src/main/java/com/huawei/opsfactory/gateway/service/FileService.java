@@ -134,6 +134,18 @@ public class FileService {
         return null;
     }
 
+    public boolean deleteFile(Path baseDir, String relativePath) throws IOException {
+        if (!PathSanitizer.isSafe(baseDir, relativePath)) {
+            return false;
+        }
+        Path resolved = baseDir.resolve(relativePath).normalize();
+        if (!Files.exists(resolved) || Files.isDirectory(resolved)) {
+            return false;
+        }
+        Files.delete(resolved);
+        return true;
+    }
+
     private Path searchFile(Path dir, String fileName) throws IOException {
         if (!Files.isDirectory(dir)) {
             return null;

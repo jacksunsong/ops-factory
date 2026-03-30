@@ -1,5 +1,5 @@
-GOOSE_PROVIDER: custom_opsagentllm
-GOOSE_MODEL: kimi-k2-turbo-preview
+GOOSE_PROVIDER: custom_openai_oss_120b
+GOOSE_MODEL: openai/gpt-oss-120b
 GOOSE_MODE: auto
 GOOSE_DISABLE_KEYRING: '1'
 GOOSE_TELEMETRY_ENABLED: false

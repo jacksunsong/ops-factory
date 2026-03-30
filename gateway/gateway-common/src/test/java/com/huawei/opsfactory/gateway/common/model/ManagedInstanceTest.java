@@ -11,7 +11,7 @@ public class ManagedInstanceTest {
     @Test
     public void testBuildKey() {
         assertEquals("agent1:user1", ManagedInstance.buildKey("agent1", "user1"));
-        assertEquals("kb-agent:sys", ManagedInstance.buildKey("kb-agent", "sys"));
+        assertEquals("kb-agent:admin", ManagedInstance.buildKey("kb-agent", "admin"));
     }
 
     @Test

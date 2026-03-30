@@ -4,6 +4,7 @@
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'https://127.0.0.1:3000'
 const GATEWAY_SECRET_KEY = process.env.GATEWAY_SECRET_KEY || 'test'
+const API_PREFIX = '/ops-gateway'
 
 // ---------------------------------------------------------------------------
 // Gateway HTTP helper
@@ -17,7 +18,7 @@ export async function gw<T>(path: string, params?: Record<string, string>): Prom
   const res = await fetch(url, {
     headers: {
       'x-secret-key': GATEWAY_SECRET_KEY,
-      'x-user-id': 'sys',
+      'x-user-id': 'admin',
     },
     signal: AbortSignal.timeout(15_000),
   })
@@ -84,16 +85,16 @@ export const tools = [
 
 export async function handleGetPlatformStatus(): Promise<string> {
   const [system, instances] = await Promise.all([
-    gw<Record<string, unknown>>('/monitoring/system'),
-    gw<Record<string, unknown>>('/monitoring/instances'),
+    gw<Record<string, unknown>>(`${API_PREFIX}/monitoring/system`),
+    gw<Record<string, unknown>>(`${API_PREFIX}/monitoring/instances`),
   ])
   return JSON.stringify({ system, instances }, null, 2)
 }
 
 export async function handleGetAgentsStatus(): Promise<string> {
   const [agentsRes, instances] = await Promise.all([
-    gw<Record<string, unknown>>('/agents'),
-    gw<Record<string, unknown>>('/monitoring/instances'),
+    gw<Record<string, unknown>>(`${API_PREFIX}/agents`),
+    gw<Record<string, unknown>>(`${API_PREFIX}/monitoring/instances`),
   ])
   return JSON.stringify({ agents: agentsRes, instances }, null, 2)
 }
@@ -104,7 +105,7 @@ export async function handleGetObservabilityData(hours: number): Promise<string>
   const params = { from: from.toISOString(), to: to.toISOString() }
 
   // First check if Langfuse is available
-  const status = await gw<{ enabled: boolean; reachable?: boolean; host?: string }>('/monitoring/status')
+  const status = await gw<{ enabled: boolean; reachable?: boolean; host?: string }>(`${API_PREFIX}/monitoring/status`)
   if (!status.enabled) {
     return JSON.stringify({
       error: 'Langfuse is not configured. Observability data is unavailable.',
@@ -119,16 +120,16 @@ export async function handleGetObservabilityData(hours: number): Promise<string>
   }
 
   const [overview, traces, observations] = await Promise.all([
-    gw<Record<string, unknown>>('/monitoring/overview', params),
-    gw<Record<string, unknown>>('/monitoring/traces', { ...params, limit: '30' }),
-    gw<Record<string, unknown>>('/monitoring/observations', params),
+    gw<Record<string, unknown>>(`${API_PREFIX}/monitoring/overview`, params),
+    gw<Record<string, unknown>>(`${API_PREFIX}/monitoring/traces`, { ...params, limit: '30' }),
+    gw<Record<string, unknown>>(`${API_PREFIX}/monitoring/observations`, params),
   ])
 
   return JSON.stringify({ timeRange: { from: from.toISOString(), to: to.toISOString(), hours }, overview, traces, observations }, null, 2)
 }
 
 export async function handleGetRealtimeMetrics(): Promise<string> {
-  const metrics = await gw<Record<string, unknown>>('/monitoring/metrics')
+  const metrics = await gw<Record<string, unknown>>(`${API_PREFIX}/monitoring/metrics`)
   return JSON.stringify(metrics, null, 2)
 }
 

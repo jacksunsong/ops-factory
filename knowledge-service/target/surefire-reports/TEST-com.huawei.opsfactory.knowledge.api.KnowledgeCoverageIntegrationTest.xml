@@ -1,0 +1,626 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="14.8" tests="14" errors="3" skipped="0" failures="1">
+  <properties>
+    <property name="java.specification.version" value="21"/>
+    <property name="sun.jnu.encoding" value="UTF-8"/>
+    <property name="java.class.path" value="/Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service/target/test-classes:/Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service/target/classes:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-web/3.3.12/spring-boot-starter-web-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter/3.3.12/spring-boot-starter-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot/3.3.12/spring-boot-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-autoconfigure/3.3.12/spring-boot-autoconfigure-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-logging/3.3.12/spring-boot-starter-logging-3.3.12.jar:/Users/buyangnie/.m2/repository/ch/qos/logback/logback-classic/1.5.18/logback-classic-1.5.18.jar:/Users/buyangnie/.m2/repository/ch/qos/logback/logback-core/1.5.18/logback-core-1.5.18.jar:/Users/buyangnie/.m2/repository/org/apache/logging/log4j/log4j-to-slf4j/2.23.1/log4j-to-slf4j-2.23.1.jar:/Users/buyangnie/.m2/repository/org/slf4j/jul-to-slf4j/2.0.17/jul-to-slf4j-2.0.17.jar:/Users/buyangnie/.m2/repository/jakarta/annotation/jakarta.annotation-api/2.1.1/jakarta.annotation-api-2.1.1.jar:/Users/buyangnie/.m2/repository/org/yaml/snakeyaml/2.2/snakeyaml-2.2.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-json/3.3.12/spring-boot-starter-json-3.3.12.jar:/Users/buyangnie/.m2/repository/com/fasterxml/jackson/core/jackson-databind/2.17.3/jackson-databind-2.17.3.jar:/Users/buyangnie/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.17.3/jackson-annotations-2.17.3.jar:/Users/buyangnie/.m2/repository/com/fasterxml/jackson/datatype/jackson-datatype-jdk8/2.17.3/jackson-datatype-jdk8-2.17.3.jar:/Users/buyangnie/.m2/repository/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.17.3/jackson-datatype-jsr310-2.17.3.jar:/Users/buyangnie/.m2/repository/com/fasterxml/jackson/module/jackson-module-parameter-names/2.17.3/jackson-module-parameter-names-2.17.3.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-tomcat/3.3.12/spring-boot-starter-tomcat-3.3.12.jar:/Users/buyangnie/.m2/repository/org/apache/tomcat/embed/tomcat-embed-core/10.1.41/tomcat-embed-core-10.1.41.jar:/Users/buyangnie/.m2/repository/org/apache/tomcat/embed/tomcat-embed-websocket/10.1.41/tomcat-embed-websocket-10.1.41.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-web/6.1.20/spring-web-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-beans/6.1.20/spring-beans-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-webmvc/6.1.20/spring-webmvc-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-aop/6.1.20/spring-aop-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-context/6.1.20/spring-context-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-expression/6.1.20/spring-expression-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-validation/3.3.12/spring-boot-starter-validation-3.3.12.jar:/Users/buyangnie/.m2/repository/org/apache/tomcat/embed/tomcat-embed-el/10.1.41/tomcat-embed-el-10.1.41.jar:/Users/buyangnie/.m2/repository/org/hibernate/validator/hibernate-validator/8.0.2.Final/hibernate-validator-8.0.2.Final.jar:/Users/buyangnie/.m2/repository/jakarta/validation/jakarta.validation-api/3.0.2/jakarta.validation-api-3.0.2.jar:/Users/buyangnie/.m2/repository/org/jboss/logging/jboss-logging/3.5.3.Final/jboss-logging-3.5.3.Final.jar:/Users/buyangnie/.m2/repository/com/fasterxml/classmate/1.7.0/classmate-1.7.0.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-actuator/3.3.12/spring-boot-starter-actuator-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-actuator-autoconfigure/3.3.12/spring-boot-actuator-autoconfigure-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-actuator/3.3.12/spring-boot-actuator-3.3.12.jar:/Users/buyangnie/.m2/repository/io/micrometer/micrometer-observation/1.13.14/micrometer-observation-1.13.14.jar:/Users/buyangnie/.m2/repository/io/micrometer/micrometer-commons/1.13.14/micrometer-commons-1.13.14.jar:/Users/buyangnie/.m2/repository/io/micrometer/micrometer-jakarta9/1.13.14/micrometer-jakarta9-1.13.14.jar:/Users/buyangnie/.m2/repository/io/micrometer/micrometer-core/1.13.14/micrometer-core-1.13.14.jar:/Users/buyangnie/.m2/repository/org/hdrhistogram/HdrHistogram/2.2.2/HdrHistogram-2.2.2.jar:/Users/buyangnie/.m2/repository/org/latencyutils/LatencyUtils/2.0.3/LatencyUtils-2.0.3.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-jdbc/3.3.12/spring-boot-starter-jdbc-3.3.12.jar:/Users/buyangnie/.m2/repository/com/zaxxer/HikariCP/5.1.0/HikariCP-5.1.0.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-jdbc/6.1.20/spring-jdbc-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-tx/6.1.20/spring-tx-6.1.20.jar:/Users/buyangnie/.m2/repository/org/xerial/sqlite-jdbc/3.50.3.0/sqlite-jdbc-3.50.3.0.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-core/10.3.1/lucene-core-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-queryparser/10.3.1/lucene-queryparser-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-queries/10.3.1/lucene-queries-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-sandbox/10.3.1/lucene-sandbox-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-facet/10.3.1/lucene-facet-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-analysis-common/10.3.1/lucene-analysis-common-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-analysis-smartcn/10.3.1/lucene-analysis-smartcn-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-core/3.2.2/tika-core-3.2.2.jar:/Users/buyangnie/.m2/repository/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar:/Users/buyangnie/.m2/repository/commons-io/commons-io/2.20.0/commons-io-2.20.0.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parsers-standard-package/3.2.2/tika-parsers-standard-package-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-apple-module/3.2.2/tika-parser-apple-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-zip-commons/3.2.2/tika-parser-zip-commons-3.2.2.jar:/Users/buyangnie/.m2/repository/com/googlecode/plist/dd-plist/1.28/dd-plist-1.28.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-audiovideo-module/3.2.2/tika-parser-audiovideo-module-3.2.2.jar:/Users/buyangnie/.m2/repository/com/drewnoakes/metadata-extractor/2.19.0/metadata-extractor-2.19.0.jar:/Users/buyangnie/.m2/repository/com/adobe/xmp/xmpcore/6.1.11/xmpcore-6.1.11.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-cad-module/3.2.2/tika-parser-cad-module-3.2.2.jar:/Users/buyangnie/.m2/repository/com/fasterxml/jackson/core/jackson-core/2.17.3/jackson-core-2.17.3.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-code-module/3.2.2/tika-parser-code-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/codelibs/jhighlight/1.1.0/jhighlight-1.1.0.jar:/Users/buyangnie/.m2/repository/org/ow2/asm/asm/9.8/asm-9.8.jar:/Users/buyangnie/.m2/repository/com/epam/parso/2.0.14/parso-2.0.14.jar:/Users/buyangnie/.m2/repository/org/tallison/jmatio/1.5/jmatio-1.5.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-crypto-module/3.2.2/tika-parser-crypto-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/bouncycastle/bcjmail-jdk18on/1.81/bcjmail-jdk18on-1.81.jar:/Users/buyangnie/.m2/repository/org/bouncycastle/bcpkix-jdk18on/1.81/bcpkix-jdk18on-1.81.jar:/Users/buyangnie/.m2/repository/org/bouncycastle/bcutil-jdk18on/1.81/bcutil-jdk18on-1.81.jar:/Users/buyangnie/.m2/repository/org/bouncycastle/bcprov-jdk18on/1.81/bcprov-jdk18on-1.81.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-digest-commons/3.2.2/tika-parser-digest-commons-3.2.2.jar:/Users/buyangnie/.m2/repository/commons-codec/commons-codec/1.16.1/commons-codec-1.16.1.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-font-module/3.2.2/tika-parser-font-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-html-module/3.2.2/tika-parser-html-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-image-module/3.2.2/tika-parser-image-module-3.2.2.jar:/Users/buyangnie/.m2/repository/com/github/jai-imageio/jai-imageio-core/1.4.0/jai-imageio-core-1.4.0.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/jbig2-imageio/3.0.4/jbig2-imageio-3.0.4.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-mail-module/3.2.2/tika-parser-mail-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-mail-commons/3.2.2/tika-parser-mail-commons-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/james/apache-mime4j-core/0.8.13/apache-mime4j-core-0.8.13.jar:/Users/buyangnie/.m2/repository/org/apache/james/apache-mime4j-dom/0.8.13/apache-mime4j-dom-0.8.13.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-microsoft-module/3.2.2/tika-parser-microsoft-module-3.2.2.jar:/Users/buyangnie/.m2/repository/com/pff/java-libpst/0.9.3/java-libpst-0.9.3.jar:/Users/buyangnie/.m2/repository/org/apache/poi/poi/5.4.1/poi-5.4.1.jar:/Users/buyangnie/.m2/repository/org/apache/commons/commons-math3/3.6.1/commons-math3-3.6.1.jar:/Users/buyangnie/.m2/repository/com/zaxxer/SparseBitSet/1.3/SparseBitSet-1.3.jar:/Users/buyangnie/.m2/repository/org/apache/logging/log4j/log4j-api/2.23.1/log4j-api-2.23.1.jar:/Users/buyangnie/.m2/repository/org/apache/poi/poi-scratchpad/5.4.1/poi-scratchpad-5.4.1.jar:/Users/buyangnie/.m2/repository/org/apache/poi/poi-ooxml/5.4.1/poi-ooxml-5.4.1.jar:/Users/buyangnie/.m2/repository/org/apache/poi/poi-ooxml-lite/5.4.1/poi-ooxml-lite-5.4.1.jar:/Users/buyangnie/.m2/repository/org/apache/xmlbeans/xmlbeans/5.3.0/xmlbeans-5.3.0.jar:/Users/buyangnie/.m2/repository/com/github/virtuald/curvesapi/1.08/curvesapi-1.08.jar:/Users/buyangnie/.m2/repository/com/healthmarketscience/jackcess/jackcess/4.0.8/jackcess-4.0.8.jar:/Users/buyangnie/.m2/repository/com/healthmarketscience/jackcess/jackcess-encrypt/4.0.3/jackcess-encrypt-4.0.3.jar:/Users/buyangnie/.m2/repository/org/slf4j/jcl-over-slf4j/2.0.17/jcl-over-slf4j-2.0.17.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-miscoffice-module/3.2.2/tika-parser-miscoffice-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/commons/commons-collections4/4.5.0/commons-collections4-4.5.0.jar:/Users/buyangnie/.m2/repository/org/glassfish/jaxb/jaxb-runtime/4.0.5/jaxb-runtime-4.0.5.jar:/Users/buyangnie/.m2/repository/org/glassfish/jaxb/jaxb-core/4.0.5/jaxb-core-4.0.5.jar:/Users/buyangnie/.m2/repository/org/eclipse/angus/angus-activation/2.0.2/angus-activation-2.0.2.jar:/Users/buyangnie/.m2/repository/org/glassfish/jaxb/txw2/4.0.5/txw2-4.0.5.jar:/Users/buyangnie/.m2/repository/com/sun/istack/istack-commons-runtime/4.1.2/istack-commons-runtime-4.1.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-news-module/3.2.2/tika-parser-news-module-3.2.2.jar:/Users/buyangnie/.m2/repository/com/rometools/rome/2.1.0/rome-2.1.0.jar:/Users/buyangnie/.m2/repository/com/rometools/rome-utils/2.1.0/rome-utils-2.1.0.jar:/Users/buyangnie/.m2/repository/org/jdom/jdom2/2.0.6.1/jdom2-2.0.6.1.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-ocr-module/3.2.2/tika-parser-ocr-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/commons/commons-exec/1.5.0/commons-exec-1.5.0.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-pdf-module/3.2.2/tika-parser-pdf-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/pdfbox-tools/3.0.5/pdfbox-tools-3.0.5.jar:/Users/buyangnie/.m2/repository/info/picocli/picocli/4.7.6/picocli-4.7.6.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/jempbox/1.8.17/jempbox-1.8.17.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-pkg-module/3.2.2/tika-parser-pkg-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/tukaani/xz/1.10/xz-1.10.jar:/Users/buyangnie/.m2/repository/org/brotli/dec/0.1.2/dec-0.1.2.jar:/Users/buyangnie/.m2/repository/com/github/junrar/junrar/7.5.5/junrar-7.5.5.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-text-module/3.2.2/tika-parser-text-module-3.2.2.jar:/Users/buyangnie/.m2/repository/com/github/albfernandez/juniversalchardet/2.5.0/juniversalchardet-2.5.0.jar:/Users/buyangnie/.m2/repository/org/apache/commons/commons-csv/1.14.1/commons-csv-1.14.1.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-webarchive-module/3.2.2/tika-parser-webarchive-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/netpreserve/jwarc/0.32.0/jwarc-0.32.0.jar:/Users/buyangnie/.m2/repository/org/apache/commons/commons-compress/1.28.0/commons-compress-1.28.0.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-xml-module/3.2.2/tika-parser-xml-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-xmp-commons/3.2.2/tika-parser-xmp-commons-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/xmpbox/3.0.5/xmpbox-3.0.5.jar:/Users/buyangnie/.m2/repository/org/gagravarr/vorbis-java-tika/0.8/vorbis-java-tika-0.8.jar:/Users/buyangnie/.m2/repository/org/gagravarr/vorbis-java-core/0.8/vorbis-java-core-0.8.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/pdfbox/3.0.5/pdfbox-3.0.5.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/pdfbox-io/3.0.5/pdfbox-io-3.0.5.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/fontbox/3.0.5/fontbox-3.0.5.jar:/Users/buyangnie/.m2/repository/commons-logging/commons-logging/1.3.5/commons-logging-1.3.5.jar:/Users/buyangnie/.m2/repository/org/jsoup/jsoup/1.19.1/jsoup-1.19.1.jar:/Users/buyangnie/.m2/repository/org/apache/commons/commons-lang3/3.17.0/commons-lang3-3.17.0.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-test/3.3.12/spring-boot-starter-test-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-test/3.3.12/spring-boot-test-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-test-autoconfigure/3.3.12/spring-boot-test-autoconfigure-3.3.12.jar:/Users/buyangnie/.m2/repository/com/jayway/jsonpath/json-path/2.9.0/json-path-2.9.0.jar:/Users/buyangnie/.m2/repository/jakarta/xml/bind/jakarta.xml.bind-api/4.0.2/jakarta.xml.bind-api-4.0.2.jar:/Users/buyangnie/.m2/repository/jakarta/activation/jakarta.activation-api/2.1.3/jakarta.activation-api-2.1.3.jar:/Users/buyangnie/.m2/repository/net/minidev/json-smart/2.5.2/json-smart-2.5.2.jar:/Users/buyangnie/.m2/repository/net/minidev/accessors-smart/2.5.2/accessors-smart-2.5.2.jar:/Users/buyangnie/.m2/repository/org/assertj/assertj-core/3.25.3/assertj-core-3.25.3.jar:/Users/buyangnie/.m2/repository/net/bytebuddy/byte-buddy/1.14.19/byte-buddy-1.14.19.jar:/Users/buyangnie/.m2/repository/org/awaitility/awaitility/4.2.2/awaitility-4.2.2.jar:/Users/buyangnie/.m2/repository/org/hamcrest/hamcrest/2.2/hamcrest-2.2.jar:/Users/buyangnie/.m2/repository/org/junit/jupiter/junit-jupiter/5.10.5/junit-jupiter-5.10.5.jar:/Users/buyangnie/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.10.5/junit-jupiter-api-5.10.5.jar:/Users/buyangnie/.m2/repository/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/Users/buyangnie/.m2/repository/org/junit/platform/junit-platform-commons/1.10.5/junit-platform-commons-1.10.5.jar:/Users/buyangnie/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/Users/buyangnie/.m2/repository/org/junit/jupiter/junit-jupiter-params/5.10.5/junit-jupiter-params-5.10.5.jar:/Users/buyangnie/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.5/junit-jupiter-engine-5.10.5.jar:/Users/buyangnie/.m2/repository/org/junit/platform/junit-platform-engine/1.10.5/junit-platform-engine-1.10.5.jar:/Users/buyangnie/.m2/repository/org/mockito/mockito-core/5.11.0/mockito-core-5.11.0.jar:/Users/buyangnie/.m2/repository/net/bytebuddy/byte-buddy-agent/1.14.19/byte-buddy-agent-1.14.19.jar:/Users/buyangnie/.m2/repository/org/objenesis/objenesis/3.3/objenesis-3.3.jar:/Users/buyangnie/.m2/repository/org/mockito/mockito-junit-jupiter/5.11.0/mockito-junit-jupiter-5.11.0.jar:/Users/buyangnie/.m2/repository/org/skyscreamer/jsonassert/1.5.3/jsonassert-1.5.3.jar:/Users/buyangnie/.m2/repository/com/vaadin/external/google/android-json/0.0.20131108.vaadin1/android-json-0.0.20131108.vaadin1.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-core/6.1.20/spring-core-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-jcl/6.1.20/spring-jcl-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-test/6.1.20/spring-test-6.1.20.jar:/Users/buyangnie/.m2/repository/org/xmlunit/xmlunit-core/2.9.1/xmlunit-core-2.9.1.jar:"/>
+    <property name="java.vm.vendor" value="Eclipse Adoptium"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="java.vendor.url" value="https://adoptium.net/"/>
+    <property name="user.timezone" value="Asia/Shanghai"/>
+    <property name="org.jboss.logging.provider" value="slf4j"/>
+    <property name="os.name" value="Mac OS X"/>
+    <property name="java.vm.specification.version" value="21"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="user.country" value="CN"/>
+    <property name="sun.boot.library.path" value="/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home/lib"/>
+    <property name="sun.java.command" value="/Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service/target/surefire/surefirebooter-20260327163730735_3.jar /Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service/target/surefire 2026-03-27T16-37-30_693-jvmRun1 surefire-20260327163730735_1tmp surefire_0-20260327163730735_2tmp"/>
+    <property name="jdk.debug" value="release"/>
+    <property name="test" value="KnowledgeCoverageIntegrationTest,KnowledgeUploadFlowIntegrationTest"/>
+    <property name="surefire.test.class.path" value="/Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service/target/test-classes:/Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service/target/classes:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-web/3.3.12/spring-boot-starter-web-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter/3.3.12/spring-boot-starter-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot/3.3.12/spring-boot-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-autoconfigure/3.3.12/spring-boot-autoconfigure-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-logging/3.3.12/spring-boot-starter-logging-3.3.12.jar:/Users/buyangnie/.m2/repository/ch/qos/logback/logback-classic/1.5.18/logback-classic-1.5.18.jar:/Users/buyangnie/.m2/repository/ch/qos/logback/logback-core/1.5.18/logback-core-1.5.18.jar:/Users/buyangnie/.m2/repository/org/apache/logging/log4j/log4j-to-slf4j/2.23.1/log4j-to-slf4j-2.23.1.jar:/Users/buyangnie/.m2/repository/org/slf4j/jul-to-slf4j/2.0.17/jul-to-slf4j-2.0.17.jar:/Users/buyangnie/.m2/repository/jakarta/annotation/jakarta.annotation-api/2.1.1/jakarta.annotation-api-2.1.1.jar:/Users/buyangnie/.m2/repository/org/yaml/snakeyaml/2.2/snakeyaml-2.2.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-json/3.3.12/spring-boot-starter-json-3.3.12.jar:/Users/buyangnie/.m2/repository/com/fasterxml/jackson/core/jackson-databind/2.17.3/jackson-databind-2.17.3.jar:/Users/buyangnie/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.17.3/jackson-annotations-2.17.3.jar:/Users/buyangnie/.m2/repository/com/fasterxml/jackson/datatype/jackson-datatype-jdk8/2.17.3/jackson-datatype-jdk8-2.17.3.jar:/Users/buyangnie/.m2/repository/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.17.3/jackson-datatype-jsr310-2.17.3.jar:/Users/buyangnie/.m2/repository/com/fasterxml/jackson/module/jackson-module-parameter-names/2.17.3/jackson-module-parameter-names-2.17.3.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-tomcat/3.3.12/spring-boot-starter-tomcat-3.3.12.jar:/Users/buyangnie/.m2/repository/org/apache/tomcat/embed/tomcat-embed-core/10.1.41/tomcat-embed-core-10.1.41.jar:/Users/buyangnie/.m2/repository/org/apache/tomcat/embed/tomcat-embed-websocket/10.1.41/tomcat-embed-websocket-10.1.41.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-web/6.1.20/spring-web-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-beans/6.1.20/spring-beans-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-webmvc/6.1.20/spring-webmvc-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-aop/6.1.20/spring-aop-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-context/6.1.20/spring-context-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-expression/6.1.20/spring-expression-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-validation/3.3.12/spring-boot-starter-validation-3.3.12.jar:/Users/buyangnie/.m2/repository/org/apache/tomcat/embed/tomcat-embed-el/10.1.41/tomcat-embed-el-10.1.41.jar:/Users/buyangnie/.m2/repository/org/hibernate/validator/hibernate-validator/8.0.2.Final/hibernate-validator-8.0.2.Final.jar:/Users/buyangnie/.m2/repository/jakarta/validation/jakarta.validation-api/3.0.2/jakarta.validation-api-3.0.2.jar:/Users/buyangnie/.m2/repository/org/jboss/logging/jboss-logging/3.5.3.Final/jboss-logging-3.5.3.Final.jar:/Users/buyangnie/.m2/repository/com/fasterxml/classmate/1.7.0/classmate-1.7.0.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-actuator/3.3.12/spring-boot-starter-actuator-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-actuator-autoconfigure/3.3.12/spring-boot-actuator-autoconfigure-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-actuator/3.3.12/spring-boot-actuator-3.3.12.jar:/Users/buyangnie/.m2/repository/io/micrometer/micrometer-observation/1.13.14/micrometer-observation-1.13.14.jar:/Users/buyangnie/.m2/repository/io/micrometer/micrometer-commons/1.13.14/micrometer-commons-1.13.14.jar:/Users/buyangnie/.m2/repository/io/micrometer/micrometer-jakarta9/1.13.14/micrometer-jakarta9-1.13.14.jar:/Users/buyangnie/.m2/repository/io/micrometer/micrometer-core/1.13.14/micrometer-core-1.13.14.jar:/Users/buyangnie/.m2/repository/org/hdrhistogram/HdrHistogram/2.2.2/HdrHistogram-2.2.2.jar:/Users/buyangnie/.m2/repository/org/latencyutils/LatencyUtils/2.0.3/LatencyUtils-2.0.3.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-jdbc/3.3.12/spring-boot-starter-jdbc-3.3.12.jar:/Users/buyangnie/.m2/repository/com/zaxxer/HikariCP/5.1.0/HikariCP-5.1.0.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-jdbc/6.1.20/spring-jdbc-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-tx/6.1.20/spring-tx-6.1.20.jar:/Users/buyangnie/.m2/repository/org/xerial/sqlite-jdbc/3.50.3.0/sqlite-jdbc-3.50.3.0.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-core/10.3.1/lucene-core-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-queryparser/10.3.1/lucene-queryparser-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-queries/10.3.1/lucene-queries-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-sandbox/10.3.1/lucene-sandbox-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-facet/10.3.1/lucene-facet-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-analysis-common/10.3.1/lucene-analysis-common-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/lucene/lucene-analysis-smartcn/10.3.1/lucene-analysis-smartcn-10.3.1.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-core/3.2.2/tika-core-3.2.2.jar:/Users/buyangnie/.m2/repository/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar:/Users/buyangnie/.m2/repository/commons-io/commons-io/2.20.0/commons-io-2.20.0.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parsers-standard-package/3.2.2/tika-parsers-standard-package-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-apple-module/3.2.2/tika-parser-apple-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-zip-commons/3.2.2/tika-parser-zip-commons-3.2.2.jar:/Users/buyangnie/.m2/repository/com/googlecode/plist/dd-plist/1.28/dd-plist-1.28.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-audiovideo-module/3.2.2/tika-parser-audiovideo-module-3.2.2.jar:/Users/buyangnie/.m2/repository/com/drewnoakes/metadata-extractor/2.19.0/metadata-extractor-2.19.0.jar:/Users/buyangnie/.m2/repository/com/adobe/xmp/xmpcore/6.1.11/xmpcore-6.1.11.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-cad-module/3.2.2/tika-parser-cad-module-3.2.2.jar:/Users/buyangnie/.m2/repository/com/fasterxml/jackson/core/jackson-core/2.17.3/jackson-core-2.17.3.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-code-module/3.2.2/tika-parser-code-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/codelibs/jhighlight/1.1.0/jhighlight-1.1.0.jar:/Users/buyangnie/.m2/repository/org/ow2/asm/asm/9.8/asm-9.8.jar:/Users/buyangnie/.m2/repository/com/epam/parso/2.0.14/parso-2.0.14.jar:/Users/buyangnie/.m2/repository/org/tallison/jmatio/1.5/jmatio-1.5.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-crypto-module/3.2.2/tika-parser-crypto-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/bouncycastle/bcjmail-jdk18on/1.81/bcjmail-jdk18on-1.81.jar:/Users/buyangnie/.m2/repository/org/bouncycastle/bcpkix-jdk18on/1.81/bcpkix-jdk18on-1.81.jar:/Users/buyangnie/.m2/repository/org/bouncycastle/bcutil-jdk18on/1.81/bcutil-jdk18on-1.81.jar:/Users/buyangnie/.m2/repository/org/bouncycastle/bcprov-jdk18on/1.81/bcprov-jdk18on-1.81.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-digest-commons/3.2.2/tika-parser-digest-commons-3.2.2.jar:/Users/buyangnie/.m2/repository/commons-codec/commons-codec/1.16.1/commons-codec-1.16.1.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-font-module/3.2.2/tika-parser-font-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-html-module/3.2.2/tika-parser-html-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-image-module/3.2.2/tika-parser-image-module-3.2.2.jar:/Users/buyangnie/.m2/repository/com/github/jai-imageio/jai-imageio-core/1.4.0/jai-imageio-core-1.4.0.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/jbig2-imageio/3.0.4/jbig2-imageio-3.0.4.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-mail-module/3.2.2/tika-parser-mail-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-mail-commons/3.2.2/tika-parser-mail-commons-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/james/apache-mime4j-core/0.8.13/apache-mime4j-core-0.8.13.jar:/Users/buyangnie/.m2/repository/org/apache/james/apache-mime4j-dom/0.8.13/apache-mime4j-dom-0.8.13.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-microsoft-module/3.2.2/tika-parser-microsoft-module-3.2.2.jar:/Users/buyangnie/.m2/repository/com/pff/java-libpst/0.9.3/java-libpst-0.9.3.jar:/Users/buyangnie/.m2/repository/org/apache/poi/poi/5.4.1/poi-5.4.1.jar:/Users/buyangnie/.m2/repository/org/apache/commons/commons-math3/3.6.1/commons-math3-3.6.1.jar:/Users/buyangnie/.m2/repository/com/zaxxer/SparseBitSet/1.3/SparseBitSet-1.3.jar:/Users/buyangnie/.m2/repository/org/apache/logging/log4j/log4j-api/2.23.1/log4j-api-2.23.1.jar:/Users/buyangnie/.m2/repository/org/apache/poi/poi-scratchpad/5.4.1/poi-scratchpad-5.4.1.jar:/Users/buyangnie/.m2/repository/org/apache/poi/poi-ooxml/5.4.1/poi-ooxml-5.4.1.jar:/Users/buyangnie/.m2/repository/org/apache/poi/poi-ooxml-lite/5.4.1/poi-ooxml-lite-5.4.1.jar:/Users/buyangnie/.m2/repository/org/apache/xmlbeans/xmlbeans/5.3.0/xmlbeans-5.3.0.jar:/Users/buyangnie/.m2/repository/com/github/virtuald/curvesapi/1.08/curvesapi-1.08.jar:/Users/buyangnie/.m2/repository/com/healthmarketscience/jackcess/jackcess/4.0.8/jackcess-4.0.8.jar:/Users/buyangnie/.m2/repository/com/healthmarketscience/jackcess/jackcess-encrypt/4.0.3/jackcess-encrypt-4.0.3.jar:/Users/buyangnie/.m2/repository/org/slf4j/jcl-over-slf4j/2.0.17/jcl-over-slf4j-2.0.17.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-miscoffice-module/3.2.2/tika-parser-miscoffice-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/commons/commons-collections4/4.5.0/commons-collections4-4.5.0.jar:/Users/buyangnie/.m2/repository/org/glassfish/jaxb/jaxb-runtime/4.0.5/jaxb-runtime-4.0.5.jar:/Users/buyangnie/.m2/repository/org/glassfish/jaxb/jaxb-core/4.0.5/jaxb-core-4.0.5.jar:/Users/buyangnie/.m2/repository/org/eclipse/angus/angus-activation/2.0.2/angus-activation-2.0.2.jar:/Users/buyangnie/.m2/repository/org/glassfish/jaxb/txw2/4.0.5/txw2-4.0.5.jar:/Users/buyangnie/.m2/repository/com/sun/istack/istack-commons-runtime/4.1.2/istack-commons-runtime-4.1.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-news-module/3.2.2/tika-parser-news-module-3.2.2.jar:/Users/buyangnie/.m2/repository/com/rometools/rome/2.1.0/rome-2.1.0.jar:/Users/buyangnie/.m2/repository/com/rometools/rome-utils/2.1.0/rome-utils-2.1.0.jar:/Users/buyangnie/.m2/repository/org/jdom/jdom2/2.0.6.1/jdom2-2.0.6.1.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-ocr-module/3.2.2/tika-parser-ocr-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/commons/commons-exec/1.5.0/commons-exec-1.5.0.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-pdf-module/3.2.2/tika-parser-pdf-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/pdfbox-tools/3.0.5/pdfbox-tools-3.0.5.jar:/Users/buyangnie/.m2/repository/info/picocli/picocli/4.7.6/picocli-4.7.6.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/jempbox/1.8.17/jempbox-1.8.17.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-pkg-module/3.2.2/tika-parser-pkg-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/tukaani/xz/1.10/xz-1.10.jar:/Users/buyangnie/.m2/repository/org/brotli/dec/0.1.2/dec-0.1.2.jar:/Users/buyangnie/.m2/repository/com/github/junrar/junrar/7.5.5/junrar-7.5.5.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-text-module/3.2.2/tika-parser-text-module-3.2.2.jar:/Users/buyangnie/.m2/repository/com/github/albfernandez/juniversalchardet/2.5.0/juniversalchardet-2.5.0.jar:/Users/buyangnie/.m2/repository/org/apache/commons/commons-csv/1.14.1/commons-csv-1.14.1.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-webarchive-module/3.2.2/tika-parser-webarchive-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/netpreserve/jwarc/0.32.0/jwarc-0.32.0.jar:/Users/buyangnie/.m2/repository/org/apache/commons/commons-compress/1.28.0/commons-compress-1.28.0.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-xml-module/3.2.2/tika-parser-xml-module-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/tika/tika-parser-xmp-commons/3.2.2/tika-parser-xmp-commons-3.2.2.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/xmpbox/3.0.5/xmpbox-3.0.5.jar:/Users/buyangnie/.m2/repository/org/gagravarr/vorbis-java-tika/0.8/vorbis-java-tika-0.8.jar:/Users/buyangnie/.m2/repository/org/gagravarr/vorbis-java-core/0.8/vorbis-java-core-0.8.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/pdfbox/3.0.5/pdfbox-3.0.5.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/pdfbox-io/3.0.5/pdfbox-io-3.0.5.jar:/Users/buyangnie/.m2/repository/org/apache/pdfbox/fontbox/3.0.5/fontbox-3.0.5.jar:/Users/buyangnie/.m2/repository/commons-logging/commons-logging/1.3.5/commons-logging-1.3.5.jar:/Users/buyangnie/.m2/repository/org/jsoup/jsoup/1.19.1/jsoup-1.19.1.jar:/Users/buyangnie/.m2/repository/org/apache/commons/commons-lang3/3.17.0/commons-lang3-3.17.0.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-starter-test/3.3.12/spring-boot-starter-test-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-test/3.3.12/spring-boot-test-3.3.12.jar:/Users/buyangnie/.m2/repository/org/springframework/boot/spring-boot-test-autoconfigure/3.3.12/spring-boot-test-autoconfigure-3.3.12.jar:/Users/buyangnie/.m2/repository/com/jayway/jsonpath/json-path/2.9.0/json-path-2.9.0.jar:/Users/buyangnie/.m2/repository/jakarta/xml/bind/jakarta.xml.bind-api/4.0.2/jakarta.xml.bind-api-4.0.2.jar:/Users/buyangnie/.m2/repository/jakarta/activation/jakarta.activation-api/2.1.3/jakarta.activation-api-2.1.3.jar:/Users/buyangnie/.m2/repository/net/minidev/json-smart/2.5.2/json-smart-2.5.2.jar:/Users/buyangnie/.m2/repository/net/minidev/accessors-smart/2.5.2/accessors-smart-2.5.2.jar:/Users/buyangnie/.m2/repository/org/assertj/assertj-core/3.25.3/assertj-core-3.25.3.jar:/Users/buyangnie/.m2/repository/net/bytebuddy/byte-buddy/1.14.19/byte-buddy-1.14.19.jar:/Users/buyangnie/.m2/repository/org/awaitility/awaitility/4.2.2/awaitility-4.2.2.jar:/Users/buyangnie/.m2/repository/org/hamcrest/hamcrest/2.2/hamcrest-2.2.jar:/Users/buyangnie/.m2/repository/org/junit/jupiter/junit-jupiter/5.10.5/junit-jupiter-5.10.5.jar:/Users/buyangnie/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.10.5/junit-jupiter-api-5.10.5.jar:/Users/buyangnie/.m2/repository/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/Users/buyangnie/.m2/repository/org/junit/platform/junit-platform-commons/1.10.5/junit-platform-commons-1.10.5.jar:/Users/buyangnie/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/Users/buyangnie/.m2/repository/org/junit/jupiter/junit-jupiter-params/5.10.5/junit-jupiter-params-5.10.5.jar:/Users/buyangnie/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.5/junit-jupiter-engine-5.10.5.jar:/Users/buyangnie/.m2/repository/org/junit/platform/junit-platform-engine/1.10.5/junit-platform-engine-1.10.5.jar:/Users/buyangnie/.m2/repository/org/mockito/mockito-core/5.11.0/mockito-core-5.11.0.jar:/Users/buyangnie/.m2/repository/net/bytebuddy/byte-buddy-agent/1.14.19/byte-buddy-agent-1.14.19.jar:/Users/buyangnie/.m2/repository/org/objenesis/objenesis/3.3/objenesis-3.3.jar:/Users/buyangnie/.m2/repository/org/mockito/mockito-junit-jupiter/5.11.0/mockito-junit-jupiter-5.11.0.jar:/Users/buyangnie/.m2/repository/org/skyscreamer/jsonassert/1.5.3/jsonassert-1.5.3.jar:/Users/buyangnie/.m2/repository/com/vaadin/external/google/android-json/0.0.20131108.vaadin1/android-json-0.0.20131108.vaadin1.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-core/6.1.20/spring-core-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-jcl/6.1.20/spring-jcl-6.1.20.jar:/Users/buyangnie/.m2/repository/org/springframework/spring-test/6.1.20/spring-test-6.1.20.jar:/Users/buyangnie/.m2/repository/org/xmlunit/xmlunit-core/2.9.1/xmlunit-core-2.9.1.jar:"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="/Users/buyangnie"/>
+    <property name="user.language" value="zh"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.version.date" value="2026-01-20"/>
+    <property name="java.home" value="/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home"/>
+    <property name="file.separator" value="/"/>
+    <property name="basedir" value="/Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service"/>
+    <property name="java.vm.compressedOopsMode" value="Zero based"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="FILE_LOG_CHARSET" value="UTF-8"/>
+    <property name="java.awt.headless" value="true"/>
+    <property name="apple.awt.application.name" value="ForkedBooter"/>
+    <property name="surefire.real.class.path" value="/Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service/target/surefire/surefirebooter-20260327163730735_3.jar"/>
+    <property name="user.script" value="Hans"/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="java.runtime.version" value="21.0.10+7-LTS"/>
+    <property name="user.name" value="buyangnie"/>
+    <property name="stdout.encoding" value="UTF-8"/>
+    <property name="path.separator" value=":"/>
+    <property name="os.version" value="26.3.1"/>
+    <property name="java.runtime.name" value="OpenJDK Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.vm.name" value="OpenJDK 64-Bit Server VM"/>
+    <property name="java.vendor.version" value="Temurin-21.0.10+7"/>
+    <property name="localRepository" value="/Users/buyangnie/.m2/repository"/>
+    <property name="java.vendor.url.bug" value="https://github.com/adoptium/adoptium-support/issues"/>
+    <property name="java.io.tmpdir" value="/var/folders/xk/l0kn1t_d3pq1cd5yj7fg_b_00000gn/T/"/>
+    <property name="java.version" value="21.0.10"/>
+    <property name="user.dir" value="/Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service"/>
+    <property name="os.arch" value="aarch64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="PID" value="79951"/>
+    <property name="CONSOLE_LOG_CHARSET" value="UTF-8"/>
+    <property name="native.encoding" value="UTF-8"/>
+    <property name="java.library.path" value="/Users/buyangnie/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:."/>
+    <property name="java.vm.info" value="mixed mode, sharing"/>
+    <property name="stderr.encoding" value="UTF-8"/>
+    <property name="java.vendor" value="Eclipse Adoptium"/>
+    <property name="java.vm.version" value="21.0.10+7-LTS"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeBig"/>
+    <property name="java.class.version" value="65.0"/>
+    <property name="LOGGED_APPLICATION_NAME" value="[knowledge-service] "/>
+  </properties>
+  <testcase name="shouldCoverRetrievalExplainAndContentTypeFilters" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="2.326">
+    <error message="No value present" type="java.util.NoSuchElementException"><![CDATA[java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.documentIdByName(KnowledgeCoverageIntegrationTest.java:1145)
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.shouldCoverRetrievalExplainAndContentTypeFilters(KnowledgeCoverageIntegrationTest.java:152)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+]]></error>
+    <system-out><![CDATA[16:37:31.123 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest]: KnowledgeCoverageIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+16:37:31.190 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.huawei.opsfactory.knowledge.KnowledgeServiceApplication for test class com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.3.12)
+
+2026-03-27T16:37:31.414+08:00  INFO 79951 --- [knowledge-service] [           main] h.o.k.a.KnowledgeCoverageIntegrationTest : Starting KnowledgeCoverageIntegrationTest using Java 21.0.10 with PID 79951 (started by buyangnie in /Users/buyangnie/Documents/GitHub/ops-factory/knowledge-service)
+2026-03-27T16:37:31.415+08:00  INFO 79951 --- [knowledge-service] [           main] h.o.k.a.KnowledgeCoverageIntegrationTest : No active profile set, falling back to 1 default profile: "default"
+2026-03-27T16:37:34.083+08:00  INFO 79951 --- [knowledge-service] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-03-27T16:37:34.084+08:00  INFO 79951 --- [knowledge-service] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-03-27T16:37:34.088+08:00  INFO 79951 --- [knowledge-service] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoints beneath base path '/actuator'
+2026-03-27T16:37:34.095+08:00  INFO 79951 --- [knowledge-service] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 11 ms
+2026-03-27T16:37:34.124+08:00  INFO 79951 --- [knowledge-service] [           main] h.o.k.a.KnowledgeCoverageIntegrationTest : Started KnowledgeCoverageIntegrationTest in 2.857 seconds (process running for 3.338)
+2026-03-27T16:37:34.256+08:00  WARN 79951 --- [knowledge-service] [           main] o.a.l.i.v.VectorizationProvider          : Java vector incubator module is not readable. For optimal vector performance, pass '--add-modules jdk.incubator.vector' to enable Vector API.
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /ops-knowledge/sources
+       Parameters = {}
+          Headers = [Content-Type:"application/json;charset=UTF-8", Content-Length:"110"]
+             Body = {
+  "name": "coverage-source-01748ba2-0d38-42ff-90f2-68ef62baabaf",
+  "description": "coverage test source"
+}
+
+    Session Attrs = {}
+
+Handler:
+             Type = com.huawei.opsfactory.knowledge.api.source.SourceController
+           Method = com.huawei.opsfactory.knowledge.api.source.SourceController#createSource(CreateSourceRequest)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json"]
+     Content type = application/json
+             Body = {"id":"src_21a9907110c8","name":"coverage-source-01748ba2-0d38-42ff-90f2-68ef62baabaf","description":"coverage test source","status":"ACTIVE","storageMode":"MANAGED","indexProfileId":"ip_8cae328c6722","retrievalProfileId":"rp_f46fb3edc9a8","createdAt":"2026-03-27T08:37:35.262859Z","updatedAt":"2026-03-27T08:37:35.262859Z"}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /ops-knowledge/sources/src_21a9907110c8/documents:ingest
+       Parameters = {}
+          Headers = [Content-Type:"multipart/form-data;charset=UTF-8"]
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = com.huawei.opsfactory.knowledge.api.document.DocumentController
+           Method = com.huawei.opsfactory.knowledge.api.document.DocumentController#ingestDocuments(String, MultipartFile[])
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json"]
+     Content type = application/json
+             Body = {"jobId":"job_480139e9737c","sourceId":"src_21a9907110c8","status":"SUCCEEDED","documentCount":5}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /ops-knowledge/documents
+       Parameters = {sourceId=[src_21a9907110c8]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = com.huawei.opsfactory.knowledge.api.document.DocumentController
+           Method = com.huawei.opsfactory.knowledge.api.document.DocumentController#listDocuments(String, int, int)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json"]
+     Content type = application/json
+             Body = {"items":[{"id":"doc_1e227f11330d","sourceId":"src_21a9907110c8","name":"sample-knowledge.pdf","contentType":"application/pdf","title":"sample-knowledge.pdf","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":627,"chunkCount":1,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:37.000071Z","updatedAt":"2026-03-27T08:37:37.045415Z"},{"id":"doc_470ae647dfad","sourceId":"src_21a9907110c8","name":"SLA_Violation_Analysis_Report_CN.html","contentType":"text/html","title":"SLA_Violation_Analysis_Report_CN.html","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":16803,"chunkCount":2,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:36.870455Z","updatedAt":"2026-03-27T08:37:36.935982Z"},{"id":"doc_09e9bc735bb1","sourceId":"src_21a9907110c8","name":"Qwen3-32+模型服务性能测试结果（Agent场景）.pdf","contentType":"application/pdf","title":"Qwen3-32+模型服务性能测试结果（Agent场景）.pdf","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":916827,"chunkCount":9,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:36.710620Z","updatedAt":"2026-03-27T08:37:36.851946Z"},{"id":"doc_1832c3e0617b","sourceId":"src_21a9907110c8","name":"Major_Incident_Analysis_INC20250115001_EN.docx","contentType":"application/vnd.openxmlformats-officedocument.wordprocessingml.document","title":"Major_Incident_Analysis_INC20250115001_EN.docx","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":40339,"chunkCount":2,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:36.183519Z","updatedAt":"2026-03-27T08:37:36.258372Z"},{"id":"doc_3daf0f4a50e3","sourceId":"src_21a9907110c8","name":"Comprehensive_Quality_Report.xlsx","contentType":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","title":"Comprehensive_Quality_Report.xlsx","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":1803945,"chunkCount":11,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:35.878148Z","updatedAt":"2026-03-27T08:37:36.021149Z"}],"page":1,"pageSize":20,"total":5}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+]]></system-out>
+    <system-err><![CDATA[WARNING: A restricted method in java.lang.foreign.Linker has been called
+WARNING: java.lang.foreign.Linker::downcallHandle has been called by the unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for this module
+
+WARNING: A Java agent has been loaded dynamically (/Users/buyangnie/.m2/repository/net/bytebuddy/byte-buddy-agent/1.14.19/byte-buddy-agent-1.14.19.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+  </testcase>
+  <testcase name="shouldComputeHybridRrfFusionFromLexicalAndSemanticRanks" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="1.082"/>
+  <testcase name="shouldCoverChunkCrudReorderReindexAndPersistence" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="0.74">
+    <error message="No value present" type="java.util.NoSuchElementException"><![CDATA[java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.documentIdByName(KnowledgeCoverageIntegrationTest.java:1145)
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.shouldCoverChunkCrudReorderReindexAndPersistence(KnowledgeCoverageIntegrationTest.java:809)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+]]></error>
+    <system-out><![CDATA[
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /ops-knowledge/sources
+       Parameters = {}
+          Headers = [Content-Type:"application/json;charset=UTF-8", Content-Length:"110"]
+             Body = {
+  "name": "coverage-source-13cb800c-92fc-4db4-9eab-516c9b78997f",
+  "description": "coverage test source"
+}
+
+    Session Attrs = {}
+
+Handler:
+             Type = com.huawei.opsfactory.knowledge.api.source.SourceController
+           Method = com.huawei.opsfactory.knowledge.api.source.SourceController#createSource(CreateSourceRequest)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json"]
+     Content type = application/json
+             Body = {"id":"src_2e79e116516a","name":"coverage-source-13cb800c-92fc-4db4-9eab-516c9b78997f","description":"coverage test source","status":"ACTIVE","storageMode":"MANAGED","indexProfileId":"ip_8cae328c6722","retrievalProfileId":"rp_f46fb3edc9a8","createdAt":"2026-03-27T08:37:38.165050Z","updatedAt":"2026-03-27T08:37:38.165050Z"}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /ops-knowledge/sources/src_2e79e116516a/documents:ingest
+       Parameters = {}
+          Headers = [Content-Type:"multipart/form-data;charset=UTF-8"]
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = com.huawei.opsfactory.knowledge.api.document.DocumentController
+           Method = com.huawei.opsfactory.knowledge.api.document.DocumentController#ingestDocuments(String, MultipartFile[])
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json"]
+     Content type = application/json
+             Body = {"jobId":"job_fdabfeb0a59c","sourceId":"src_2e79e116516a","status":"SUCCEEDED","documentCount":5}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /ops-knowledge/documents
+       Parameters = {sourceId=[src_2e79e116516a]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = com.huawei.opsfactory.knowledge.api.document.DocumentController
+           Method = com.huawei.opsfactory.knowledge.api.document.DocumentController#listDocuments(String, int, int)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json"]
+     Content type = application/json
+             Body = {"items":[{"id":"doc_ad0a221ae22d","sourceId":"src_2e79e116516a","name":"sample-knowledge.pdf","contentType":"application/pdf","title":"sample-knowledge.pdf","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":627,"chunkCount":1,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:38.825588Z","updatedAt":"2026-03-27T08:37:38.885086Z"},{"id":"doc_a66469c29749","sourceId":"src_2e79e116516a","name":"SLA_Violation_Analysis_Report_CN.html","contentType":"text/html","title":"SLA_Violation_Analysis_Report_CN.html","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":16803,"chunkCount":2,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:38.769188Z","updatedAt":"2026-03-27T08:37:38.821585Z"},{"id":"doc_b81f7dc2c465","sourceId":"src_2e79e116516a","name":"Qwen3-32+模型服务性能测试结果（Agent场景）.pdf","contentType":"application/pdf","title":"Qwen3-32+模型服务性能测试结果（Agent场景）.pdf","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":916827,"chunkCount":9,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:38.627344Z","updatedAt":"2026-03-27T08:37:38.764207Z"},{"id":"doc_49d76fb06262","sourceId":"src_2e79e116516a","name":"Major_Incident_Analysis_INC20250115001_EN.docx","contentType":"application/vnd.openxmlformats-officedocument.wordprocessingml.document","title":"Major_Incident_Analysis_INC20250115001_EN.docx","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":40339,"chunkCount":2,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:38.473078Z","updatedAt":"2026-03-27T08:37:38.518896Z"},{"id":"doc_4fc1bf7affa4","sourceId":"src_2e79e116516a","name":"Comprehensive_Quality_Report.xlsx","contentType":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","title":"Comprehensive_Quality_Report.xlsx","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":1803945,"chunkCount":11,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:38.342729Z","updatedAt":"2026-03-27T08:37:38.439394Z"}],"page":1,"pageSize":20,"total":5}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+]]></system-out>
+  </testcase>
+  <testcase name="shouldReturnRawCompareResultsForAllRequestedModes" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="0.866"/>
+  <testcase name="shouldDifferentiateLexicalSemanticAndHybridRrfSearch" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="0.794"/>
+  <testcase name="shouldCoverSupportedFileMatrixAndArtifacts" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="0.728">
+    <failure message="&#10;Expecting actual:&#10;  [&quot;Major_Incident_Analysis_INC20250115001_EN.docx&quot;,&#10;    &quot;sample-knowledge.pdf&quot;,&#10;    &quot;Comprehensive_Quality_Report.xlsx&quot;,&#10;    &quot;Qwen3-32+æ¨¡åæå¡æ§è½æµè¯ç»æï¼Agentåºæ¯ï¼.pdf&quot;,&#10;    &quot;SLA_Violation_Analysis_Report_CN.html&quot;]&#10;to contain exactly in any order:&#10;  [&quot;Major_Incident_Analysis_INC20250115001_EN.docx&quot;,&#10;    &quot;Qwen3-32+模型服务性能测试结果（Agent场景）.pdf&quot;,&#10;    &quot;sample-knowledge.pdf&quot;,&#10;    &quot;Comprehensive_Quality_Report.xlsx&quot;,&#10;    &quot;SLA_Violation_Analysis_Report_CN.html&quot;]&#10;elements not found:&#10;  [&quot;Qwen3-32+模型服务性能测试结果（Agent场景）.pdf&quot;]&#10;and elements not expected:&#10;  [&quot;Qwen3-32+æ¨¡åæå¡æ§è½æµè¯ç»æï¼Agentåºæ¯ï¼.pdf&quot;]&#10;" type="java.lang.AssertionError"><![CDATA[java.lang.AssertionError: 
+
+Expecting actual:
+  ["Major_Incident_Analysis_INC20250115001_EN.docx",
+    "sample-knowledge.pdf",
+    "Comprehensive_Quality_Report.xlsx",
+    "Qwen3-32+æ¨¡åæå¡æ§è½æµè¯ç»æï¼Agentåºæ¯ï¼.pdf",
+    "SLA_Violation_Analysis_Report_CN.html"]
+to contain exactly in any order:
+  ["Major_Incident_Analysis_INC20250115001_EN.docx",
+    "Qwen3-32+模型服务性能测试结果（Agent场景）.pdf",
+    "sample-knowledge.pdf",
+    "Comprehensive_Quality_Report.xlsx",
+    "SLA_Violation_Analysis_Report_CN.html"]
+elements not found:
+  ["Qwen3-32+模型服务性能测试结果（Agent场景）.pdf"]
+and elements not expected:
+  ["Qwen3-32+æ¨¡åæå¡æ§è½æµè¯ç»æï¼Agentåºæ¯ï¼.pdf"]
+
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.shouldCoverSupportedFileMatrixAndArtifacts(KnowledgeCoverageIntegrationTest.java:86)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+]]></failure>
+    <system-out><![CDATA[
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /ops-knowledge/sources
+       Parameters = {}
+          Headers = [Content-Type:"application/json;charset=UTF-8", Content-Length:"110"]
+             Body = {
+  "name": "coverage-source-5d3146f0-cbf6-45f5-9c21-fbd34d42df44",
+  "description": "coverage test source"
+}
+
+    Session Attrs = {}
+
+Handler:
+             Type = com.huawei.opsfactory.knowledge.api.source.SourceController
+           Method = com.huawei.opsfactory.knowledge.api.source.SourceController#createSource(CreateSourceRequest)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json"]
+     Content type = application/json
+             Body = {"id":"src_40804c73bb68","name":"coverage-source-5d3146f0-cbf6-45f5-9c21-fbd34d42df44","description":"coverage test source","status":"ACTIVE","storageMode":"MANAGED","indexProfileId":"ip_8cae328c6722","retrievalProfileId":"rp_f46fb3edc9a8","createdAt":"2026-03-27T08:37:40.566056Z","updatedAt":"2026-03-27T08:37:40.566056Z"}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /ops-knowledge/sources/src_40804c73bb68/documents:ingest
+       Parameters = {}
+          Headers = [Content-Type:"multipart/form-data;charset=UTF-8"]
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = com.huawei.opsfactory.knowledge.api.document.DocumentController
+           Method = com.huawei.opsfactory.knowledge.api.document.DocumentController#ingestDocuments(String, MultipartFile[])
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json"]
+     Content type = application/json
+             Body = {"jobId":"job_14062809f7ca","sourceId":"src_40804c73bb68","status":"SUCCEEDED","documentCount":5}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /ops-knowledge/documents
+       Parameters = {sourceId=[src_40804c73bb68]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = com.huawei.opsfactory.knowledge.api.document.DocumentController
+           Method = com.huawei.opsfactory.knowledge.api.document.DocumentController#listDocuments(String, int, int)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json"]
+     Content type = application/json
+             Body = {"items":[{"id":"doc_b387d3f8a7a1","sourceId":"src_40804c73bb68","name":"sample-knowledge.pdf","contentType":"application/pdf","title":"sample-knowledge.pdf","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":627,"chunkCount":1,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:41.229889Z","updatedAt":"2026-03-27T08:37:41.272727Z"},{"id":"doc_de429961b0cb","sourceId":"src_40804c73bb68","name":"SLA_Violation_Analysis_Report_CN.html","contentType":"text/html","title":"SLA_Violation_Analysis_Report_CN.html","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":16803,"chunkCount":2,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:41.159658Z","updatedAt":"2026-03-27T08:37:41.226463Z"},{"id":"doc_dbb4b5453016","sourceId":"src_40804c73bb68","name":"Qwen3-32+模型服务性能测试结果（Agent场景）.pdf","contentType":"application/pdf","title":"Qwen3-32+模型服务性能测试结果（Agent场景）.pdf","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":916827,"chunkCount":9,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:40.969858Z","updatedAt":"2026-03-27T08:37:41.154147Z"},{"id":"doc_6b0eae75253d","sourceId":"src_40804c73bb68","name":"Major_Incident_Analysis_INC20250115001_EN.docx","contentType":"application/vnd.openxmlformats-officedocument.wordprocessingml.document","title":"Major_Incident_Analysis_INC20250115001_EN.docx","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":40339,"chunkCount":2,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:40.821615Z","updatedAt":"2026-03-27T08:37:40.875892Z"},{"id":"doc_bedbf5321010","sourceId":"src_40804c73bb68","name":"Comprehensive_Quality_Report.xlsx","contentType":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","title":"Comprehensive_Quality_Report.xlsx","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":1803945,"chunkCount":11,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:40.710040Z","updatedAt":"2026-03-27T08:37:40.796489Z"}],"page":1,"pageSize":20,"total":5}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+]]></system-out>
+  </testcase>
+  <testcase name="shouldDefaultCompareModesAndReturnEmptyHitsForBlankQuery" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="0.615"/>
+  <testcase name="shouldApplyScoreThresholdToSemanticAndHybridFinalScores" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="0.745"/>
+  <testcase name="shouldCoverDocumentAndJobManagementWithDataConsistency" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="0.714"/>
+  <testcase name="shouldDeleteSourceAndCascadeDocumentsChunksBindingsAndArtifacts" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="0.602"/>
+  <testcase name="shouldReturnOnlyRequestedCompareModesAndFilterByDocumentAndContentType" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="0.585">
+    <error message="No value present" type="java.util.NoSuchElementException"><![CDATA[java.util.NoSuchElementException: No value present
+	at java.base/java.util.Optional.orElseThrow(Optional.java:377)
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.documentIdByName(KnowledgeCoverageIntegrationTest.java:1145)
+	at com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest.shouldReturnOnlyRequestedCompareModesAndFilterByDocumentAndContentType(KnowledgeCoverageIntegrationTest.java:294)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+]]></error>
+    <system-out><![CDATA[
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /ops-knowledge/sources
+       Parameters = {}
+          Headers = [Content-Type:"application/json;charset=UTF-8", Content-Length:"110"]
+             Body = {
+  "name": "coverage-source-7e750023-d0c5-45e8-9d9e-a45cc727ca93",
+  "description": "coverage test source"
+}
+
+    Session Attrs = {}
+
+Handler:
+             Type = com.huawei.opsfactory.knowledge.api.source.SourceController
+           Method = com.huawei.opsfactory.knowledge.api.source.SourceController#createSource(CreateSourceRequest)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json"]
+     Content type = application/json
+             Body = {"id":"src_e40774d500f4","name":"coverage-source-7e750023-d0c5-45e8-9d9e-a45cc727ca93","description":"coverage test source","status":"ACTIVE","storageMode":"MANAGED","indexProfileId":"ip_8cae328c6722","retrievalProfileId":"rp_f46fb3edc9a8","createdAt":"2026-03-27T08:37:43.967986Z","updatedAt":"2026-03-27T08:37:43.967986Z"}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = POST
+      Request URI = /ops-knowledge/sources/src_e40774d500f4/documents:ingest
+       Parameters = {}
+          Headers = [Content-Type:"multipart/form-data;charset=UTF-8"]
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = com.huawei.opsfactory.knowledge.api.document.DocumentController
+           Method = com.huawei.opsfactory.knowledge.api.document.DocumentController#ingestDocuments(String, MultipartFile[])
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json"]
+     Content type = application/json
+             Body = {"jobId":"job_33f69ea06b84","sourceId":"src_e40774d500f4","status":"SUCCEEDED","documentCount":5}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+
+MockHttpServletRequest:
+      HTTP Method = GET
+      Request URI = /ops-knowledge/documents
+       Parameters = {sourceId=[src_e40774d500f4]}
+          Headers = []
+             Body = null
+    Session Attrs = {}
+
+Handler:
+             Type = com.huawei.opsfactory.knowledge.api.document.DocumentController
+           Method = com.huawei.opsfactory.knowledge.api.document.DocumentController#listDocuments(String, int, int)
+
+Async:
+    Async started = false
+     Async result = null
+
+Resolved Exception:
+             Type = null
+
+ModelAndView:
+        View name = null
+             View = null
+            Model = null
+
+FlashMap:
+       Attributes = null
+
+MockHttpServletResponse:
+           Status = 200
+    Error message = null
+          Headers = [Vary:"Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers", Content-Type:"application/json"]
+     Content type = application/json
+             Body = {"items":[{"id":"doc_8557e1a86285","sourceId":"src_e40774d500f4","name":"sample-knowledge.pdf","contentType":"application/pdf","title":"sample-knowledge.pdf","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":627,"chunkCount":1,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:44.506038Z","updatedAt":"2026-03-27T08:37:44.542833Z"},{"id":"doc_f940f49fa75c","sourceId":"src_e40774d500f4","name":"SLA_Violation_Analysis_Report_CN.html","contentType":"text/html","title":"SLA_Violation_Analysis_Report_CN.html","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":16803,"chunkCount":2,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:44.445981Z","updatedAt":"2026-03-27T08:37:44.498653Z"},{"id":"doc_9386bd102e13","sourceId":"src_e40774d500f4","name":"Qwen3-32+模型服务性能测试结果（Agent场景）.pdf","contentType":"application/pdf","title":"Qwen3-32+模型服务性能测试结果（Agent场景）.pdf","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":916827,"chunkCount":9,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:44.323143Z","updatedAt":"2026-03-27T08:37:44.441231Z"},{"id":"doc_11089a8b9b36","sourceId":"src_e40774d500f4","name":"Major_Incident_Analysis_INC20250115001_EN.docx","contentType":"application/vnd.openxmlformats-officedocument.wordprocessingml.document","title":"Major_Incident_Analysis_INC20250115001_EN.docx","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":40339,"chunkCount":2,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:44.187626Z","updatedAt":"2026-03-27T08:37:44.235715Z"},{"id":"doc_e7af640db79a","sourceId":"src_e40774d500f4","name":"Comprehensive_Quality_Report.xlsx","contentType":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","title":"Comprehensive_Quality_Report.xlsx","status":"INDEXED","indexStatus":"INDEXED","fileSizeBytes":1803945,"chunkCount":11,"userEditedChunkCount":0,"createdAt":"2026-03-27T08:37:44.090155Z","updatedAt":"2026-03-27T08:37:44.162847Z"}],"page":1,"pageSize":20,"total":5}
+    Forwarded URL = null
+   Redirected URL = null
+          Cookies = []
+]]></system-out>
+  </testcase>
+  <testcase name="shouldCoverBoundaryAndDedupBehaviors" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="0.597"/>
+  <testcase name="shouldCoverSourceProfileAndBindingManagement" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="0.057"/>
+  <testcase name="shouldRespectBoundRetrievalProfileModeWithoutOverride" classname="com.huawei.opsfactory.knowledge.api.KnowledgeCoverageIntegrationTest" time="0.642"/>
+</testsuite>

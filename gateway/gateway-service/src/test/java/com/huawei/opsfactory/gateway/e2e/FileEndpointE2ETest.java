@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
  * E2E tests for FileController endpoints:
  * GET /agents/{agentId}/files
  * GET /agents/{agentId}/files/**
+ * DELETE /agents/{agentId}/files/**
  * POST /agents/{agentId}/files/upload
  */
 public class FileEndpointE2ETest extends BaseE2ETest {
@@ -165,6 +166,53 @@ public class FileEndpointE2ETest extends BaseE2ETest {
                 .header(HEADER_USER_ID, "alice")
                 .exchange()
                 .expectStatus().isOk();
+    }
+
+    // ====================== DELETE /agents/{agentId}/files/** ======================
+
+    @Test
+    public void deleteFile_existingFile_returnsDeleted() throws IOException {
+        when(fileService.deleteFile(any(Path.class), eq("data/readme.txt"))).thenReturn(true);
+
+        webClient.delete().uri("/ops-gateway/agents/test-agent/files/data/readme.txt")
+                .header(HEADER_SECRET_KEY, SECRET_KEY)
+                .header(HEADER_USER_ID, "alice")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.status").isEqualTo("deleted")
+                .jsonPath("$.path").isEqualTo("data/readme.txt");
+    }
+
+    @Test
+    public void deleteFile_notFound_returns404() throws IOException {
+        when(fileService.deleteFile(any(Path.class), eq("data/missing.txt"))).thenReturn(false);
+
+        webClient.delete().uri("/ops-gateway/agents/test-agent/files/data/missing.txt")
+                .header(HEADER_SECRET_KEY, SECRET_KEY)
+                .header(HEADER_USER_ID, "alice")
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.error").isEqualTo("file not found");
+    }
+
+    @Test
+    public void deleteFile_pathTraversal_returns403() {
+        webClient.delete().uri("/ops-gateway/agents/test-agent/files/..%2F..%2Fsecret.txt")
+                .header(HEADER_SECRET_KEY, SECRET_KEY)
+                .header(HEADER_USER_ID, "alice")
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectBody()
+                .jsonPath("$.error").isEqualTo("path traversal not allowed");
+    }
+
+    @Test
+    public void deleteFile_unauthenticated_returns401() {
+        webClient.delete().uri("/ops-gateway/agents/test-agent/files/data/readme.txt")
+                .exchange()
+                .expectStatus().isUnauthorized();
     }
 
     // ====================== POST /agents/{agentId}/files/upload ======================

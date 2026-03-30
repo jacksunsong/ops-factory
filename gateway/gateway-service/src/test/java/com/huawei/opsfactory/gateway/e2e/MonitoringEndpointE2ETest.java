@@ -27,12 +27,12 @@ public class MonitoringEndpointE2ETest extends BaseE2ETest {
     @Test
     public void system_admin_returnsSystemInfo() {
         when(agentConfigService.getRegistry()).thenReturn(List.of(
-                new AgentRegistryEntry("agent-a", "Agent A", false)));
+                new AgentRegistryEntry("agent-a", "Agent A")));
         when(instanceManager.getAllInstances()).thenReturn(Collections.emptyList());
 
         webClient.get().uri("/ops-gateway/monitoring/system")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -67,11 +67,11 @@ public class MonitoringEndpointE2ETest extends BaseE2ETest {
         inst.setStatus(ManagedInstance.Status.RUNNING);
         when(instanceManager.getAllInstances()).thenReturn(List.of(inst));
         when(agentConfigService.findAgent("agent-a")).thenReturn(
-                new AgentRegistryEntry("agent-a", "Agent A", false));
+                new AgentRegistryEntry("agent-a", "Agent A"));
 
         webClient.get().uri("/ops-gateway/monitoring/instances")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -94,7 +94,7 @@ public class MonitoringEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/ops-gateway/monitoring/instances")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -118,14 +118,14 @@ public class MonitoringEndpointE2ETest extends BaseE2ETest {
         inst1.setStatus(ManagedInstance.Status.RUNNING);
         ManagedInstance inst2 = new ManagedInstance("agent-b", "bob", 9002, 222L, null, "test-secret");
         inst2.setStatus(ManagedInstance.Status.STOPPED);
-        ManagedInstance inst3 = new ManagedInstance("agent-a", "sys", 9003, 333L, null, "test-secret");
+        ManagedInstance inst3 = new ManagedInstance("agent-a", "admin", 9003, 333L, null, "test-secret");
         inst3.setStatus(ManagedInstance.Status.STARTING);
 
         when(instanceManager.getAllInstances()).thenReturn(List.of(inst1, inst2, inst3));
 
         webClient.get().uri("/ops-gateway/monitoring/instances")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -143,7 +143,7 @@ public class MonitoringEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/ops-gateway/monitoring/status")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -158,7 +158,7 @@ public class MonitoringEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/ops-gateway/monitoring/status")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -190,7 +190,7 @@ public class MonitoringEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/ops-gateway/monitoring/overview?from=2024-01-01&to=2024-01-02")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -221,7 +221,7 @@ public class MonitoringEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/ops-gateway/monitoring/traces?from=2024-01-01&to=2024-01-02")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -238,7 +238,7 @@ public class MonitoringEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/ops-gateway/monitoring/traces?from=2024-01-01&to=2024-01-02&limit=5&errorsOnly=true")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -266,7 +266,7 @@ public class MonitoringEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/ops-gateway/monitoring/observations?from=2024-01-01&to=2024-01-02")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -304,7 +304,7 @@ public class MonitoringEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/ops-gateway/monitoring/metrics")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -331,7 +331,7 @@ public class MonitoringEndpointE2ETest extends BaseE2ETest {
 
         webClient.get().uri("/ops-gateway/monitoring/metrics")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
-                .header(HEADER_USER_ID, "sys")
+                .header(HEADER_USER_ID, "admin")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()

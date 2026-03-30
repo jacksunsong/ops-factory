@@ -298,7 +298,7 @@ export default function ScheduledActions() {
     }
 
     return (
-        <div className="page-container scheduled-page">
+        <div className="page-container sidebar-top-page scheduled-page">
             <div className="page-header">
                 <h1 className="page-title">{t('scheduler.title')}</h1>
                 <p className="page-subtitle">{t('scheduler.subtitle')}</p>
@@ -498,4 +498,3 @@ export default function ScheduledActions() {
         </div>
     )
 }
-

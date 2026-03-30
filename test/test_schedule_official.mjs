@@ -9,12 +9,12 @@ function pass(name) { console.log(`  ✅ PASS: ${name}`); testsPassed++; }
 function fail(name, reason) { console.log(`  ❌ FAIL: ${name} — ${reason}`); testsFailed++; }
 
 try {
-    // Login as sys (admin)
-    console.log('=== Setup: Login as sys ===');
+    // Login as admin (admin)
+    console.log('=== Setup: Login as admin ===');
     await page.goto('http://127.0.0.1:5173/');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await page.fill('input[placeholder="Your name"]', 'sys');
+    await page.fill('input[placeholder="Your name"]', 'admin');
     await page.click('button:has-text("Enter")');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);

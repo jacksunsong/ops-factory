@@ -1,7 +1,8 @@
 import { useCallback, useReducer, useRef, useEffect, useState } from 'react'
 import { GoosedClient } from '@goosed/sdk'
 import type { TokenState, ImageData, OutputFile } from '@goosed/sdk'
-import { ChatMessage, MessageContent, type AttachedFile } from '../components/Message'
+import type { AttachedFile, ChatMessage, MessageContent } from '../types/message'
+import { getCompactingMessage, getThinkingMessage } from '../utils/messageContent'
 
 // ── ChatState enum ──────────────────────────────────────────────
 export enum ChatState {
@@ -81,27 +82,6 @@ export interface UseChatReturn {
     stopMessage: () => Promise<boolean>
     clearMessages: () => void
     setInitialMessages: (msgs: ChatMessage[]) => void
-}
-
-/**
- * Detect thinking blocks in message text (e.g. <think>…</think>).
- * Used to switch ChatState to Thinking while the model is reasoning.
- */
-function hasThinkingContent(msg: ChatMessage): boolean {
-    return msg.content.some(
-        c => c.type === 'text' && c.text && /<think>/i.test(c.text) && !/<\/think>/i.test(c.text)
-    )
-}
-
-/**
- * Detect compaction system notifications.
- */
-function hasCompactingContent(msg: ChatMessage): boolean {
-    return msg.content.some(
-        c =>
-            (c as unknown as Record<string, unknown>).type === 'systemNotification' &&
-            (c as unknown as Record<string, unknown>).notificationType === 'compactingMessage'
-    )
 }
 
 /**
@@ -240,9 +220,9 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
                         }
 
                         // Determine chat sub-state from message content
-                        if (hasCompactingContent(incomingMessage)) {
+                        if (getCompactingMessage(incomingMessage)) {
                             dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Compacting })
-                        } else if (hasThinkingContent(incomingMessage)) {
+                        } else if (getThinkingMessage(incomingMessage)) {
                             dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Thinking })
                         } else {
                             dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Streaming })
@@ -312,15 +292,23 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
     const stopMessage = useCallback(async (): Promise<boolean> => {
         if (!sessionId || !isStreamingRef.current) return false
 
+        console.info('[chat-stop] stop requested', { sessionId })
+
         // Abort the SSE connection immediately
         abortControllerRef.current?.abort()
         isStreamingRef.current = false
         dispatch({ type: 'STREAM_FINISH' })
+        console.info('[chat-stop] local stream aborted', { sessionId })
 
         try {
             await client.stopSession(sessionId)
+            console.info('[chat-stop] gateway stop acknowledged', { sessionId })
             return true
         } catch (err) {
+            console.warn('[chat-stop] gateway stop failed', {
+                sessionId,
+                error: err instanceof Error ? err.message : String(err),
+            })
             if (isMountedRef.current) {
                 dispatch({ type: 'SET_ERROR', payload: err instanceof Error ? err.message : 'Failed to stop message' })
             }

@@ -23,7 +23,7 @@
 import { test, expect, type Page } from '@playwright/test'
 
 const REGULAR_USER = 'e2e-test-user'
-const ADMIN_USER = 'sys'
+const ADMIN_USER = 'admin'
 
 // Helper: login as a specific user
 async function loginAs(page: Page, username: string) {

@@ -1,6 +1,8 @@
 package com.huawei.opsfactory.gateway.service;
 
 import com.huawei.opsfactory.gateway.common.model.AgentRegistryEntry;
+import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
+import com.huawei.opsfactory.gateway.common.model.ResidentInstanceTarget;
 import com.huawei.opsfactory.gateway.common.util.FileUtil;
 import com.huawei.opsfactory.gateway.common.util.YamlLoader;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
@@ -18,6 +20,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -28,8 +31,10 @@ public class AgentConfigService {
 
     private final GatewayProperties properties;
     private final CopyOnWriteArrayList<AgentRegistryEntry> registry = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ResidentInstanceTarget> residentInstances = new CopyOnWriteArrayList<>();
     private final ConcurrentHashMap<String, Map<String, Object>> configCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Map<String, Object>> secretsCache = new ConcurrentHashMap<>();
+    private final Set<String> residentInstanceKeys = ConcurrentHashMap.newKeySet();
     private Path gatewayRoot;
 
     public AgentConfigService(GatewayProperties properties) {
@@ -38,6 +43,10 @@ public class AgentConfigService {
 
     @PostConstruct
     public void loadRegistry() {
+        registry.clear();
+        residentInstances.clear();
+        residentInstanceKeys.clear();
+
         this.gatewayRoot = Path.of(properties.getPaths().getProjectRoot())
                 .toAbsolutePath().normalize().resolve("gateway");
         Path configYaml = gatewayRoot.resolve("config.yaml");
@@ -56,16 +65,25 @@ public class AgentConfigService {
                     }
                     String id = YamlLoader.getString(map, "id", "");
                     String name = YamlLoader.getString(map, "name", "");
-                    boolean sysOnly = Boolean.TRUE.equals(map.get("sysOnly"));
-                    registry.add(new AgentRegistryEntry(id, name, sysOnly));
+                    registry.add(new AgentRegistryEntry(id, name));
                 }
             }
         }
+        loadResidentInstances(data);
         log.info("Loaded {} agents from registry", registry.size());
+        log.info("Loaded {} resident instance targets", residentInstances.size());
     }
 
     public List<AgentRegistryEntry> getRegistry() {
         return Collections.unmodifiableList(registry);
+    }
+
+    public List<ResidentInstanceTarget> getResidentInstances() {
+        return Collections.unmodifiableList(residentInstances);
+    }
+
+    public boolean isResidentInstance(String agentId, String userId) {
+        return residentInstanceKeys.contains(ManagedInstance.buildKey(agentId, userId));
     }
 
     public AgentRegistryEntry findAgent(String agentId) {
@@ -75,6 +93,72 @@ public class AgentConfigService {
             }
         }
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void loadResidentInstances(Map<String, Object> data) {
+        Object residentObj = data.get("residentInstances");
+        if (!(residentObj instanceof Map<?, ?> residentMapObj)) {
+            return;
+        }
+        Map<String, Object> residentMap = (Map<String, Object>) residentMapObj;
+        if (Boolean.FALSE.equals(residentMap.get("enabled"))) {
+            return;
+        }
+
+        Object entriesObj = residentMap.get("entries");
+        if (!(entriesObj instanceof List<?> entries)) {
+            return;
+        }
+
+        List<String> configuredAgentIds = registry.stream().map(AgentRegistryEntry::id).toList();
+        for (Object entryObj : entries) {
+            if (!(entryObj instanceof Map<?, ?> rawEntry)) {
+                continue;
+            }
+            Map<String, Object> entry = (Map<String, Object>) rawEntry;
+            String userId = YamlLoader.getString(entry, "userId", "").trim();
+            if (userId.isEmpty()) {
+                log.warn("Skipping residentInstances entry with blank userId");
+                continue;
+            }
+            Object agentIdsObj = entry.get("agentIds");
+            if (!(agentIdsObj instanceof List<?> rawAgentIds) || rawAgentIds.isEmpty()) {
+                log.warn("Skipping residentInstances entry for user {} without agentIds", userId);
+                continue;
+            }
+
+            List<String> agentIds = rawAgentIds.stream()
+                    .filter(String.class::isInstance)
+                    .map(String.class::cast)
+                    .map(String::trim)
+                    .filter(id -> !id.isEmpty())
+                    .toList();
+            if (agentIds.contains("*")) {
+                addResidentTargets(userId, configuredAgentIds);
+                continue;
+            }
+            List<String> validAgentIds = agentIds.stream()
+                    .filter(agentId -> {
+                        boolean exists = configuredAgentIds.contains(agentId);
+                        if (!exists) {
+                            log.warn("Skipping unknown resident agent {} for user {}", agentId, userId);
+                        }
+                        return exists;
+                    })
+                    .toList();
+            addResidentTargets(userId, validAgentIds);
+        }
+    }
+
+    private void addResidentTargets(String userId, List<String> agentIds) {
+        for (String agentId : agentIds) {
+            String key = ManagedInstance.buildKey(agentId, userId);
+            if (!residentInstanceKeys.add(key)) {
+                continue;
+            }
+            residentInstances.add(new ResidentInstanceTarget(userId, agentId));
+        }
     }
 
     /**
@@ -317,7 +401,7 @@ public class AgentConfigService {
         updateAgentsYaml(id, name, false);
 
         // Update in-memory registry and invalidate cache
-        registry.add(new AgentRegistryEntry(id, name, false));
+        registry.add(new AgentRegistryEntry(id, name));
         invalidateCache(id);
 
         // Read provider/model from created config

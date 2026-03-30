@@ -1,7 +1,7 @@
 /**
  * Gateway Integration Tests — Deep Coverage
  *
- * All tests use only universal-agent with three users: sys (default), alice, bob.
+ * All tests use only universal-agent with three users: admin (default), alice, bob.
  * Tests exercise the full request path through the gateway to real goosed instances.
  *
  * Prerequisites: goosed binary must be available in PATH.
@@ -16,7 +16,7 @@ import { join } from 'node:path'
 const AGENT_ID = 'universal-agent'
 const USER_ALICE = 'test-alice'
 const USER_BOB = 'test-bob'
-const USER_SYS = 'sys'
+const USER_SYS = 'admin'
 const PROJECT_ROOT = join(import.meta.dirname, '..')
 
 let gw: GatewayHandle
@@ -206,10 +206,10 @@ describe('Gateway health & auth', () => {
     }
   })
 
-  it('GET /me defaults to sys when no x-user-id', async () => {
+  it('GET /me defaults to admin when no x-user-id', async () => {
     const res = await gw.fetch('/me')
     const data = await res.json()
-    expect(data.userId).toBe('sys')
+    expect(data.userId).toBe('admin')
   })
 
   it('GET /config returns officePreview setting', async () => {
@@ -1308,27 +1308,27 @@ describe('Path traversal — additional vectors', () => {
 describe('Role-based access control', () => {
   // --- /me returns correct role ---
 
-  it('GET /me returns role=admin for sys user', async () => {
+  it('GET /me returns role=admin for admin user', async () => {
     const res = await gw.fetchAs(USER_SYS, '/me')
     const data = await res.json()
-    expect(data.userId).toBe('sys')
+    expect(data.userId).toBe('admin')
     expect(data.role).toBe('admin')
   })
 
-  it('GET /me returns role=user for non-sys user', async () => {
+  it('GET /me returns role=user for non-admin user', async () => {
     const res = await gw.fetchAs(USER_ALICE, '/me')
     const data = await res.json()
     expect(data.userId).toBe(USER_ALICE)
     expect(data.role).toBe('user')
   })
 
-  it('GET /me defaults to role=admin when no x-user-id (defaults to sys)', async () => {
+  it('GET /me defaults to role=admin when no x-user-id (defaults to admin)', async () => {
     const res = await gw.fetch('/me')
     const data = await res.json()
     expect(data.role).toBe('admin')
   })
 
-  // --- Admin routes accessible by admin (sys) ---
+  // --- Admin routes accessible by admin (admin) ---
 
   it('admin can GET /agents/:id/config', async () => {
     const res = await gw.fetchAs(USER_SYS, `/agents/${AGENT_ID}/config`)

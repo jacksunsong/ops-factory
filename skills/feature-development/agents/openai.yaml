@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feature Development"
+  short_description: "Guide feature work from discovery to review"
+  default_prompt: "Use $feature-development to implement a new feature in this codebase: describe the feature and constraints."

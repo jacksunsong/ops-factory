@@ -2,6 +2,7 @@ package com.huawei.opsfactory.gateway.process;
 
 import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+import com.huawei.opsfactory.gateway.service.AgentConfigService;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -17,6 +18,7 @@ public class InstanceWatchdogTest {
     private InstanceManager instanceManager;
     private GatewayProperties properties;
     private PrewarmService prewarmService;
+    private AgentConfigService agentConfigService;
     private InstanceWatchdog watchdog;
 
     @Before
@@ -27,7 +29,8 @@ public class InstanceWatchdogTest {
         properties.getIdle().setMaxRestartAttempts(3);
         properties.getIdle().setRestartBaseDelayMs(5000L);
         prewarmService = mock(PrewarmService.class);
-        watchdog = new InstanceWatchdog(instanceManager, properties, prewarmService);
+        agentConfigService = mock(AgentConfigService.class);
+        watchdog = new InstanceWatchdog(instanceManager, properties, prewarmService, agentConfigService);
     }
 
     // ---- Idle reap tests (original behavior) ----
@@ -57,15 +60,16 @@ public class InstanceWatchdogTest {
     }
 
     @Test
-    public void testReap_neverReapsSys() {
-        ManagedInstance sysInstance = createInstance("agent1", "sys", ManagedInstance.Status.RUNNING, mockAliveProcess());
-        setLastActivity(sysInstance, System.currentTimeMillis() - 60 * 60 * 1000L);
+    public void testReap_neverReapsResidentInstance() {
+        ManagedInstance resident = createInstance("agent1", "admin", ManagedInstance.Status.RUNNING, mockAliveProcess());
+        setLastActivity(resident, System.currentTimeMillis() - 60 * 60 * 1000L);
 
-        when(instanceManager.getAllInstances()).thenReturn(List.of(sysInstance));
+        when(instanceManager.getAllInstances()).thenReturn(List.of(resident));
+        when(agentConfigService.isResidentInstance("agent1", "admin")).thenReturn(true);
 
         watchdog.watchInstances();
 
-        verify(instanceManager, never()).stopInstance(sysInstance);
+        verify(instanceManager, never()).stopInstance(resident);
     }
 
     @Test
@@ -150,6 +154,20 @@ public class InstanceWatchdogTest {
 
         verify(instanceManager, never()).stopInstance(alive);
         verify(instanceManager, never()).respawnAsync("agent1", "user1", 1);
+    }
+
+    @Test
+    public void testWatchdog_residentDeadProcessStillRespawns() {
+        Process deadProcess = mockDeadProcess(1);
+        ManagedInstance resident = createInstance("agent1", "admin", ManagedInstance.Status.RUNNING, deadProcess);
+
+        when(instanceManager.getAllInstances()).thenReturn(List.of(resident));
+        when(agentConfigService.isResidentInstance("agent1", "admin")).thenReturn(true);
+
+        watchdog.watchInstances();
+
+        verify(instanceManager).stopInstance(resident);
+        verify(instanceManager).respawnAsync("agent1", "admin", 1);
     }
 
     // ---- Helpers ----

@@ -22,6 +22,19 @@ yaml_val() {
 yaml_nested_val() {
     local section="$1" key="$2" file="${SERVICE_DIR}/config.yaml"
     [ -f "${file}" ] || return 0
+    local inline
+    inline="$(awk -v section="${section}" '
+      $0 ~ "^" section ":[[:space:]]*\\{" { print; exit }
+    ' "${file}")"
+    if [ -n "${inline}" ]; then
+        echo "${inline}" \
+          | sed -E "s/^${section}:[[:space:]]*\\{//; s/}[[:space:]]*$//" \
+          | tr ',' '\n' \
+          | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
+          | awk -F': *' -v key="${key}" '$1==key {print $2; exit}' \
+          | sed 's/^["'"'"']//;s/["'"'"']$//'
+        return 0
+    fi
     awk -F': ' -v section="${section}" -v key="${key}" '
       $0 ~ "^" section ":" { in_section=1; next }
       in_section && $0 ~ "^[^[:space:]]" { in_section=0 }
@@ -44,8 +57,9 @@ case "${GOOSED_BIN}" in
     /*) ;;  # already absolute
     *)  [ -f "${SERVICE_DIR}/${GOOSED_BIN}" ] && GOOSED_BIN="${SERVICE_DIR}/${GOOSED_BIN}" ;;
 esac
-GOOSED_TLS="${GOOSED_TLS:-$(yaml_val goosedTls)}"
-GOOSED_TLS="${GOOSED_TLS:-false}"
+GOOSE_TLS="${GOOSE_TLS:-$(yaml_val gooseTls)}"
+GOOSE_TLS="${GOOSE_TLS:-$(yaml_val goosedTls)}"
+GOOSE_TLS="${GOOSE_TLS:-true}"
 GATEWAY_TLS="${GATEWAY_TLS:-$(yaml_val gatewayTls)}"
 GATEWAY_TLS="${GATEWAY_TLS:-true}"
 GATEWAY_KEY_STORE="${GATEWAY_KEY_STORE:-$(yaml_val gatewayKeyStore)}"
@@ -87,7 +101,7 @@ PROJECT_ROOT="${PROJECT_ROOT:-${ROOT_DIR}}"
 MAX_INSTANCES_PER_USER="${MAX_INSTANCES_PER_USER:-$(yaml_nested_val limits maxInstancesPerUser)}"
 MAX_INSTANCES_PER_USER="${MAX_INSTANCES_PER_USER:-5}"
 MAX_INSTANCES_GLOBAL="${MAX_INSTANCES_GLOBAL:-$(yaml_nested_val limits maxInstancesGlobal)}"
-MAX_INSTANCES_GLOBAL="${MAX_INSTANCES_GLOBAL:-50}"
+MAX_INSTANCES_GLOBAL="${MAX_INSTANCES_GLOBAL:-200}"
 
 # Prewarm
 PREWARM_ENABLED="${PREWARM_ENABLED:-$(yaml_nested_val prewarm enabled)}"
@@ -123,8 +137,50 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 log_ok()    { echo -e "${GREEN}[OK]${NC}    $1"; }
 log_fail()  { echo -e "${RED}[FAIL]${NC}  $1"; }
 
+LOG_DIR="${SERVICE_DIR}/logs"
+GATEWAY_HEALTH_PATH="/ops-gateway/status"
+GATEWAY_AGENTS_PATH="/ops-gateway/agents"
+
 # --- Utilities ---
 check_port() { lsof -ti:"$1" >/dev/null 2>&1; }
+
+generate_gateway_api_password() {
+    if command -v openssl >/dev/null 2>&1; then
+        openssl rand -hex 24
+        return
+    fi
+    if command -v python3 >/dev/null 2>&1; then
+        python3 - <<'EOF'
+import secrets
+print(secrets.token_hex(24))
+EOF
+        return
+    fi
+    if command -v uuidgen >/dev/null 2>&1; then
+        uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-'
+        return
+    fi
+    date +%s | shasum | awk '{print $1}'
+}
+
+read_gateway_api_password() {
+    if [ ! -t 0 ] || [ ! -r /dev/tty ] || [ ! -w /dev/tty ]; then
+        return 2
+    fi
+
+    printf "Enter API password for gateway REST interface: " >/dev/tty
+    if ! IFS= read -r -s GATEWAY_API_PASSWORD </dev/tty; then
+        printf "\n" >/dev/tty
+        log_error "Failed to read API password"
+        return 1
+    fi
+    printf "\n" >/dev/tty
+
+    if [ -z "${GATEWAY_API_PASSWORD}" ]; then
+        log_error "Password cannot be empty"
+        return 1
+    fi
+}
 
 stop_port() {
     local port=$1 name=$2
@@ -149,16 +205,31 @@ wait_http_ok() {
     return 1
 }
 
+start_detached() {
+    local log_file="$1"
+    shift
+
+    mkdir -p "${LOG_DIR}"
+    if command -v setsid >/dev/null 2>&1; then
+        nohup setsid "$@" </dev/null >>"${log_file}" 2>&1 &
+    else
+        nohup "$@" </dev/null >>"${log_file}" 2>&1 &
+    fi
+    echo $!
+}
+
 gateway_url() {
     local sk="${GATEWAY_SECRET_KEY}"
     for host in "${GATEWAY_HOST}" "127.0.0.1"; do
-        if curl -fsS ${CURL_TLS_OPTS} "${GATEWAY_SCHEME}://${host}:${GATEWAY_PORT}/status" -H "x-secret-key: ${sk}" >/dev/null 2>&1; then
+        if curl -fsS ${CURL_TLS_OPTS} "${GATEWAY_SCHEME}://${host}:${GATEWAY_PORT}${GATEWAY_HEALTH_PATH}" \
+                -H "x-secret-key: ${sk}" >/dev/null 2>&1; then
             echo "${GATEWAY_SCHEME}://${host}:${GATEWAY_PORT}"; return 0
         fi
     done
     for host in "${GATEWAY_HOST}" "127.0.0.1"; do
         local code
-        code="$(curl -s ${CURL_TLS_OPTS} -o /dev/null -w "%{http_code}" "${GATEWAY_SCHEME}://${host}:${GATEWAY_PORT}/status" 2>/dev/null || true)"
+        code="$(curl -s ${CURL_TLS_OPTS} -o /dev/null -w "%{http_code}" \
+            "${GATEWAY_SCHEME}://${host}:${GATEWAY_PORT}${GATEWAY_HEALTH_PATH}" 2>/dev/null || true)"
         [ "${code}" = "401" ] && { echo "${GATEWAY_SCHEME}://${host}:${GATEWAY_PORT}"; return 0; }
     done
     return 1
@@ -200,8 +271,8 @@ shutdown_agents() {
 
 check_agents_configured() {
     local agents_json
-    agents_json="$(curl -fsS ${CURL_TLS_OPTS} "${GATEWAY_SCHEME}://127.0.0.1:${GATEWAY_PORT}/agents" \
-        -H "x-secret-key: ${GATEWAY_SECRET_KEY}" -H "x-user-id: sys" 2>/dev/null || true)"
+    agents_json="$(curl -fsS ${CURL_TLS_OPTS} "${GATEWAY_SCHEME}://127.0.0.1:${GATEWAY_PORT}${GATEWAY_AGENTS_PATH}" \
+        -H "x-secret-key: ${GATEWAY_SECRET_KEY}" -H "x-user-id: admin" 2>/dev/null || true)"
     [ -z "${agents_json}" ] && { log_error "Failed to query agents"; return 1; }
 
     # Parse with lightweight approach (no node dependency)
@@ -222,7 +293,8 @@ status_agents() {
 
     if [ -n "${base_url}" ]; then
         local agents_json
-        agents_json="$(curl -fsS ${CURL_TLS_OPTS} "${base_url}/agents" -H "x-secret-key: ${GATEWAY_SECRET_KEY}" -H "x-user-id: sys" 2>/dev/null || true)"
+        agents_json="$(curl -fsS ${CURL_TLS_OPTS} "${base_url}${GATEWAY_AGENTS_PATH}" \
+            -H "x-secret-key: ${GATEWAY_SECRET_KEY}" -H "x-user-id: admin" 2>/dev/null || true)"
         if [ -n "${agents_json}" ]; then
             local count
             count="$(echo "${agents_json}" | python3 -c "import sys,json;d=json.load(sys.stdin);print(len(d.get('agents',d) if isinstance(d,dict) else d))" 2>/dev/null || echo "0")"
@@ -233,7 +305,7 @@ status_agents() {
                 log_ok "Agents configured (${count} total)"
             fi
         else
-            log_fail "Failed to query /agents"
+            log_fail "Failed to query ${GATEWAY_AGENTS_PATH}"
             return 1
         fi
     else
@@ -297,19 +369,24 @@ do_startup() {
         fi
     fi
 
-    # Prompt for password if not provided
-    GATEWAY_API_PASSWORD=""
     if [ -z "${GATEWAY_API_PASSWORD:-}" ]; then
-        echo -n "Enter API password for gateway REST interface: "
-        read -s GATEWAY_API_PASSWORD
-        echo
-        if [ -z "${GATEWAY_API_PASSWORD}" ]; then
-            log_error "Password cannot be empty"
-            return 1
+        if read_gateway_api_password; then
+            log_info "Using user-provided gateway API password"
+        else
+            local password_status=$?
+            if [ "${password_status}" -ne 2 ]; then
+                return 1
+            fi
+            GATEWAY_API_PASSWORD="$(generate_gateway_api_password)"
+            log_info "Generated random internal gateway API password for child processes"
         fi
     fi
 
+    # Log gooseTls configuration for debugging
+    log_info "[gooseTls config] env=$GOOSE_TLS (source: env var > config.yaml > default)"
+
     log_info "Starting gateway at ${GATEWAY_SCHEME}://${GATEWAY_HOST}:${GATEWAY_PORT}"
+    log_info "[gooseTls config] Java will be started with -Dgateway.goose-tls=${GOOSE_TLS}"
 
     # Build Java command — inject all config as Spring properties
     local java_cmd="java"
@@ -320,7 +397,7 @@ do_startup() {
         "-Dgateway.secret-key=${GATEWAY_SECRET_KEY}"
         "-Dgateway.cors-origin=${CORS_ORIGIN}"
         "-Dgateway.goosed-bin=${GOOSED_BIN}"
-        "-Dgateway.goosed-tls=${GOOSED_TLS}"
+        "-Dgateway.goose-tls=${GOOSE_TLS}"
         "-Dgateway.paths.project-root=${PROJECT_ROOT}"
         "-Dgateway.paths.agents-dir=${AGENTS_DIR}"
         "-Dgateway.paths.users-dir=${USERS_DIR}"
@@ -369,22 +446,22 @@ do_startup() {
     java_opts+=("-jar" "${jar}")
 
     if [ "${mode}" = "background" ]; then
-        ${java_cmd} "${java_opts[@]}" &
-        GATEWAY_PID=$!
+        local log_file="${LOG_DIR}/gateway.log"
+        GATEWAY_PID="$(start_detached "${log_file}" "${java_cmd}" "${java_opts[@]}")"
         if ! kill -0 "${GATEWAY_PID}" 2>/dev/null; then
             log_error "Failed to start gateway"
             return 1
         fi
-        if ! wait_http_ok "Gateway" "${GATEWAY_SCHEME}://127.0.0.1:${GATEWAY_PORT}/status" \
+        if ! wait_http_ok "Gateway" "${GATEWAY_SCHEME}://127.0.0.1:${GATEWAY_PORT}${GATEWAY_HEALTH_PATH}" \
                 "x-secret-key: ${GATEWAY_SECRET_KEY}" 40 1; then
-            log_error "Gateway failed to become healthy. Check logs."
+            log_error "Gateway failed to become healthy. Check logs: ${log_file}"
             kill "${GATEWAY_PID}" 2>/dev/null || true
             return 1
         fi
-        log_info "Gateway started (PID: ${GATEWAY_PID})"
+        log_info "Gateway started (PID: ${GATEWAY_PID}, log: ${log_file})"
         check_agents_configured || true
     else
-        ${java_cmd} "${java_opts[@]}"
+        exec ${java_cmd} "${java_opts[@]}"
     fi
 }
 
@@ -399,7 +476,7 @@ do_status() {
         if gateway_url >/dev/null 2>&1; then
             log_ok "Gateway running (${GATEWAY_SCHEME}://localhost:${GATEWAY_PORT})"
         else
-            log_fail "Gateway port open but /status check failed"
+            log_fail "Gateway port open but ${GATEWAY_HEALTH_PATH} check failed"
             has_fail=1
         fi
     else

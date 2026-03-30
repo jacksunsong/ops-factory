@@ -77,9 +77,9 @@ test.describe('Gateway unavailable — error display', () => {
     })
 
     test('Monitoring page shows error banner', async ({ page }) => {
-        // Monitoring requires admin — use 'sys' user to avoid redirect
+        // Monitoring requires admin — use 'admin' user to avoid redirect
         await page.evaluate(() => {
-            localStorage.setItem('opsfactory:userId', 'sys')
+            localStorage.setItem('opsfactory:userId', 'admin')
         })
         await page.goto('/monitoring')
         const errorBanner = page.locator('.conn-banner-error').or(

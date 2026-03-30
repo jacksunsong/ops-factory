@@ -4,9 +4,9 @@ description: "Automated daily platform health check and diagnosis report"
 prompt: |
   Perform a comprehensive platform diagnosis:
 
-  1. Call get_platform_status to check gateway health and running instances.
-  2. Call get_agents_status to review all agent configurations and their status.
-  3. Call get_observability_data to analyze the last 24 hours of traces, latency, errors, and cost.
+  1. Call platform-monitor__get_platform_status to check gateway health and running instances.
+  2. Call platform-monitor__get_agents_status to review all agent configurations and their status.
+  3. Call platform-monitor__get_observability_data to analyze the last 24 hours of traces, latency, errors, and cost.
 
   Produce a structured diagnosis report with:
   - Overall health summary

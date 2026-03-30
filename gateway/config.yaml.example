@@ -7,7 +7,7 @@ host: "0.0.0.0"                         # env: GATEWAY_HOST
 secretKey: ""                           # env: GATEWAY_SECRET_KEY     [REQUIRED]
 corsOrigin: "http://127.0.0.1:5173"     # env: CORS_ORIGIN
 goosedBin: "goosed"                     # env: GOOSED_BIN
-goosedTls: false                        # env: GOOSED_TLS  (gateway↔goosed TLS)
+gooseTls: true                          # env: GOOSE_TLS  (gateway↔goosed TLS)
 
 paths:
   agentsDir: "agents"                   # env: AGENTS_DIR
@@ -27,18 +27,26 @@ upload:
   maxImageSizeMb: 20                    # env: MAX_IMAGE_SIZE_MB
 
 limits:
-  maxInstancesPerUser: 5               # env: MAX_INSTANCES_PER_USER
-  maxInstancesGlobal: 50               # env: MAX_INSTANCES_GLOBAL
+  maxInstancesPerUser: 20              # env: MAX_INSTANCES_PER_USER
+  maxInstancesGlobal: 200              # env: MAX_INSTANCES_GLOBAL
 
 prewarm:
   enabled: true                         # env: PREWARM_ENABLED
   defaultAgentId: universal-agent       # env: PREWARM_DEFAULT_AGENT_ID
 
+residentInstances:
+  enabled: true
+  entries:
+    - userId: admin
+      agentIds: ["*"]
+    - userId: robby
+      agentIds: ["*"]
+
 agents:
   - {id: universal-agent, name: Universal Agent}
   - {id: kb-agent, name: KB Agent}
   - {id: report-agent, name: Report Agent}
-  - {id: supervisor-agent, name: Supervisor Agent, sysOnly: true}
+  - {id: supervisor-agent, name: Supervisor Agent}
 
 # Langfuse observability (optional)
 # langfuse:

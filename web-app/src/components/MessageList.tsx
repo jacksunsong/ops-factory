@@ -1,11 +1,95 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import Message, { ChatMessage, type DetectedFile } from './Message'
-import type { ToolResponseMap } from './Message'
+import Message from './Message'
 import { ChatState, type OutputFilesEvent } from '../hooks/useChat'
 import { extractSourceDocuments, type Citation } from '../utils/citationParser'
+import { getReasoningContent, getThinkingContent, hasDisplayTextContent, hasTextContent, hasToolContent } from '../utils/messageContent'
 import { useUser } from '../contexts/UserContext'
 import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
+import type { ChatMessage, DetectedFile, ToolResponseMap } from '../types/message'
+
+function hasOnlyToolResponse(message: ChatMessage): boolean {
+    return message.role === 'user' &&
+        message.content.length > 0 &&
+        message.content.every(content => content.type === 'toolResponse')
+}
+
+function hasOnlyProcessContent(message: ChatMessage): boolean {
+    return message.role === 'assistant' &&
+        !hasDisplayTextContent(message) &&
+        !message.content.some(content => content.type === 'toolRequest') &&
+        (!!getReasoningContent(message) || !!getThinkingContent(message))
+}
+
+function hasToolRequest(message: ChatMessage): boolean {
+    return message.role === 'assistant' &&
+        message.content.some(content => content.type === 'toolRequest')
+}
+
+function buildDisplayMessages(messages: ChatMessage[]): ChatMessage[] {
+    const displayMessages: ChatMessage[] = []
+
+    for (let i = 0; i < messages.length; i++) {
+        const message = messages[i]
+
+        if (hasOnlyToolResponse(message)) {
+            continue
+        }
+
+        const startsToolChain = hasOnlyProcessContent(message) ||
+            (hasToolRequest(message) && !hasDisplayTextContent(message))
+
+        if (!startsToolChain) {
+            displayMessages.push(message)
+            continue
+        }
+
+        let nextIndex = i
+        let sawToolRequest = false
+        const mergedContent = [...message.content]
+
+        if (hasToolRequest(message)) {
+            sawToolRequest = true
+        }
+
+        while (nextIndex + 1 < messages.length) {
+            const nextMessage = messages[nextIndex + 1]
+
+            if (hasOnlyToolResponse(nextMessage)) {
+                nextIndex += 1
+                continue
+            }
+
+            const canMergeAssistant = hasOnlyProcessContent(nextMessage) ||
+                (hasToolRequest(nextMessage) && !hasDisplayTextContent(nextMessage))
+
+            if (!canMergeAssistant) {
+                break
+            }
+
+            if (hasToolRequest(nextMessage)) {
+                sawToolRequest = true
+            }
+
+            mergedContent.push(...nextMessage.content)
+            nextIndex += 1
+        }
+
+        if (sawToolRequest) {
+            displayMessages.push({
+                ...message,
+                id: message.id || `merged-chain-${i}`,
+                content: mergedContent,
+            })
+            i = nextIndex
+            continue
+        }
+
+        displayMessages.push(message)
+    }
+
+    return displayMessages
+}
 
 interface MessageListProps {
     messages: ChatMessage[]
@@ -32,20 +116,40 @@ export default function MessageList({ messages, isLoading = false, chatState = C
         }
     }, [messages])
 
-    const visibleMessages = useMemo(
-        () => messages.filter(msg => !msg.metadata || msg.metadata.userVisible !== false),
-        [messages]
-    )
+    const visibleMessages = useMemo(() => {
+        const userVisibleMessages = messages.filter(msg => !msg.metadata || msg.metadata.userVisible !== false)
+
+        return userVisibleMessages.filter((msg, index) => {
+            if (msg.role !== 'assistant') {
+                return true
+            }
+
+            const hasPrimaryContent = hasTextContent(msg) || hasToolContent(msg)
+            if (hasPrimaryContent) {
+                return true
+            }
+
+            const hasReasoningOnly = !!getReasoningContent(msg) || !!getThinkingContent(msg)
+            if (hasReasoningOnly) {
+                return true
+            }
+
+            const isLastMessage = index === userVisibleMessages.length - 1
+            return isLastMessage
+        })
+    }, [messages])
+
+    const displayMessages = useMemo(() => buildDisplayMessages(visibleMessages), [visibleMessages])
 
     const finalAssistantTextMessageId = useMemo(() => {
-        for (let i = visibleMessages.length - 1; i >= 0; i--) {
-            const msg = visibleMessages[i]
-            if (msg.role === 'assistant' && msg.content.some(c => c.type === 'text' && typeof c.text === 'string' && c.text.trim().length > 0)) {
+        for (let i = displayMessages.length - 1; i >= 0; i--) {
+            const msg = displayMessages[i]
+            if (msg.role === 'assistant' && hasDisplayTextContent(msg)) {
                 return msg.id
             }
         }
         return undefined
-    }, [visibleMessages])
+    }, [displayMessages])
 
     const toolResponses = useMemo<ToolResponseMap>(() => {
         const map: ToolResponseMap = new Map()
@@ -114,7 +218,7 @@ export default function MessageList({ messages, isLoading = false, chatState = C
     useEffect(() => {
         if (!agentId || !sessionId || isLoading) return
         // Only fetch on initial load when we have messages but no output files yet
-        if (messageOutputFiles.size > 0 || visibleMessages.length === 0) return
+        if (messageOutputFiles.size > 0 || displayMessages.length === 0) return
 
         let cancelled = false
         const loadPersistedCapsules = async () => {
@@ -143,7 +247,7 @@ export default function MessageList({ messages, isLoading = false, chatState = C
 
         loadPersistedCapsules()
         return () => { cancelled = true }
-    }, [agentId, sessionId, isLoading, visibleMessages.length, gatewayHeaders])
+    }, [agentId, sessionId, isLoading, displayMessages.length, gatewayHeaders])
 
     // Reset state when agent or session changes
     useEffect(() => {
@@ -151,7 +255,7 @@ export default function MessageList({ messages, isLoading = false, chatState = C
         processedOutputFilesRef.current = new Set()
     }, [agentId, sessionId])
 
-    if (visibleMessages.length === 0 && !isLoading) {
+    if (displayMessages.length === 0 && !isLoading) {
         return (
             <div className="empty-state">
                 <svg
@@ -173,11 +277,11 @@ export default function MessageList({ messages, isLoading = false, chatState = C
 
     return (
         <div className="chat-messages" ref={containerRef}>
-            {visibleMessages.map((message, index) => {
+            {displayMessages.map((message, index) => {
                 const isLastAssistant =
                     isLoading &&
                     message.role === 'assistant' &&
-                    index === visibleMessages.length - 1
+                    index === displayMessages.length - 1
                 const isFinalAssistantResponse =
                     message.role === 'assistant' &&
                     !!message.id &&
@@ -199,21 +303,23 @@ export default function MessageList({ messages, isLoading = false, chatState = C
                 )
             })}
 
-            {isLoading && visibleMessages[visibleMessages.length - 1]?.role !== 'assistant' && (
+            {isLoading && displayMessages[displayMessages.length - 1]?.role !== 'assistant' && (
                 <div className="message assistant animate-fade-in">
                     <div className="message-avatar">G</div>
-                    <div className="message-content">
-                        <div className="loading-dots">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                    <div className="message-body">
+                        <div className="message-content">
+                            <div className="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            {chatState === ChatState.Thinking && (
+                                <div className="loading-status-text">{t('chat.thinking')}</div>
+                            )}
+                            {chatState === ChatState.Compacting && (
+                                <div className="loading-status-text">{t('chat.compactingContext')}</div>
+                            )}
                         </div>
-                        {chatState === ChatState.Thinking && (
-                            <div className="loading-status-text">{t('chat.thinking')}</div>
-                        )}
-                        {chatState === ChatState.Compacting && (
-                            <div className="loading-status-text">{t('chat.compactingContext')}</div>
-                        )}
                     </div>
                 </div>
             )}

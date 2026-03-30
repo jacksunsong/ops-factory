@@ -1,54 +1,14 @@
-import { memo } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ToolCallDisplay from './ToolCallDisplay'
 import CitationMark from './CitationMark'
 import ReferenceList from './ReferenceList'
 import { usePreview } from '../contexts/PreviewContext'
-import { parseCitations, type Citation } from '../utils/citationParser'
+import { mergeCitationMetadata, parseCitations, replaceCitationsWithPlaceholders, type Citation } from '../utils/citationParser'
+import { getDisplayTextContent, getFullTextContent, getReasoningContent, getThinkingContent } from '../utils/messageContent'
 import { GATEWAY_URL, GATEWAY_SECRET_KEY } from '../config/runtime'
-
-export interface MessageContent {
-    type: string
-    text?: string
-    id?: string
-    name?: string
-    input?: Record<string, unknown>
-    // For toolRequest - contains the tool call details
-    toolCall?: {
-        status?: string
-        value?: {
-            name?: string
-            arguments?: Record<string, unknown>
-        }
-    }
-    // For toolResponse - contains the tool result
-    toolResult?: {
-        status?: string
-        value?: unknown
-    }
-}
-
-export interface AttachedFile {
-    name: string        // display name ("dependencies.pdf")
-    path: string        // basename for download URL
-    ext: string         // extension without dot
-    serverPath?: string // full server path (for API text, transient)
-}
-
-export interface MessageMetadata {
-    userVisible?: boolean
-    agentVisible?: boolean
-    attachedFiles?: AttachedFile[]
-}
-
-export interface ChatMessage {
-    id?: string
-    role: 'user' | 'assistant'
-    content: MessageContent[]
-    created?: number
-    metadata?: MessageMetadata
-}
+import type { ChatMessage, DetectedFile, ToolResponseMap } from '../types/message'
 
 interface MessageProps {
     message: ChatMessage
@@ -62,15 +22,6 @@ interface MessageProps {
     showFileCapsules?: boolean
 }
 
-export type ToolResponseMap = Map<string, { result?: unknown; isError: boolean }>
-
-export interface DetectedFile {
-    path: string
-    name: string
-    ext: string
-}
-
-// Represents a paired tool call with its request and response
 interface ToolCallPair {
     id: string
     name: string
@@ -80,7 +31,33 @@ interface ToolCallPair {
     isError: boolean
 }
 
-// Parse todo markdown content into structured task items
+interface ProcessEntry {
+    key: string
+    kind: 'reasoning' | 'thinking' | 'tool'
+    label?: string
+    content?: string
+    toolCall?: ToolCallPair
+}
+
+interface ScrollFadeState {
+    hasTopFade: boolean
+    hasBottomFade: boolean
+}
+
+function ThinkingStatusIcon({ isStreaming, isOpen }: { isStreaming: boolean; isOpen: boolean }) {
+    if (isStreaming) {
+        return (
+            <span className="process-thinking-status process-thinking-status-spinning" aria-hidden="true">
+                <span className="process-thinking-spinner-ring" />
+            </span>
+        )
+    }
+
+    return (
+        <span className={`process-thinking-status process-thinking-status-chevron${isOpen ? ' open' : ''}`} aria-hidden="true" />
+    )
+}
+
 function parseTodoContent(content: string) {
     const lines = content.split('\n').map(line => line.trim()).filter(Boolean)
     const tasks: Array<{ done: boolean; text: string }> = []
@@ -94,7 +71,10 @@ function parseTodoContent(content: string) {
     return tasks
 }
 
-// File capsule component (hoisted to module scope for stable identity)
+function normalizeProcessText(text: string | undefined): string {
+    return (text || '').replace(/\s+/g, ' ').trim()
+}
+
 function FileCapsule({ filePath, fileName, fileExt, agentId, userId }: {
     filePath: string; fileName: string; fileExt: string; agentId?: string; userId?: string | null
 }) {
@@ -154,55 +134,243 @@ function MessageInner({
     onRetry,
     sourceDocuments,
     outputFiles = [],
-    showFileCapsules = true
+    showFileCapsules = true,
 }: MessageProps) {
     const isUser = message.role === 'user'
 
-    // Extract text content and tool calls
-    const textContent: string[] = []
-    const toolRequests: Map<string, { name: string; args?: Record<string, unknown>; status?: string }> = new Map()
+    const fullText = getFullTextContent(message)
+    const displayTextFromContent = getDisplayTextContent(message)
 
-    // Collect content from current message
-    for (const content of message.content) {
-        if (content.type === 'text' && content.text) {
-            textContent.push(content.text)
-        } else if (content.type === 'toolRequest' && content.id) {
-            // toolRequest contains toolCall.value.name and toolCall.value.arguments
-            const toolCall = content.toolCall
-            toolRequests.set(content.id, {
-                name: toolCall?.value?.name || 'unknown',
-                args: toolCall?.value?.arguments,
-                status: toolCall?.status
+    const processEntries = useMemo<ProcessEntry[]>(() => {
+        if (isUser) return []
+
+        const items: ProcessEntry[] = []
+        let hasStructuredReasoning = false
+        let hasStructuredThinking = false
+        let textBufferKind: 'reasoning' | 'thinking' | null = null
+        let textBuffer = ''
+        const pushProcessTextEntry = (entry: ProcessEntry) => {
+            const previous = items[items.length - 1]
+            const currentText = normalizeProcessText(entry.content)
+            const previousText = normalizeProcessText(previous?.content)
+
+            if (
+                previous &&
+                (previous.kind === 'reasoning' || previous.kind === 'thinking') &&
+                (entry.kind === 'reasoning' || entry.kind === 'thinking') &&
+                currentText.length > 0 &&
+                currentText === previousText
+            ) {
+                return
+            }
+
+            items.push(entry)
+        }
+
+        const flushTextBuffer = () => {
+            if (!textBufferKind || !textBuffer.trim()) {
+                textBufferKind = null
+                textBuffer = ''
+                return
+            }
+
+            pushProcessTextEntry({
+                key: `${message.id || 'message'}-${textBufferKind}-${items.length}`,
+                kind: textBufferKind,
+                label: textBufferKind === 'reasoning' ? '推理过程' : '思考过程',
+                content: textBuffer,
             })
-        } else if (content.type === 'toolResponse' && content.id) {
-            // Also collect from current message
-            const toolResult = content.toolResult
-            toolResponses.set(content.id, {
-                result: toolResult?.status === 'success' ? toolResult.value : toolResult,
-                isError: toolResult?.status === 'error'
+
+            textBufferKind = null
+            textBuffer = ''
+        }
+
+        for (const content of message.content) {
+            if (content.type === 'reasoning' && typeof content.text === 'string' && content.text.trim()) {
+                hasStructuredReasoning = true
+                if (textBufferKind !== 'reasoning') {
+                    flushTextBuffer()
+                    textBufferKind = 'reasoning'
+                }
+                textBuffer += content.text
+                continue
+            }
+
+            if (content.type === 'thinking' && typeof content.thinking === 'string' && content.thinking.trim()) {
+                hasStructuredThinking = true
+                if (textBufferKind !== 'thinking') {
+                    flushTextBuffer()
+                    textBufferKind = 'thinking'
+                }
+                textBuffer += content.thinking
+                continue
+            }
+
+            if (content.type === 'toolRequest' && content.id) {
+                flushTextBuffer()
+                const toolCall = content.toolCall
+                const name = toolCall?.value?.name || 'unknown'
+                if (name === 'unknown' && toolCall?.status === 'error') {
+                    continue
+                }
+
+                const response = toolResponses.get(content.id)
+                items.push({
+                    key: content.id,
+                    kind: 'tool',
+                    toolCall: {
+                        id: content.id,
+                        name,
+                        args: toolCall?.value?.arguments,
+                        result: response?.result,
+                        isPending: !response && toolCall?.status === 'pending',
+                        isError: response?.isError || toolCall?.status === 'error',
+                    },
+                })
+            }
+        }
+
+        flushTextBuffer()
+
+        if (!hasStructuredReasoning) {
+            const reasoningText = getReasoningContent(message)
+            if (reasoningText) {
+                pushProcessTextEntry({
+                    key: `${message.id || 'message'}-reasoning-fallback`,
+                    kind: 'reasoning',
+                    label: '推理过程',
+                    content: reasoningText,
+                })
+            }
+        }
+
+        if (!hasStructuredThinking) {
+            const thinkingText = getThinkingContent(message)
+            if (thinkingText) {
+                pushProcessTextEntry({
+                    key: `${message.id || 'message'}-thinking-fallback`,
+                    kind: 'thinking',
+                    label: '思考过程',
+                    content: thinkingText,
+                })
+            }
+        }
+
+        return items
+    }, [isUser, message.content, message.id, toolResponses])
+
+    const [openState, setOpenState] = useState<Record<string, boolean>>({})
+    const [fadeState, setFadeState] = useState<Record<string, ScrollFadeState>>({})
+    const contentRefs = useRef<Record<string, HTMLDivElement | null>>({})
+    const wasStreamingRef = useRef(isStreaming)
+
+    useEffect(() => {
+        setOpenState(current => {
+            const next = { ...current }
+            for (const entry of processEntries) {
+                if ((entry.kind === 'reasoning' || entry.kind === 'thinking') && !(entry.key in next)) {
+                    next[entry.key] = isStreaming
+                }
+            }
+            return next
+        })
+    }, [isStreaming, processEntries])
+
+    useEffect(() => {
+        if (isStreaming) {
+            setOpenState(current => {
+                const next = { ...current }
+                for (const entry of processEntries) {
+                    if (entry.kind !== 'reasoning' && entry.kind !== 'thinking') continue
+                    next[entry.key] = true
+                }
+                return next
             })
         }
+    }, [isStreaming, processEntries])
+
+    useEffect(() => {
+        const wasStreaming = wasStreamingRef.current
+        if (wasStreaming && !isStreaming) {
+            setOpenState(current => {
+                const next = { ...current }
+                for (const entry of processEntries) {
+                    if (entry.kind !== 'reasoning' && entry.kind !== 'thinking') continue
+                    next[entry.key] = false
+                }
+                return next
+            })
+        }
+        wasStreamingRef.current = isStreaming
+    }, [isStreaming, processEntries])
+
+    useEffect(() => {
+        const computeFadeState = (element: HTMLDivElement | null): ScrollFadeState => {
+            if (!element) return { hasTopFade: false, hasBottomFade: false }
+            const maxScrollTop = Math.max(element.scrollHeight - element.clientHeight, 0)
+            return {
+                hasTopFade: element.scrollTop > 2,
+                hasBottomFade: maxScrollTop - element.scrollTop > 2,
+            }
+        }
+
+        const syncFadeStates = () => {
+            setFadeState(current => {
+                const next = { ...current }
+                for (const entry of processEntries) {
+                    if (entry.kind !== 'reasoning' && entry.kind !== 'thinking') continue
+                    next[entry.key] = computeFadeState(contentRefs.current[entry.key] || null)
+                }
+                return next
+            })
+        }
+
+        syncFadeStates()
+        window.addEventListener('resize', syncFadeStates)
+        return () => window.removeEventListener('resize', syncFadeStates)
+    }, [processEntries, openState])
+
+    const toggleEntry = (key: string) => {
+        if (isStreaming) return
+        setOpenState(current => ({ ...current, [key]: !current[key] }))
     }
 
-    // Pair tool requests with their responses
-    // Skip tool calls that failed before execution (no name, error status) — they are
-    // pre-execution failures (MCP connection error, tool not found, etc.) and provide
-    // no useful information to the user.
-    const toolCalls: ToolCallPair[] = []
-    for (const [id, request] of toolRequests) {
-        if (request.name === 'unknown' && request.status === 'error') continue
-        const response = toolResponses.get(id)
-        toolCalls.push({
-            id,
-            name: request.name,
-            args: request.args,
-            result: response?.result,
-            isPending: !response && request.status === 'pending',
-            isError: response?.isError || request.status === 'error'
+    const handleScroll = (key: string) => {
+        const element = contentRefs.current[key]
+        if (!element) return
+        const maxScrollTop = Math.max(element.scrollHeight - element.clientHeight, 0)
+        setFadeState(current => ({
+            ...current,
+            [key]: {
+                hasTopFade: element.scrollTop > 2,
+                hasBottomFade: maxScrollTop - element.scrollTop > 2,
+            }
+        }))
+    }
+
+    useEffect(() => {
+        if (!isStreaming) return
+
+        setFadeState(current => {
+            const next = { ...current }
+
+            for (const entry of processEntries) {
+                if ((entry.kind !== 'reasoning' && entry.kind !== 'thinking') || !openState[entry.key]) continue
+
+                const element = contentRefs.current[entry.key]
+                if (!element) continue
+
+                element.scrollTop = element.scrollHeight
+                next[entry.key] = {
+                    hasTopFade: element.scrollTop > 2,
+                    hasBottomFade: false,
+                }
+            }
+
+            return next
         })
-    }
+    }, [isStreaming, openState, processEntries])
 
-    // Todo card: uses the standard tool-call outer shell, structured checkbox body
     const TodoToolCard = ({ toolCall }: { toolCall: ToolCallPair }) => {
         const raw = typeof toolCall.args?.content === 'string' ? toolCall.args.content : ''
         const tasks = parseTodoContent(raw)
@@ -214,11 +382,12 @@ function MessageInner({
             if (totalCount > 0 && doneCount === totalCount) return 'success'
             return 'active'
         })()
-        const displayName = toolCall.name.split('__').pop()?.replace(/_/g, ' ') || toolCall.name
-        const capitalized = displayName.charAt(0).toUpperCase() + displayName.slice(1)
+        const rawDisplayName = toolCall.name.split('__').pop()?.replace(/_/g, ' ') || toolCall.name
+        const cleanedDisplayName = rawDisplayName.replace(/^todo\s+/i, '').trim() || rawDisplayName
+        const capitalized = cleanedDisplayName.charAt(0).toUpperCase() + cleanedDisplayName.slice(1)
 
         return (
-            <div className="tool-call">
+            <div className="tool-call embedded todo-tool-call">
                 <div className="tool-call-header">
                     <span className={`tool-call-indicator ${indicatorTone}`} aria-hidden="true" />
                     <span className="tool-call-name">Todo {capitalized}</span>
@@ -247,192 +416,190 @@ function MessageInner({
         )
     }
 
-
-    const fullText = textContent.join('\n')
-
-    // Split thinking blocks from visible text
-    const thinkRegex = /<think>([\s\S]*?)<\/think>/gi
-    const thinkingParts: string[] = []
-    const visibleText = fullText.replace(thinkRegex, (_match, content) => {
-        thinkingParts.push(content.trim())
-        return ''
-    }).trim()
-    const thinkingText = thinkingParts.join('\n\n')
-
-    // Check for unclosed thinking block (still thinking)
-    const unclosedThinkMatch = fullText.match(/<think>([\s\S]*)$/i)
-    const isThinking = !!unclosedThinkMatch
-    const unclosedThinkingText = unclosedThinkMatch ? unclosedThinkMatch[1].trim() : ''
-
-    // Detect empty assistant response (model truly returned nothing — empty content array)
     const isEmptyAssistantResponse = !isUser && message.content.length === 0 && !isStreaming
 
-    // Don't render empty user messages
     if (isUser && !fullText) {
         return null
     }
 
-    // Skip assistant messages with only non-renderable content (e.g. reasoning, redactedThinking).
-    // These are intermediate chain-of-thought messages that get accumulated during live streaming
-    // but appear as separate messages when loading from session history.
-    const hasThinking = !isUser && (thinkingText || isThinking)
-    if (!isUser && !fullText && toolCalls.length === 0 && !hasThinking && !isStreaming && !isEmptyAssistantResponse) {
+    const hasProcessEntries = !isUser && processEntries.length > 0
+
+    if (!isUser && !fullText && !hasProcessEntries && !isStreaming && !isEmptyAssistantResponse) {
         return null
     }
 
-    // Determine which text to display for assistant messages
-    const rawDisplayText = !isUser ? (visibleText || fullText) : fullText
-
-    // Citation processing — only for assistant text content
-    const citations: Citation[] = !isUser && rawDisplayText ? parseCitations(rawDisplayText) : []
+    const rawDisplayText = !isUser ? (displayTextFromContent || fullText) : fullText
+    const parsedCitations: Citation[] = !isUser && rawDisplayText ? parseCitations(rawDisplayText) : []
+    const citations = mergeCitationMetadata(parsedCitations, sourceDocuments || [])
     const citationMap = new Map(citations.map(c => [c.index, c]))
 
-    // Replace {{cite:N:TITLE:URL}} markers with Markdown links that the
-    // custom `a` component will intercept and render as <CitationMark />.
-    // Inline citations are best-effort — they only appear when the LLM
-    // follows the citation format instruction.
     const displayText = citations.length > 0
-        ? rawDisplayText
-            .replace(
-                /\{\{cite:(\d+):\s*[^:]*:[^}]*\}\}/g,
-                (_, num) => `[CITE_${num}](#cite-${num})`
-            )
+        ? replaceCitationsWithPlaceholders(rawDisplayText)
             .replace(/```[ \t]*\[CITE_/g, '```\n\n[CITE_')
         : rawDisplayText
+    const shouldShowReferences = !isUser && !isStreaming && citations.length > 0
 
     return (
         <div className={`message ${isUser ? 'user' : 'assistant'} animate-slide-in`}>
             <div className="message-avatar">
                 {isUser ? 'U' : 'G'}
             </div>
-            <div className="message-content">
-                {/* Empty assistant response — model error */}
-                {isEmptyAssistantResponse && (
-                    <div className="message-error-banner">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="12" />
-                            <line x1="12" y1="16" x2="12.01" y2="16" />
-                        </svg>
-                        <span>The model did not return a valid response. This may be a temporary service issue.</span>
-                        {onRetry && (
-                            <button className="message-error-retry" onClick={onRetry}>
-                                Retry
-                            </button>
-                        )}
-                    </div>
-                )}
+            <div className="message-body">
+                <div className="message-content">
+                    {isEmptyAssistantResponse && (
+                        <div className="message-error-banner">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            <span>The model did not return a valid response. This may be a temporary service issue.</span>
+                            {onRetry && (
+                                <button className="message-error-retry" onClick={onRetry}>
+                                    Retry
+                                </button>
+                            )}
+                        </div>
+                    )}
 
-                {/* Thinking block (collapsible) */}
-                {hasThinking && (
-                    <details className="thinking-block">
-                        <summary className="thinking-block-summary">
-                            {isThinking ? 'Thinking...' : 'Show thinking'}
-                        </summary>
-                        <div className="thinking-block-content">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {thinkingText || unclosedThinkingText}
+                    {!isUser && processEntries.length > 0 && (
+                        <div className="process-flow">
+                            {processEntries.map((entry, index) => {
+                                const stepClass = `${index === 0 ? ' process-step-first' : ''}${index === processEntries.length - 1 ? ' process-step-last' : ''}`
+
+                                if (entry.kind === 'reasoning' || entry.kind === 'thinking') {
+                                    const isOpen = openState[entry.key] ?? true
+                                    const state = fadeState[entry.key] || { hasTopFade: false, hasBottomFade: false }
+                                    return (
+                                        <div key={entry.key} className={`process-step process-step-thinking${stepClass}`}>
+                                            <div className="process-step-rail" aria-hidden="true" />
+                                            <div className="process-step-content">
+                                                <button
+                                                    type="button"
+                                                    className={`process-thinking-header${isOpen ? ' open' : ''}${isStreaming ? ' is-streaming' : ''}`}
+                                                    onClick={() => toggleEntry(entry.key)}
+                                                    disabled={isStreaming}
+                                                    aria-expanded={isOpen}
+                                                >
+                                                    <ThinkingStatusIcon isStreaming={isStreaming} isOpen={isOpen} />
+                                                    <span className="process-thinking-label">{entry.label}</span>
+                                                </button>
+                                                {isOpen && (
+                                                    <div
+                                                        ref={element => { contentRefs.current[entry.key] = element }}
+                                                        className={`thinking-block-content process-thinking-content${state.hasTopFade ? ' has-top-fade' : ''}${state.hasBottomFade ? ' has-bottom-fade' : ''}`}
+                                                        onScroll={() => handleScroll(entry.key)}
+                                                    >
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                            {entry.content || ''}
+                                                        </ReactMarkdown>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                }
+
+                                const toolCall = entry.toolCall!
+                                const indicatorTone = toolCall.isError ? 'error' : toolCall.isPending ? 'pending' : 'success'
+
+                                return (
+                                    <div key={entry.key} className={`process-step process-step-tool process-step-tool-${indicatorTone}${stepClass}`}>
+                                        <div className="process-step-rail" aria-hidden="true">
+                                            <span className={`process-step-node ${indicatorTone}`} />
+                                        </div>
+                                        <div className="process-step-content">
+                                            {toolCall.name.startsWith('todo__')
+                                                ? <TodoToolCard toolCall={toolCall} />
+                                                : (
+                                                    <ToolCallDisplay
+                                                        name={toolCall.name}
+                                                        args={toolCall.args}
+                                                        result={toolCall.result}
+                                                        isPending={toolCall.isPending}
+                                                        isError={toolCall.isError}
+                                                        embedded
+                                                    />
+                                                )}
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+
+                    {displayText && (
+                        <div className="message-text">
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                    a: ({ href, children, ...props }) => {
+                                        if (href?.startsWith('#cite-')) {
+                                            const index = parseInt(href.replace('#cite-', ''), 10)
+                                            const citation = citationMap.get(index)
+                                            if (citation) return <CitationMark citation={citation} />
+                                            return <>{children}</>
+                                        }
+                                        if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('mailto:') && agentId) {
+                                            return (
+                                                <span className="file-link-group">
+                                                    <span className="file-link-name">{children}</span>
+                                                </span>
+                                            )
+                                        }
+                                        return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+                                    }
+                                }}
+                            >
+                                {displayText}
                             </ReactMarkdown>
                         </div>
-                    </details>
-                )}
+                    )}
 
-                {/* Main text content (with thinking stripped) */}
-                {displayText && (
-                    <div className="message-text">
-                        <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                                a: ({ href, children, ...props }) => {
-                                    // Citation markers rendered as #cite-N fragment links
-                                    if (href?.startsWith('#cite-')) {
-                                        const index = parseInt(href.replace('#cite-', ''), 10)
-                                        const citation = citationMap.get(index)
-                                        if (citation) return <CitationMark citation={citation} />
-                                        return <>{children}</>
-                                    }
-                                    if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('mailto:') && agentId) {
-                                        // Render as a simple styled file name inline — the bottom capsule handles preview/download
-                                        return (
-                                            <span className="file-link-group">
-                                                <span className="file-link-name">{children}</span>
-                                            </span>
-                                        )
-                                    }
-                                    return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
-                                }
-                            }}
-                        >
-                            {displayText}
-                        </ReactMarkdown>
-                    </div>
-                )}
-
-                {/* Attached file capsules for user messages */}
-                {isUser && message.metadata?.attachedFiles && message.metadata.attachedFiles.length > 0 && (
-                    <div className="file-capsules-container">
-                        {message.metadata.attachedFiles.map((file, idx) => (
-                            <FileCapsule
-                                key={`attached-${file.path}-${idx}`}
-                                filePath={file.path}
-                                fileName={file.name}
-                                fileExt={file.ext}
-                                agentId={agentId}
-                                userId={userId}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* File capsules — only show files confirmed by filesystem diff (outputFiles from MessageList) */}
-                {!isUser && showFileCapsules && outputFiles.length > 0 && (
-                    <div className="file-capsules-container">
-                        {outputFiles.map((file, idx) => (
-                            <FileCapsule
-                                key={`${file.path}-${idx}`}
-                                filePath={file.path}
-                                fileName={file.name}
-                                fileExt={file.ext}
-                                agentId={agentId}
-                                userId={userId}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* Source references — always shown when available (extracted from tool call results) */}
-                {sourceDocuments && sourceDocuments.length > 0 && displayText && (
-                    <ReferenceList citations={sourceDocuments} />
-                )}
-
-                {/* Tool calls */}
-                {toolCalls.map(toolCall => (
-                    toolCall.name.startsWith('todo__')
-                        ? (
-                            <TodoToolCard key={toolCall.id} toolCall={toolCall} />
-                        )
-                        : (
-                            <ToolCallDisplay
-                                key={toolCall.id}
-                                name={toolCall.name}
-                                args={toolCall.args}
-                                result={toolCall.result}
-                                isPending={toolCall.isPending}
-                                isError={toolCall.isError}
-                            />
-                        )
-                ))}
-
-                {/* Streaming indicator on last assistant message */}
-                {isStreaming && (
-                    <div className="streaming-indicator">
-                        <div className="loading-dots">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                    {isUser && message.metadata?.attachedFiles && message.metadata.attachedFiles.length > 0 && (
+                        <div className="file-capsules-container">
+                            {message.metadata.attachedFiles.map((file, idx) => (
+                                <FileCapsule
+                                    key={`attached-${file.path}-${idx}`}
+                                    filePath={file.path}
+                                    fileName={file.name}
+                                    fileExt={file.ext}
+                                    agentId={agentId}
+                                    userId={userId}
+                                />
+                            ))}
                         </div>
-                    </div>
-                )}
+                    )}
+
+                    {!isUser && showFileCapsules && outputFiles.length > 0 && (
+                        <div className="file-capsules-container">
+                            {outputFiles.map((file, idx) => (
+                                <FileCapsule
+                                    key={`${file.path}-${idx}`}
+                                    filePath={file.path}
+                                    fileName={file.name}
+                                    fileExt={file.ext}
+                                    agentId={agentId}
+                                    userId={userId}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {shouldShowReferences && displayText && (
+                        <ReferenceList citations={citations} />
+                    )}
+
+                    {isStreaming && (
+                        <div className="streaming-indicator">
+                            <div className="loading-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     )

@@ -120,8 +120,8 @@ describe('gw() helper', () => {
 
 describe('handleGetPlatformStatus', () => {
   it('should combine /monitoring/system and /monitoring/instances', async () => {
-    routes['/monitoring/system'] = { gateway: { uptimeMs: 1000 } }
-    routes['/monitoring/instances'] = { totalInstances: 3 }
+    routes['/ops-gateway/monitoring/system'] = { gateway: { uptimeMs: 1000 } }
+    routes['/ops-gateway/monitoring/instances'] = { totalInstances: 3 }
 
     const result = JSON.parse(await handleGetPlatformStatus())
     assert.deepStrictEqual(result.system, { gateway: { uptimeMs: 1000 } })
@@ -131,8 +131,8 @@ describe('handleGetPlatformStatus', () => {
 
 describe('handleGetAgentsStatus', () => {
   it('should combine /agents and /monitoring/instances', async () => {
-    routes['/agents'] = [{ id: 'agent-1' }]
-    routes['/monitoring/instances'] = { totalInstances: 1 }
+    routes['/ops-gateway/agents'] = [{ id: 'agent-1' }]
+    routes['/ops-gateway/monitoring/instances'] = { totalInstances: 1 }
 
     const result = JSON.parse(await handleGetAgentsStatus())
     assert.deepStrictEqual(result.agents, [{ id: 'agent-1' }])
@@ -142,7 +142,7 @@ describe('handleGetAgentsStatus', () => {
 
 describe('handleGetObservabilityData', () => {
   it('should return error when Langfuse is not enabled', async () => {
-    routes['/monitoring/status'] = { enabled: false }
+    routes['/ops-gateway/monitoring/status'] = { enabled: false }
 
     const result = JSON.parse(await handleGetObservabilityData(24))
     assert.ok(result.error.includes('not configured'))
@@ -150,17 +150,17 @@ describe('handleGetObservabilityData', () => {
   })
 
   it('should return error when Langfuse is not reachable', async () => {
-    routes['/monitoring/status'] = { enabled: true, reachable: false, host: 'http://langfuse:3000' }
+    routes['/ops-gateway/monitoring/status'] = { enabled: true, reachable: false, host: 'http://langfuse:3000' }
 
     const result = JSON.parse(await handleGetObservabilityData(24))
     assert.ok(result.error.includes('not reachable'))
   })
 
   it('should fetch overview/traces/observations when Langfuse is available', async () => {
-    routes['/monitoring/status'] = { enabled: true, reachable: true, host: 'http://langfuse:3000' }
-    routes['/monitoring/overview'] = { totalTraces: 100 }
-    routes['/monitoring/traces'] = [{ id: 'trace-1' }]
-    routes['/monitoring/observations'] = { breakdown: [] }
+    routes['/ops-gateway/monitoring/status'] = { enabled: true, reachable: true, host: 'http://langfuse:3000' }
+    routes['/ops-gateway/monitoring/overview'] = { totalTraces: 100 }
+    routes['/ops-gateway/monitoring/traces'] = [{ id: 'trace-1' }]
+    routes['/ops-gateway/monitoring/observations'] = { breakdown: [] }
 
     const result = JSON.parse(await handleGetObservabilityData(12))
     assert.equal(result.timeRange.hours, 12)
@@ -192,7 +192,7 @@ describe('handleGetRealtimeMetrics', () => {
       ],
       agentMetrics: { 'agent-1': { requests: 30, errors: 0 } },
     }
-    routes['/monitoring/metrics'] = metricsData
+    routes['/ops-gateway/monitoring/metrics'] = metricsData
 
     const result = JSON.parse(await handleGetRealtimeMetrics())
     assert.equal(result.collectionIntervalSec, 30)
@@ -206,8 +206,8 @@ describe('handleGetRealtimeMetrics', () => {
 
 describe('dispatch', () => {
   it('should route get_platform_status', async () => {
-    routes['/monitoring/system'] = { up: true }
-    routes['/monitoring/instances'] = { total: 0 }
+    routes['/ops-gateway/monitoring/system'] = { up: true }
+    routes['/ops-gateway/monitoring/instances'] = { total: 0 }
 
     const result = JSON.parse(await dispatch('get_platform_status', {}))
     assert.ok('system' in result)
@@ -215,29 +215,29 @@ describe('dispatch', () => {
   })
 
   it('should route get_agents_status', async () => {
-    routes['/agents'] = []
-    routes['/monitoring/instances'] = { total: 0 }
+    routes['/ops-gateway/agents'] = []
+    routes['/ops-gateway/monitoring/instances'] = { total: 0 }
 
     const result = JSON.parse(await dispatch('get_agents_status', {}))
     assert.ok('agents' in result)
   })
 
   it('should route get_observability_data with default hours', async () => {
-    routes['/monitoring/status'] = { enabled: false }
+    routes['/ops-gateway/monitoring/status'] = { enabled: false }
 
     const result = JSON.parse(await dispatch('get_observability_data', {}))
     assert.ok(result.error) // Langfuse not configured
   })
 
   it('should route get_observability_data with custom hours', async () => {
-    routes['/monitoring/status'] = { enabled: false }
+    routes['/ops-gateway/monitoring/status'] = { enabled: false }
 
     const result = JSON.parse(await dispatch('get_observability_data', { hours: 48 }))
     assert.ok(result.error)
   })
 
   it('should route get_realtime_metrics', async () => {
-    routes['/monitoring/metrics'] = { collectionIntervalSec: 30, series: [] }
+    routes['/ops-gateway/monitoring/metrics'] = { collectionIntervalSec: 30, series: [] }
 
     const result = JSON.parse(await dispatch('get_realtime_metrics', {}))
     assert.equal(result.collectionIntervalSec, 30)

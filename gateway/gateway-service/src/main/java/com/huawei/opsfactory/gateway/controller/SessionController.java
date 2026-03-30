@@ -106,7 +106,7 @@ public class SessionController {
         String userId = exchange.getAttribute(UserContextFilter.USER_ID_ATTR);
         return Flux.fromIterable(instanceManager.getAllInstances())
                 .filter(inst -> inst.getUserId().equals(userId)
-                        || GatewayConstants.SYS_USER.equals(inst.getUserId()))
+                        || GatewayConstants.SYSTEM_USER.equals(inst.getUserId()))
                 .filter(inst -> inst.getStatus() == ManagedInstance.Status.RUNNING)
                 .flatMap(inst -> sessionService.getSessionsFromInstance(inst)
                         .map(json -> extractSessionsArray(json, inst.getAgentId())))

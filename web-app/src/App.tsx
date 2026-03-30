@@ -8,24 +8,32 @@ import AgentConfigure from './pages/AgentConfigure'
 import ScheduledActions from './pages/ScheduledActions'
 import Monitoring from './pages/Monitoring'
 import Inbox from './pages/Inbox'
+import Knowledge from './pages/Knowledge'
+import KnowledgeConfigure from './pages/KnowledgeConfigure'
 import FilePreview from './components/FilePreview'
 import { PreviewProvider, usePreview } from './contexts/PreviewContext'
 import { InboxProvider } from './contexts/InboxContext'
 import { SidebarProvider, useSidebar } from './contexts/SidebarContext'
 import { AdminRoute } from './contexts/UserContext'
+import { RightPanelProvider, useRightPanel } from './contexts/RightPanelContext'
+import CapabilityMarketPanel from './components/market/CapabilityMarketPanel'
 
 const IS_EMBED = new URLSearchParams(window.location.search).get('embed') === 'true'
 
 function AppContent() {
     const { previewFile } = usePreview()
     const { isCollapsed } = useSidebar()
+    const { isMarketOpen, marketActiveTab, closeMarket, setMarketActiveTab } = useRightPanel()
     const isPreviewOpen = !!previewFile
+    const isRightPanelOpen = isMarketOpen || isPreviewOpen
+    const rightPanelMode = isMarketOpen ? 'panel-drawer' : isPreviewOpen ? 'panel-preview' : ''
     const isEmbed = IS_EMBED
 
     const mainWrapperClass = [
         'main-wrapper',
         isEmbed ? 'embed-mode' : '',
-        isPreviewOpen ? 'with-preview' : '',
+        isRightPanelOpen ? 'with-right-panel' : '',
+        rightPanelMode,
         isCollapsed ? 'sidebar-collapsed' : '',
     ].filter(Boolean).join(' ')
 
@@ -43,9 +51,24 @@ function AppContent() {
                         <Route path="/inbox" element={<Inbox />} />
                         <Route path="/agents" element={<Agents />} />
                         <Route path="/agents/:agentId/configure" element={<AdminRoute><AgentConfigure /></AdminRoute>} />
+                        <Route path="/knowledge" element={<AdminRoute><Knowledge /></AdminRoute>} />
+                        <Route path="/knowledge/:sourceId" element={<AdminRoute><KnowledgeConfigure /></AdminRoute>} />
                     </Routes>
                 </main>
-                {!isEmbed && <FilePreview />}
+                {!isEmbed && (
+                    <div className={`right-panel-host ${isRightPanelOpen ? 'open' : ''} ${isMarketOpen ? 'drawer' : isPreviewOpen ? 'preview' : ''}`}>
+                        {isMarketOpen ? (
+                            <CapabilityMarketPanel
+                                isOpen={isMarketOpen}
+                                activeTab={marketActiveTab}
+                                onClose={closeMarket}
+                                onTabChange={setMarketActiveTab}
+                            />
+                        ) : (
+                            <FilePreview embedded />
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     )
@@ -55,13 +78,15 @@ export default function App() {
     return (
         <Routes>
             <Route path="/*" element={
-                <SidebarProvider>
-                    <InboxProvider>
-                        <PreviewProvider>
-                            <AppContent />
-                        </PreviewProvider>
-                    </InboxProvider>
-                </SidebarProvider>
+                    <SidebarProvider>
+                        <InboxProvider>
+                            <PreviewProvider>
+                                <RightPanelProvider>
+                                    <AppContent />
+                                </RightPanelProvider>
+                            </PreviewProvider>
+                        </InboxProvider>
+                    </SidebarProvider>
             } />
         </Routes>
     )

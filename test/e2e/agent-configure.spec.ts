@@ -11,7 +11,7 @@
  */
 import { test, expect, type Page } from '@playwright/test'
 
-const ADMIN_USER = 'sys'
+const ADMIN_USER = 'admin'
 const AGENT_ID = 'universal-agent'
 const UNIQUE = Date.now()
 
