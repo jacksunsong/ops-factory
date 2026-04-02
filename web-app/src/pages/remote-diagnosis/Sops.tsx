@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSops } from '../../hooks/useSops'
-import { useHosts } from '../../hooks/useHosts'
 import { useCommandWhitelist } from '../../hooks/useCommandWhitelist'
 import { useToast } from '../../contexts/ToastContext'
-import type { Sop, SopNode, SopCreateRequest } from '../../types/sop'
+import type { Sop, SopNode, SopCreateRequest, SopVariable } from '../../types/sop'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -49,7 +48,7 @@ function VariableEditor({
     )
 
     const updateVar = useCallback(
-        (index: number, field: string, value: string | boolean) => {
+        (index: number, field: keyof SopVariable, value: string | boolean) => {
             const next = [...variables]
             next[index] = { ...next[index], [field]: value }
             onChange(next)
@@ -235,12 +234,10 @@ function TransitionEditor({
 
 function SopFormModal({
     sop,
-    allHostTags,
     onClose,
     onSave,
 }: {
     sop: Sop | null
-    allHostTags: string[]
     onClose: () => void
     onSave: (data: SopCreateRequest) => Promise<void>
 }) {
@@ -634,7 +631,12 @@ function SopExpandableRow({ sop, onEdit, onDelete }: {
                                                 {node.transitions && node.transitions.length > 0 && (
                                                     <div>
                                                         <span style={{ fontWeight: 500 }}>{t('remoteDiagnosis.sops.nodeTransitions')}:</span>{' '}
-                                                        {node.transitions.map(tr => `${tr.condition} -> ${tr.nextNodeId}`).join('; ')}
+                                                        {node.transitions.map(tr => {
+                                                            const target = tr.nextNodes && tr.nextNodes.length > 0
+                                                                ? tr.nextNodes.join(', ')
+                                                                : (tr.nextNodeId || '—')
+                                                            return `${tr.condition} -> ${target}`
+                                                        }).join('; ')}
                                                     </div>
                                                 )}
                                             </div>
@@ -661,7 +663,6 @@ function SopExpandableRow({ sop, onEdit, onDelete }: {
 export function SopsTab() {
     const { t } = useTranslation()
     const { sops, isLoading, error, fetchSops, createSop, updateSop, deleteSop } = useSops()
-    const { hosts } = useHosts()
     const { showToast } = useToast()
 
     const [editingSop, setEditingSop] = useState<Sop | null>(null)
@@ -671,12 +672,6 @@ export function SopsTab() {
     useEffect(() => {
         fetchSops()
     }, [fetchSops])
-
-    const allHostTags = useMemo(() => {
-        const set = new Set<string>()
-        hosts.forEach(h => h.tags?.forEach(tag => set.add(tag)))
-        return Array.from(set).sort()
-    }, [hosts])
 
     const handleSaveSop = useCallback(
         async (data: SopCreateRequest) => {
@@ -776,7 +771,7 @@ export function SopsTab() {
 
             {error && (
                 <div className="conn-banner conn-banner-error">
-                    {typeof error === 'string' ? error : error.message}
+                    {error}
                 </div>
             )}
 
@@ -824,7 +819,6 @@ export function SopsTab() {
             {(showAddModal || editingSop) && (
                 <SopFormModal
                     sop={editingSop}
-                    allHostTags={allHostTags}
                     onClose={() => {
                         setShowAddModal(false)
                         setEditingSop(null)

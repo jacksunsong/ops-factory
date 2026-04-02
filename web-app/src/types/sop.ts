@@ -4,10 +4,18 @@ export interface SopNode {
     type: 'start' | 'analysis'
     hostTags: string[]
     command: string
-    commandVariables: Record<string, SopCommandVariable>
+    variables: SopVariable[]
+    commandVariables?: Record<string, SopCommandVariable>
     outputFormat: string
     analysisInstruction: string
     transitions: SopTransition[]
+}
+
+export interface SopVariable {
+    name: string
+    description?: string
+    defaultValue?: string
+    required?: boolean
 }
 
 export interface SopCommandVariable {
@@ -18,8 +26,9 @@ export interface SopCommandVariable {
 
 export interface SopTransition {
     condition: string
-    description: string
-    nextNodes: string[]
+    description?: string
+    nextNodeId?: string
+    nextNodes?: string[]
 }
 
 export interface Sop {

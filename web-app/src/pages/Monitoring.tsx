@@ -156,7 +156,7 @@ function buildThroughputOption(series: MetricsPoint[], labels: { requests: strin
     ...base,
     tooltip: {
       ...base.tooltip,
-      formatter: params => buildChartTooltip(params as any[], (seriesName, value) => {
+      formatter: (params: unknown) => buildChartTooltip(params as any[], (seriesName, value) => {
         if (seriesName === labels.requests) return fmtNum(value)
         return value > 0 ? value.toFixed(1) : '0'
       }),
@@ -248,7 +248,7 @@ function buildLatencyOption(
     ...base,
     tooltip: {
       ...base.tooltip,
-      formatter: params => buildChartTooltip(params as any[], (_seriesName, value) => fmtMs2(value)),
+      formatter: (params: unknown) => buildChartTooltip(params as any[], (_seriesName, value) => fmtMs2(value)),
     },
     yAxis: {
       type: 'value',

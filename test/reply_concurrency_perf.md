@@ -65,6 +65,10 @@ python3 test/reply_concurrency_perf.py
   - 所有并发槽位共用同一用户，但各自 session 不同
   - 适合测“同一用户多会话并发”
   - 共享用户 ID 使用 `--shared-user-id` 指定（默认 `perf-shared-user`）
+- single-user-single-session
+  - 所有请求复用同一个用户与同一个会话
+  - 适合测“单用户单会话多轮对话”的连续性与上下文稳定性
+  - 可与 `--rounds` 搭配做长对话；若 `--concurrency > 1` 则表示同时向同一会话并发发送消息（用于压力探索）
 
 用户生成逻辑见 [build_user_id](file:///Users/zlj/Documents/ZLJ/works/code/ops-factory/test/reply_concurrency_perf.py#L419-L422)。
 
@@ -152,6 +156,17 @@ python3 test/reply_concurrency_perf.py \
   --output-json /tmp/reply-perf-result.json
 ```
 
+单用户单会话多轮对话（推荐并发=1，持续多轮）：
+```bash
+python3 test/reply_concurrency_perf.py \
+  --concurrency 1 \
+  --rounds 10 \
+  --scenario warm \
+  --preset single-user-single-session \
+  --shared-user-id perf-shared-user \
+  --align-reply-perf-log
+```
+
 ## 故障排查
 - Python 报类型注解错误（如 `type | None` 报错）：
   - 请使用 Python 3.9+，脚本已使用 `Optional[...]` 等兼容写法
@@ -174,4 +189,3 @@ python3 test/reply_concurrency_perf.py \
   - 匹配策略与窗口：[event_matches_result](file:///Users/zlj/Documents/ZLJ/works/code/ops-factory/test/reply_concurrency_perf.py#L644-L653)
   - 阶段耗时提取：[event_metric_ms](file:///Users/zlj/Documents/ZLJ/works/code/ops-factory/test/reply_concurrency_perf.py#L656-L666)
   - 对齐汇总与展示：[align_reply_perf_logs](file:///Users/zlj/Documents/ZLJ/works/code/ops-factory/test/reply_concurrency_perf.py#L669-L731)
-

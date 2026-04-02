@@ -18,13 +18,15 @@ export interface HostCreateRequest {
     port: number
     username: string
     authType: 'password' | 'key'
-    credential: string
+    credential?: string
     tags: string[]
     description?: string
 }
 
 export interface HostTestResult {
     success: boolean
-    message: string
-    latency?: string
+    hostId?: string
+    reachable?: boolean
+    latencyMs?: number
+    error?: string
 }
