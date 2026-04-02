@@ -1,8 +1,16 @@
 import type { UserRole } from '../contexts/UserContext'
 
+interface RuntimeConfig {
+    gatewayUrl?: string
+    gatewaySecretKey?: string
+    knowledgeServiceUrl?: string
+    businessIntelligenceServiceUrl?: string
+}
+
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1'])
 // const GATEWAY_PATH_PREFIX = '/gateway'
 const KNOWLEDGE_PATH_PREFIX = '/knowledge'
+const BUSINESS_INTELLIGENCE_PATH_PREFIX = '/business-intelligence'
 
 function isLoopbackHost(host: string): boolean {
     return LOOPBACK_HOSTS.has(host)
@@ -44,11 +52,58 @@ function resolveKnowledgeServiceUrl(raw: string | undefined): string {
     }
 }
 
+function resolveBusinessIntelligenceServiceUrl(raw: string | undefined): string {
+    const pageHost = window.location.hostname || '127.0.0.1'
+    const pageProtocol = window.location.protocol || 'http:'
+    const fallbackOrigin = `${pageProtocol}//${pageHost}:8093`
+
+    if (!raw) return `${fallbackOrigin}${BUSINESS_INTELLIGENCE_PATH_PREFIX}`
+
+    try {
+        const url = new URL(raw)
+        if (isLoopbackHost(url.hostname) && !isLoopbackHost(pageHost)) {
+            url.hostname = pageHost
+        }
+        return `${url.origin}${BUSINESS_INTELLIGENCE_PATH_PREFIX}`
+    } catch {
+        return `${fallbackOrigin}${BUSINESS_INTELLIGENCE_PATH_PREFIX}`
+    }
+}
+
 const DEFAULT_SECRET_KEY = 'test'
-// export const GATEWAY_URL = resolveGatewayUrl(import.meta.env.VITE_GATEWAY_URL)
-export const GATEWAY_URL = `${window.location.origin}/gateway`
-export const GATEWAY_SECRET_KEY = DEFAULT_SECRET_KEY
-export const KNOWLEDGE_SERVICE_URL = resolveKnowledgeServiceUrl(undefined)
+export const GATEWAY_URL = window.location.port ==='5173' ? `${window.location.protocol}//${window.location.hostname}:3000` : `${window.location.origin}/gateway`
+export let GATEWAY_SECRET_KEY = DEFAULT_SECRET_KEY
+export let KNOWLEDGE_SERVICE_URL = resolveKnowledgeServiceUrl(undefined)
+export let BUSINESS_INTELLIGENCE_SERVICE_URL = resolveBusinessIntelligenceServiceUrl(undefined)
+
+function setRuntimeConfig(config: RuntimeConfig): void {
+    // GATEWAY_URL = resolveGatewayUrl(config.gatewayUrl)
+    GATEWAY_SECRET_KEY = config.gatewaySecretKey || DEFAULT_SECRET_KEY
+    KNOWLEDGE_SERVICE_URL = resolveKnowledgeServiceUrl(config.knowledgeServiceUrl)
+    BUSINESS_INTELLIGENCE_SERVICE_URL = resolveBusinessIntelligenceServiceUrl(config.businessIntelligenceServiceUrl)
+}
+
+async function loadRuntimeConfig(): Promise<RuntimeConfig> {
+    const response = await fetch('/config.json', { cache: 'no-store' })
+    if (!response.ok) {
+        throw new Error(`Failed to load /config.json (${response.status})`)
+    }
+
+    return (await response.json()) as RuntimeConfig
+}
+
+export async function initializeRuntimeConfig(): Promise<void> {
+    const config = await loadRuntimeConfig()
+
+    if (!config.gatewayUrl) {
+        throw new Error('Missing required configuration: gatewayUrl')
+    }
+    if (!config.gatewaySecretKey) {
+        throw new Error('Missing required configuration: gatewaySecretKey')
+    }
+
+    setRuntimeConfig(config)
+}
 
 export function isAdminUser(userId: string | null, role: UserRole | null): boolean {
     if (role === 'admin') return true
