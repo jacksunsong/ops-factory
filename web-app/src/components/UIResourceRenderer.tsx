@@ -37,7 +37,7 @@ function isMermaidVisualization(uri: string, html: string): boolean {
  * Create a clean HTML page with CDN Mermaid.js
  * Uses ESM import for Mermaid v10+ and applies "Beautiful" styling
  */
-function createCleanMermaidHtml(mermaidCode: string): string {
+export function createCleanMermaidHtml(mermaidCode: string): string {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -46,7 +46,7 @@ function createCleanMermaidHtml(mermaidCode: string): string {
     <title>Mermaid Diagram</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', sans-serif, Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             margin: 0;
             padding: 40px;
             background-color: #ffffff;
@@ -91,7 +91,7 @@ ${mermaidCode}
     </div>
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        
+
         try {
             // "Beautiful" configuration mimicking modern aesthetics
             mermaid.initialize({
@@ -105,11 +105,11 @@ ${mermaidCode}
                     lineColor: '#6366f1',
                     secondaryColor: '#f3e8ff', // Soft Purple
                     tertiaryColor: '#fde68a', // Soft Amber
-                    fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", sans-serif',
                     fontSize: '16px',
                 },
-                flowchart: { 
-                    useMaxWidth: true, 
+                flowchart: {
+                    useMaxWidth: true,
                     htmlLabels: true,
                     curve: 'basis' // Smoother curves
                 }

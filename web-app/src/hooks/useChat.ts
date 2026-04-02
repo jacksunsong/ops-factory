@@ -160,6 +160,9 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
         if (!sessionId || isStreamingRef.current) return
         if (!text.trim() && (!images || images.length === 0) && (!attachedFiles || attachedFiles.length === 0)) return
 
+        // Clear stale OutputFiles event from previous reply
+        setOutputFilesEvent(null)
+
         dispatch({ type: 'START_STREAMING' })
         isStreamingRef.current = true
         streamErrorRef.current = null

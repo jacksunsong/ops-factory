@@ -127,3 +127,11 @@ extensions:
     display_name: Analyze
     bundled: true
     available_tools: []
+  skills:
+    enabled: true
+    type: platform
+    name: skills
+    description: Load and use skills from relevant directories
+    display_name: Skills
+    bundled: true
+    available_tools: []

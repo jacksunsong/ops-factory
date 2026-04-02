@@ -8,7 +8,7 @@ export interface SopNodeVariable {
 export interface SopNode {
     id: string
     name: string
-    type: 'start' | 'analysis'
+    type: 'start' | 'analysis' | 'browser'
     hostTags: string[]
     command: string
     commandVariables: Record<string, SopCommandVariable>
@@ -16,6 +16,9 @@ export interface SopNode {
     outputFormat: string
     analysisInstruction: string
     transitions: SopTransition[]
+    browserUrl?: string
+    browserAction?: string
+    browserMode?: 'headless' | 'headed'
 }
 
 export interface SopCommandVariable {

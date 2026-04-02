@@ -1,9 +1,10 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ToolCallDisplay from './ToolCallDisplay'
 import CitationMark from './CitationMark'
 import ReferenceList from './ReferenceList'
+import { createCleanMermaidHtml } from './UIResourceRenderer'
 import { usePreview } from '../contexts/PreviewContext'
 import { mergeCitationMetadata, parseCitations, replaceCitationsWithPlaceholders, type Citation } from '../utils/citationParser'
 import { getDisplayTextContent, getFullTextContent, getReasoningContent, getThinkingContent } from '../utils/messageContent'
@@ -74,6 +75,36 @@ function parseTodoContent(content: string) {
 
 function normalizeProcessText(text: string | undefined): string {
     return (text || '').replace(/\s+/g, ' ').trim()
+}
+
+function MermaidBlock({ code }: { code: string }) {
+    const iframeRef = useRef<HTMLIFrameElement>(null)
+    const html = useMemo(() => createCleanMermaidHtml(code), [code])
+
+    const handleLoad = useCallback(() => {
+        const iframe = iframeRef.current
+        if (!iframe) return
+        try {
+            const doc = iframe.contentDocument || iframe.contentWindow?.document
+            if (doc) {
+                const height = doc.documentElement.scrollHeight || doc.body.scrollHeight
+                iframe.style.height = `${Math.min(height + 20, 800)}px`
+            }
+        } catch { /* cross-origin */ }
+    }, [])
+
+    return (
+        <div style={{ marginTop: '8px', border: '1px solid var(--color-border, #e0e0e0)', borderRadius: '8px', overflow: 'hidden', background: 'white' }}>
+            <iframe
+                ref={iframeRef}
+                srcDoc={html}
+                onLoad={handleLoad}
+                sandbox="allow-scripts"
+                style={{ width: '100%', height: '200px', border: 'none', display: 'block' }}
+                title="Mermaid Diagram"
+            />
+        </div>
+    )
 }
 
 function FileCapsule({ filePath, fileName, fileExt, agentId, userId }: {
@@ -537,6 +568,12 @@ function MessageInner({
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
+                                    code: ({ className, children, ...props }: React.HTMLAttributes<HTMLElement> & { children?: React.ReactNode }) => {
+                                        if (className?.includes('language-mermaid')) {
+                                            return <MermaidBlock code={String(children).replace(/\n$/, '')} />
+                                        }
+                                        return <code className={className} {...props}>{children}</code>
+                                    },
                                     a: ({ href, children, ...props }) => {
                                         if (href?.startsWith('#cite-')) {
                                             const index = parseInt(href.replace('#cite-', ''), 10)

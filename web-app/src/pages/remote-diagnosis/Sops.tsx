@@ -21,6 +21,9 @@ function createEmptyNode(index: number): SopNode {
         outputFormat: '',
         analysisInstruction: '',
         transitions: [],
+        browserUrl: '',
+        browserAction: '',
+        browserMode: 'headless',
     }
 }
 
@@ -299,9 +302,10 @@ function SopFormModal({
             return
         }
 
-        // Validate all node commands against whitelist
+        // Validate all node commands against whitelist (skip browser nodes)
         const errors: Record<number, string> = {}
         nodes.forEach((node, idx) => {
+            if (node.type === 'browser') return
             const rejected = validateNodeCommand(node.command || '')
             if (rejected.length > 0) {
                 errors[idx] = t('remoteDiagnosis.sops.commandNotInWhitelist', { commands: rejected.join(', ') })
@@ -414,44 +418,87 @@ function SopFormModal({
                                         <select className="form-input" value={node.type} onChange={e => handleNodeChange(idx, 'type', e.target.value)}>
                                             <option value="start">{t('remoteDiagnosis.sops.startNode')}</option>
                                             <option value="analysis">{t('remoteDiagnosis.sops.analysisNode')}</option>
+                                            <option value="browser">{t('remoteDiagnosis.sops.browserNode')}</option>
                                         </select>
                                     </div>
                                 </div>
 
-                                <div className="form-group" style={{ marginBottom: 'var(--spacing-3)' }}>
-                                    <label className="form-label">{t('remoteDiagnosis.sops.nodeTags')}</label>
-                                    <input
-                                        className="form-input"
-                                        placeholder="tag1, tag2"
-                                        value={node.hostTags?.join(', ') ?? ''}
-                                        onChange={e => {
-                                            const tags = e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean)
-                                            handleNodeChange(idx, 'hostTags', tags)
-                                        }}
-                                    />
-                                </div>
-
-                                <div className="form-group" style={{ marginBottom: 'var(--spacing-3)' }}>
-                                    <label className="form-label">{t('remoteDiagnosis.sops.nodeCommand')}</label>
-                                    <textarea
-                                        className="form-input"
-                                        rows={2}
-                                        value={node.command}
-                                        onChange={e => {
-                                            handleNodeChange(idx, 'command', e.target.value)
-                                            setCommandErrors(prev => {
-                                                const next = { ...prev }
-                                                delete next[idx]
-                                                return next
-                                            })
-                                        }}
-                                    />
-                                    {commandErrors[idx] && (
-                                        <div className="agents-alert agents-alert-error" style={{ marginTop: '4px' }}>
-                                            {commandErrors[idx]}
+                                {node.type === 'browser' ? (
+                                    <>
+                                        <div className="form-group" style={{ marginBottom: 'var(--spacing-3)' }}>
+                                            <label className="form-label">{t('remoteDiagnosis.sops.browserUrl')}</label>
+                                            <input
+                                                className="form-input"
+                                                placeholder="https://example.com"
+                                                value={node.browserUrl ?? ''}
+                                                onChange={e => handleNodeChange(idx, 'browserUrl', e.target.value)}
+                                            />
                                         </div>
-                                    )}
-                                </div>
+                                        <div className="form-group" style={{ marginBottom: 'var(--spacing-3)' }}>
+                                            <label className="form-label">{t('remoteDiagnosis.sops.browserAction')}</label>
+                                            <textarea
+                                                className="form-input"
+                                                rows={3}
+                                                placeholder={t('remoteDiagnosis.sops.browserActionPlaceholder')}
+                                                value={node.browserAction ?? ''}
+                                                onChange={e => handleNodeChange(idx, 'browserAction', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ marginBottom: 'var(--spacing-3)' }}>
+                                            <label className="form-label">{t('remoteDiagnosis.sops.browserMode')}</label>
+                                            <select
+                                                className="form-input"
+                                                value={node.browserMode ?? 'headless'}
+                                                onChange={e => handleNodeChange(idx, 'browserMode', e.target.value)}
+                                            >
+                                                <option value="headless">{t('remoteDiagnosis.sops.chromiumMode')}</option>
+                                                <option value="headed">{t('remoteDiagnosis.sops.headedMode')}</option>
+                                            </select>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="form-group" style={{ marginBottom: 'var(--spacing-3)' }}>
+                                            <label className="form-label">{t('remoteDiagnosis.sops.nodeTags')}</label>
+                                            <input
+                                                className="form-input"
+                                                placeholder="tag1, tag2"
+                                                value={node.hostTags?.join(', ') ?? ''}
+                                                onChange={e => {
+                                                    const tags = e.target.value.split(',').map(s => s.trim()).filter(Boolean)
+                                                    handleNodeChange(idx, 'hostTags', tags)
+                                                }}
+                                            />
+                                        </div>
+
+                                        <div className="form-group" style={{ marginBottom: 'var(--spacing-3)' }}>
+                                            <label className="form-label">{t('remoteDiagnosis.sops.nodeCommand')}</label>
+                                            <textarea
+                                                className="form-input"
+                                                rows={2}
+                                                value={node.command}
+                                                onChange={e => {
+                                                    handleNodeChange(idx, 'command', e.target.value)
+                                                    setCommandErrors(prev => {
+                                                        const next = { ...prev }
+                                                        delete next[idx]
+                                                        return next
+                                                    })
+                                                }}
+                                            />
+                                            {commandErrors[idx] && (
+                                                <div className="agents-alert agents-alert-error" style={{ marginTop: '4px' }}>
+                                                    {commandErrors[idx]}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <VariableEditor
+                                            variables={node.variables ?? []}
+                                            onChange={v => handleNodeChange(idx, 'variables', v)}
+                                        />
+                                    </>
+                                )}
 
                                 <div className="form-group" style={{ marginBottom: 'var(--spacing-3)' }}>
                                     <label className="form-label">{t('remoteDiagnosis.sops.nodeOutputFormat')}</label>
@@ -467,11 +514,6 @@ function SopFormModal({
                                         onChange={e => handleNodeChange(idx, 'analysisInstruction', e.target.value)}
                                     />
                                 </div>
-
-                                <VariableEditor
-                                    variables={node.variables ?? []}
-                                    onChange={v => handleNodeChange(idx, 'variables', v)}
-                                />
 
                                 <TransitionEditor
                                     transitions={node.transitions ?? []}
@@ -593,41 +635,60 @@ function SopExpandableRow({ sop, onEdit, onDelete }: {
                                                     padding: '1px 8px',
                                                     borderRadius: 'var(--radius-full)',
                                                     fontSize: 'var(--font-size-xs)',
-                                                    background: node.type === 'start' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                                                    color: node.type === 'start' ? 'var(--color-success)' : '#3b82f6',
+                                                    background: node.type === 'start' ? 'rgba(16, 185, 129, 0.1)' : node.type === 'browser' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                                                    color: node.type === 'start' ? 'var(--color-success)' : node.type === 'browser' ? '#f59e0b' : '#3b82f6',
                                                 }}>
-                                                    {node.type === 'start' ? t('remoteDiagnosis.sops.startNode') : t('remoteDiagnosis.sops.analysisNode')}
+                                                    {node.type === 'start' ? t('remoteDiagnosis.sops.startNode') : node.type === 'browser' ? t('remoteDiagnosis.sops.browserNode') : t('remoteDiagnosis.sops.analysisNode')}
                                                 </span>
                                             </div>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
-                                                {node.hostTags && node.hostTags.length > 0 && (
-                                                    <div>
-                                                        <span style={{ fontWeight: 500 }}>{t('remoteDiagnosis.sops.nodeTags')}:</span>{' '}
-                                                        {node.hostTags.map(tag => (
-                                                            <span key={tag} style={{
-                                                                display: 'inline-block',
-                                                                padding: '1px 6px',
-                                                                borderRadius: 'var(--radius-full)',
-                                                                fontSize: 'var(--font-size-xs)',
-                                                                background: 'var(--color-accent-subtle)',
-                                                                marginRight: 4,
-                                                            }}>
-                                                                {tag}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                <div>
-                                                    <span style={{ fontWeight: 500 }}>{t('remoteDiagnosis.sops.nodeCommand')}:</span>{' '}
-                                                    <code style={{ fontSize: 'var(--font-size-xs)', background: 'var(--color-bg-secondary)', padding: '1px 4px', borderRadius: 'var(--radius-sm)' }}>
-                                                        {node.command || '—'}
-                                                    </code>
-                                                </div>
-                                                {node.variables && node.variables.length > 0 && (
-                                                    <div>
-                                                        <span style={{ fontWeight: 500 }}>{t('remoteDiagnosis.sops.nodeVariables')}:</span>{' '}
-                                                        {node.variables.map(v => v.name).join(', ')}
-                                                    </div>
+                                                {node.type === 'browser' ? (
+                                                    <>
+                                                        <div>
+                                                            <span style={{ fontWeight: 500 }}>{t('remoteDiagnosis.sops.browserUrl')}:</span>{' '}
+                                                            <code style={{ fontSize: 'var(--font-size-xs)', background: 'var(--color-bg-secondary)', padding: '1px 4px', borderRadius: 'var(--radius-sm)' }}>
+                                                                {node.browserUrl || '—'}
+                                                            </code>
+                                                        </div>
+                                                        {node.browserAction && (
+                                                            <div style={{ gridColumn: '1 / -1' }}>
+                                                                <span style={{ fontWeight: 500 }}>{t('remoteDiagnosis.sops.browserAction')}:</span>{' '}
+                                                                {node.browserAction}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {node.hostTags && node.hostTags.length > 0 && (
+                                                            <div>
+                                                                <span style={{ fontWeight: 500 }}>{t('remoteDiagnosis.sops.nodeTags')}:</span>{' '}
+                                                                {node.hostTags.map(tag => (
+                                                                    <span key={tag} style={{
+                                                                        display: 'inline-block',
+                                                                        padding: '1px 6px',
+                                                                        borderRadius: 'var(--radius-full)',
+                                                                        fontSize: 'var(--font-size-xs)',
+                                                                        background: 'var(--color-accent-subtle)',
+                                                                        marginRight: 4,
+                                                                    }}>
+                                                                        {tag}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <span style={{ fontWeight: 500 }}>{t('remoteDiagnosis.sops.nodeCommand')}:</span>{' '}
+                                                            <code style={{ fontSize: 'var(--font-size-xs)', background: 'var(--color-bg-secondary)', padding: '1px 4px', borderRadius: 'var(--radius-sm)' }}>
+                                                                {node.command || '—'}
+                                                            </code>
+                                                        </div>
+                                                        {node.variables && node.variables.length > 0 && (
+                                                            <div>
+                                                                <span style={{ fontWeight: 500 }}>{t('remoteDiagnosis.sops.nodeVariables')}:</span>{' '}
+                                                                {node.variables.map(v => v.name).join(', ')}
+                                                            </div>
+                                                        )}
+                                                    </>
                                                 )}
                                                 {node.transitions && node.transitions.length > 0 && (
                                                     <div>
@@ -704,14 +765,24 @@ export function SopsTab() {
     )
 
     const handleExport = useCallback(() => {
-        const blob = new Blob([JSON.stringify(sops, null, 2)], { type: 'application/json' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'sops-export.json'
-        a.click()
-        URL.revokeObjectURL(url)
-        showToast('success', t('remoteDiagnosis.sops.exportSuccess'))
+        if (sops.length === 0) {
+            showToast('error', t('remoteDiagnosis.sops.noSops'))
+            return
+        }
+        try {
+            const blob = new Blob([JSON.stringify(sops, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.style.display = 'none'
+            a.href = url
+            a.download = 'sops-export.json'
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            setTimeout(() => URL.revokeObjectURL(url), 1000)
+        } catch (err) {
+            showToast('error', err instanceof Error ? err.message : 'Export failed')
+        }
     }, [sops, showToast, t])
 
     const handleImport = useCallback(
