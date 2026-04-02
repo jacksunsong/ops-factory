@@ -89,8 +89,9 @@ export function createCleanMermaidHtml(mermaidCode: string): string {
 ${mermaidCode}
         </div>
     </div>
-    <script src="/mermaid/mermaid.min.js"></script>
-    <script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
         try {
             // "Beautiful" configuration mimicking modern aesthetics
             mermaid.initialize({
@@ -104,17 +105,17 @@ ${mermaidCode}
                     lineColor: '#6366f1',
                     secondaryColor: '#f3e8ff', // Soft Purple
                     tertiaryColor: '#fde68a', // Soft Amber
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI",Roboto, Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", sans-serif',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", sans-serif',
                     fontSize: '16px',
                 },
-                flowchart: { 
-                    useMaxWidth: true, 
+                flowchart: {
+                    useMaxWidth: true,
                     htmlLabels: true,
                     curve: 'basis' // Smoother curves
                 }
             });
         } catch (e) {
-            var errDiv = document.getElementById('error-container');
+            const errDiv = document.getElementById('error-container');
             errDiv.style.display = 'block';
             errDiv.textContent = 'Mermaid Initialization Error:\\n' + e.message;
         }

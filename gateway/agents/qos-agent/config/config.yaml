@@ -119,31 +119,34 @@ extensions:
     bundled: true
     available_tools: []
   sop-executor:
-    enabled: true
+    enabled: false
     type: stdio
     name: sop-executor
-    description: ''
+    description: SOP workflow executor - list/run SOPs, query hosts, execute remote
+      commands
     cmd: node
     args:
-    - D:/ss/code/ops-factory-main/ops-factory-main/gateway/agents/qos-agent/config/mcp/sop-executor/dist/index.js
+    - D:/ss/code/TMP/ops-factory-main/gateway/agents/qos-agent/config/mcp/sop-executor/dist/index.js
     envs:
       GATEWAY_URL: http://127.0.0.1:3000
       GATEWAY_SECRET_KEY: test
     env_keys: []
-    timeout: null
+    timeout: 300
     bundled: null
     available_tools: []
   browser-use:
     enabled: true
     type: stdio
     name: browser-use
-    description: Browser automation via Puppeteer MCP - navigate, click, type, extract, and screenshot web pages
-    cmd: npx
+    description: Browser automation via Puppeteer - navigate, click, type, extract,
+      and screenshot web pages
+    cmd: node
     args:
-    - tsx
-    - config/mcp/browser-use/src/index.ts
-    envs: {}
+    - D:/ss/code/TMP/ops-factory-main/gateway/agents/qos-agent/config/mcp/browser-use/dist/index.js
+    envs:
+      CHROME_PATH: C:\Users\sunsong\AppData\Local\Google\Chrome\Application\chrome.exe
+      OUTPUT_DIR: ./output
     env_keys: []
-    timeout: 60
+    timeout: 120
     bundled: null
     available_tools: []
