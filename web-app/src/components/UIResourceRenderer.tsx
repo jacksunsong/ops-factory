@@ -46,7 +46,7 @@ function createCleanMermaidHtml(mermaidCode: string): string {
     <title>Mermaid Diagram</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', sans-serif;
             margin: 0;
             padding: 40px;
             background-color: #ffffff;
@@ -75,7 +75,7 @@ function createCleanMermaidHtml(mermaidCode: string): string {
             padding: 16px;
             border-radius: 8px;
             text-align: left;
-            font-family: monospace;
+            font-family: ui-monospace, 'SFMono-Regular', 'SF Mono', 'Cascadia Code', 'Segoe UI Mono', 'Roboto Mono', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
             white-space: pre-wrap;
             display: none;
             margin: 20px;
@@ -105,7 +105,7 @@ ${mermaidCode}
                     lineColor: '#6366f1',
                     secondaryColor: '#f3e8ff', // Soft Purple
                     tertiaryColor: '#fde68a', // Soft Amber
-                    fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", sans-serif',
                     fontSize: '16px',
                 },
                 flowchart: { 

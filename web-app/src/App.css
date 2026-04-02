@@ -51,7 +51,30 @@
     --gradient-glow: radial-gradient(circle at 50% 0%, rgba(50, 53, 59, 0.12) 0%, transparent 55%);
 
     /* Typography */
-    --font-family: 'Cash Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-family-sans:
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        'PingFang SC',
+        'Hiragino Sans GB',
+        'Microsoft YaHei',
+        'Noto Sans CJK SC',
+        'Source Han Sans SC',
+        'WenQuanYi Micro Hei',
+        sans-serif;
+    --font-family-mono:
+        ui-monospace,
+        'SFMono-Regular',
+        'SF Mono',
+        'Cascadia Code',
+        'Segoe UI Mono',
+        'Roboto Mono',
+        Menlo,
+        Monaco,
+        Consolas,
+        'Liberation Mono',
+        monospace;
+    --font-family: var(--font-family-sans);
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.8125rem;
     --font-size-base: 0.875rem;
@@ -637,7 +660,7 @@ textarea {
 }
 
 .resource-card-summary-code {
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace;
+    font-family: var(--font-family-mono);
     font-size: 0.75rem;
     color: var(--color-text-primary);
 }
@@ -780,7 +803,7 @@ textarea {
     margin-top: 2px;
     font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--font-family-mono);
 }
 
 .scheduled-source {
@@ -1778,7 +1801,7 @@ textarea {
     background: #eceff3;
     padding: var(--spacing-1) var(--spacing-2);
     border-radius: var(--radius-sm);
-    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+    font-family: var(--font-family-mono);
     font-size: 0.9em;
 }
 
@@ -3259,7 +3282,7 @@ textarea {
 .file-preview-code {
     margin: 0;
     padding: var(--spacing-4) var(--spacing-5);
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    font-family: var(--font-family-mono);
     font-size: 13px;
     line-height: 1.6;
     overflow-x: auto;
@@ -3343,7 +3366,7 @@ textarea {
 }
 
 .file-preview-markdown code {
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-family: var(--font-family-mono);
     font-size: 0.875em;
     padding: var(--spacing-1) var(--spacing-2);
     background: var(--color-bg-tertiary);
@@ -4082,42 +4105,6 @@ textarea {
     animation: slideIn var(--transition-base);
 }
 
-@font-face {
-    font-family: 'Cash Sans';
-    src:
-        url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff2/CashSans-Light.woff2) format('woff2'),
-        url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff/CashSans-Light.woff) format('woff');
-    font-weight: 300;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Cash Sans';
-    src:
-        url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff2/CashSans-Regular.woff2) format('woff2'),
-        url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff/CashSans-Regular.woff) format('woff');
-    font-weight: 400;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Cash Sans';
-    src:
-        url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff2/CashSans-Medium.woff2) format('woff2'),
-        url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff/CashSans-Medium.woff) format('woff');
-    font-weight: 500;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'Cash Sans';
-    src:
-        url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff2/CashSans-Bold.woff2) format('woff2'),
-        url(https://cash-f.squarecdn.com/static/fonts/cashsans/woff/CashSans-Bold.woff) format('woff');
-    font-weight: 700;
-    font-style: normal;
-}
-
 /* ========================================
    Agent Selector
    ======================================== */
@@ -4796,7 +4783,7 @@ textarea {
 }
 
 .mcp-card-cmd {
-    font-family: 'SF Mono', Monaco, monospace;
+    font-family: var(--font-family-mono);
     font-size: 11px;
     color: var(--color-text-secondary);
     background: var(--color-bg-tertiary);
@@ -5168,7 +5155,7 @@ textarea {
     width: 100%;
     min-height: 300px;
     padding: var(--spacing-4);
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-family: var(--font-family-mono);
     font-size: var(--font-size-sm);
     line-height: 1.6;
     color: var(--color-text-primary);
@@ -7728,7 +7715,7 @@ textarea {
     font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--color-text-primary);
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-family: var(--font-family-mono);
 }
 
 .prompts-item-desc {
@@ -7776,7 +7763,7 @@ textarea {
     width: 100%;
     min-height: 300px;
     padding: var(--spacing-3);
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
     line-height: 1.6;
     color: var(--color-text-primary);
@@ -8020,7 +8007,7 @@ textarea {
 }
 
 .skill-card-path code {
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
     color: var(--color-text-muted);
 }
@@ -8033,7 +8020,7 @@ textarea {
 }
 
 .skill-empty code {
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-family: var(--font-family-mono);
     background: var(--color-bg-primary);
     padding: 2px 6px;
     border-radius: var(--radius-sm);
@@ -8893,7 +8880,7 @@ textarea {
 }
 
 .mon-agent-model {
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace;
+    font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
     background: var(--color-bg-secondary);
@@ -8945,7 +8932,7 @@ textarea {
 }
 
 .mon-obs-name {
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace;
+    font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
     background: var(--color-bg-secondary);
@@ -9039,14 +9026,14 @@ textarea {
 }
 
 .mon-traces-ts {
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace;
+    font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
     color: var(--color-text-muted);
     font-variant-numeric: tabular-nums;
 }
 
 .mon-traces-name {
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace;
+    font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
 }
@@ -9324,7 +9311,7 @@ textarea {
 }
 
 .mon-agent-card-tag {
-    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace;
+    font-family: var(--font-family-mono);
     font-size: 0.6875rem;
     color: var(--color-text-muted);
     background: var(--color-bg-secondary);
@@ -9657,7 +9644,7 @@ textarea {
     padding: 2px 9px;
     font-size: var(--font-size-xs);
     font-weight: 600;
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-family: var(--font-family-mono);
     border-radius: var(--radius-md);
 }
 
@@ -10188,7 +10175,7 @@ textarea {
 }
 
 .knowledge-chunk-detail-subtitle {
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
     color: var(--color-text-muted);
 }
@@ -10725,14 +10712,14 @@ textarea {
 }
 
 .knowledge-kv-code {
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-family: var(--font-family-mono);
     font-size: 0.8125rem;
 }
 
 .knowledge-kv-meta {
     font-size: var(--font-size-xs);
     color: var(--color-text-muted);
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-family: var(--font-family-mono);
     word-break: break-all;
 }
 
@@ -10825,7 +10812,7 @@ textarea {
 }
 
 .knowledge-config-key {
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-family: var(--font-family-mono);
     font-size: var(--font-size-xs);
     color: var(--color-text-secondary);
     word-break: break-word;
@@ -11488,7 +11475,7 @@ textarea {
 }
 
 .knowledge-retrieval-hit-chunk {
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-family: var(--font-family-mono);
 }
 
 .knowledge-retrieval-summary-panel {
