@@ -789,12 +789,14 @@
     "creatingSession": "Creating session...",
     "askAnything": "Describe your ops question or scenario...",
     "failedToCreateSession": "Failed to create session: {{error}}",
+    "time":"Time range is ",
+    "environment":"For the environment ",
+    "qosHealth":" perform a preliminary health analysis",
     "categories": {
       "all": "All",
       "fault-diagnosis": "Fault Diagnosis",
       "log-analysis": "Log Analysis",
       "performance": "Performance Optimization",
-
       "ops-knowledge": "Ops Knowledge Q&A",
       "automation": "Automation Scripts"
     },

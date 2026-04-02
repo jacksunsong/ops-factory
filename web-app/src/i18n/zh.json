@@ -789,6 +789,9 @@
     "creatingSession": "正在创建会话...",
     "askAnything": "描述你的运维问题或场景...",
     "failedToCreateSession": "创建会话失败：{{error}}",
+    "time":"时间区间为",
+    "environment":"对环境",
+    "qosHealth":"进行健康度初步分析",
     "categories": {
       "all": "全部",
       "fault-diagnosis": "故障诊断与排查",

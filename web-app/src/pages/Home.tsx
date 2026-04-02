@@ -45,11 +45,9 @@ export default function Home() {
                 throw new Error(`HTTP ${res.status}`)
             }
             const data = await res.text()
-            console.log('诊断结果:', data)
             setDiagnosisMessage(data || '')
             return data
         } catch (err) {
-            console.error('获取诊断信息失败:', err)
             showToast('error', '获取诊断信息失败')
             throw err
         }
@@ -73,17 +71,14 @@ export default function Home() {
     // 当诊断接口返回数据后，自动发送消息
     useEffect(() => {
         if (selectedAgent && diagnosisMessage) {
-            console.log('诊断接口返回数据，发送消息:', diagnosisMessage)
             setDiagnosisMessage('')
-
             const params = getUrlParams()
             const startTime = params.get('startTime')
             const endTime = params.get('endTime')
             const startT = startTime ? new Date(Number(startTime)).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : ''
             const endT = endTime ? new Date(Number(endTime)).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : ''
-            const timeStr = startT && endT ? `，时间区间为[ ${startT}，${endT} ]` : ''
-            const str = '对环境：' + params.get('envCode') + '进行健康度初步分析' + timeStr
-
+            const timeStr = startT && endT ? `，${t("home.time")}[ ${startT}，${endT} ]` : ''
+            const str = `${t("home.environment")}：` + params.get('envCode') + t('home.qosHealth') + timeStr
             handleInputSubmit(str)
         }
     }, [selectedAgent, diagnosisMessage])
