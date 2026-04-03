@@ -30,6 +30,10 @@ function detectAgentFromWorkingDir(workingDir: string, agents: Array<{ id: strin
     return agents[0]?.id || ''
 }
 
+function isNotFoundError(error: unknown): boolean {
+    return error instanceof Error && error.name === 'GoosedNotFoundError'
+}
+
 export default function Chat() {
     const { t } = useTranslation()
     const [searchParams] = useSearchParams()
@@ -42,7 +46,7 @@ export default function Chat() {
     const sessionId = searchParams.get('sessionId')
     const agentParam = searchParams.get('agent')
 
-    const [selectedAgent, setSelectedAgent] = useState(agentParam || agents[0]?.id || '')
+    const [selectedAgent, setSelectedAgent] = useState('')
     const [session, setSession] = useState<Session | null>(null)
     const [isInitializing, setIsInitializing] = useState(true)
     const [initError, setInitError] = useState<string | null>(null)
@@ -51,7 +55,8 @@ export default function Chat() {
     const [showStopHint, setShowStopHint] = useState(false)
     const stopHintTimerRef = useRef<number | null>(null)
 
-    const client = selectedAgent ? getClient(selectedAgent) : null
+    const activeAgentId = selectedAgent || agents[0]?.id || ''
+    const client = activeAgentId ? getClient(activeAgentId) : null
 
     const { messages, chatState, isLoading, error, tokenState, outputFilesEvent, sendMessage, stopMessage, clearMessages, setInitialMessages } = useChat({
         sessionId,
@@ -72,14 +77,6 @@ export default function Chat() {
             }
         }
     }, [error, showToast, t])
-
-    useEffect(() => {
-        if (agentParam) {
-            setSelectedAgent(agentParam)
-        } else if (agents.length > 0 && !selectedAgent) {
-            setSelectedAgent(agents[0].id)
-        }
-    }, [agentParam, agents, selectedAgent])
 
     const locationState = location.state as LocationState | null
     const initialMessage = locationState?.initialMessage
@@ -124,8 +121,34 @@ export default function Chat() {
     }, [selectedAgent, createSessionWithAgent])
 
     useEffect(() => {
+        let cancelled = false
+
+        const resumeSessionForAgent = async (agentId: string) => {
+            const agentClient = getClient(agentId)
+            const resumeResult = await agentClient.resumeSession(sessionId!)
+            return { agentId, resumeResult }
+        }
+
+        const findSessionOwner = async () => {
+            let notFoundError: Error | null = null
+
+            for (const agent of agents) {
+                try {
+                    return await resumeSessionForAgent(agent.id)
+                } catch (err) {
+                    if (isNotFoundError(err)) {
+                        notFoundError = err instanceof Error ? err : new Error('Resource not found')
+                        continue
+                    }
+                    throw err
+                }
+            }
+
+            throw notFoundError ?? new Error('Failed to load session')
+        }
+
         const initSession = async () => {
-            if (!isConnected || !selectedAgent) return
+            if (!isConnected || agents.length === 0) return
 
             if (!sessionId) {
                 clearMessages()
@@ -136,29 +159,34 @@ export default function Chat() {
                 return
             }
 
-            setIsInitializing(true)
-            setInitError(null)
+            if (!cancelled) {
+                setIsInitializing(true)
+                setInitError(null)
+            }
 
             try {
-                const initialClient = getClient(selectedAgent)
-                let resumeResult = await initialClient.resumeSession(sessionId)
+                const { agentId: ownerAgentId, resumeResult } = await findSessionOwner()
+                let resolvedAgentId = ownerAgentId
                 let resumedSession = resumeResult.session
 
-                if (!agentParam && resumedSession.working_dir) {
-                    const detected = detectAgentFromWorkingDir(resumedSession.working_dir, agents)
-                    if (detected !== selectedAgent) {
-                        setSelectedAgent(detected)
-                        resumeResult = await getClient(detected).resumeSession(sessionId)
-                        resumedSession = resumeResult.session
+                if (resumedSession.working_dir) {
+                    const workingDirAgentId = detectAgentFromWorkingDir(resumedSession.working_dir, agents)
+                    if (workingDirAgentId) {
+                        resolvedAgentId = workingDirAgentId
                     }
                 }
 
+                if (cancelled) return
+
+                setSelectedAgent(resolvedAgentId)
+                if (agentParam !== resolvedAgentId) {
+                    navigate(`/chat?sessionId=${sessionId}&agent=${resolvedAgentId}`, { replace: true })
+                }
                 setSession(resumedSession)
 
                 // Auto-mark scheduled sessions as read when viewed
                 if (isScheduledSession(resumedSession)) {
-                    const agentId = agentParam || detectAgentFromWorkingDir(resumedSession.working_dir, agents)
-                    markSessionRead(agentId, sessionId)
+                    markSessionRead(resolvedAgentId, sessionId)
                 }
 
                 if (resumedSession.conversation && Array.isArray(resumedSession.conversation)) {
@@ -169,13 +197,21 @@ export default function Chat() {
                 }
             } catch (err) {
                 console.error('Failed to initialize session:', err)
-                setInitError(err instanceof Error ? err.message : 'Failed to load session')
+                if (!cancelled) {
+                    setInitError(err instanceof Error ? err.message : 'Failed to load session')
+                }
             } finally {
-                setIsInitializing(false)
+                if (!cancelled) {
+                    setIsInitializing(false)
+                }
             }
         }
-        initSession()
-    }, [getClient, isConnected, sessionId, selectedAgent, agentParam, agents, setInitialMessages, clearMessages, navigate])
+        void initSession()
+
+        return () => {
+            cancelled = true
+        }
+    }, [getClient, isConnected, sessionId, agentParam, agents, setInitialMessages, clearMessages, navigate, markSessionRead])
 
     useEffect(() => {
         if (initialMessage && sessionId && !isInitializing && messages.length === 0) {
