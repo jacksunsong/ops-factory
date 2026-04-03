@@ -1,13 +1,13 @@
 .list-workbench {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-4);
+    gap: var(--spacing-5);
 }
 
 .list-workbench-controls {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-2);
+    gap: var(--spacing-3);
 }
 
 .list-workbench-body {
@@ -15,5 +15,5 @@
 }
 
 .list-workbench-footer {
-    padding-top: var(--spacing-4);
+    padding-top: var(--spacing-5);
 }
