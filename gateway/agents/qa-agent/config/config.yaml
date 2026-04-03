@@ -109,8 +109,7 @@ extensions:
     description: Knowledge-service MCP for agentic RAG over OpsFactory knowledge chunks
     cmd: node
     args:
-    - config/mcp/knowledge-service/node_modules/tsx/dist/cli.mjs
-    - config/mcp/knowledge-service/src/index.ts
+    - config/mcp/knowledge-service/src/index.js
     envs: {}
     env_keys:
     - KNOWLEDGE_SERVICE_URL

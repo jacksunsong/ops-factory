@@ -2,6 +2,7 @@
     "compilerOptions": {
         "target": "ES2020",
         "useDefineForClassFields": true,
+        "baseUrl": ".",
         "lib": [
             "ES2020",
             "DOM",
@@ -23,7 +24,12 @@
         "noFallthroughCasesInSwitch": true,
         "types": [
             "vite/client"
-        ]
+        ],
+        "paths": {
+            "@goosed/sdk": [
+                "../typescript-sdk/src/index.ts"
+            ]
+        }
     },
     "include": [
         "src"

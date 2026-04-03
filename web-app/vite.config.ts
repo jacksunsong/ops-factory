@@ -44,8 +44,15 @@ function runtimeConfigPlugin(): Plugin {
 }
 
 export default defineConfig(() => {
+    const sdkEntry = resolve(process.cwd(), '../typescript-sdk/src/index.ts')
+
     return {
         plugins: [react(), runtimeConfigPlugin()],
+        resolve: {
+            alias: {
+                '@goosed/sdk': sdkEntry,
+            },
+        },
         server: {
             port: 5173,
         },

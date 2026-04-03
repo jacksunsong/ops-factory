@@ -5,68 +5,12 @@ const KNOWLEDGE_FETCH_MAX_NEIGHBOR_WINDOW = 2
 
 const API_PREFIX = '/knowledge'
 
-interface SearchArgs {
-  query?: string
-  sourceIds?: string[]
-  documentIds?: string[]
-  topK?: number
-}
-
-interface FetchArgs {
-  chunkId?: string
-  includeNeighbors?: boolean
-  neighborWindow?: number
-}
-
-interface SearchHit {
-  chunkId: string
-  documentId: string
-  sourceId: string
-  title: string | null
-  titlePath: string[]
-  snippet: string
-  score: number
-  lexicalScore: number
-  semanticScore: number
-  fusionScore: number
-  pageFrom: number | null
-  pageTo: number | null
-}
-
-interface SearchResponse {
-  query: string
-  hits: SearchHit[]
-  total: number
-}
-
-interface FetchNeighbor {
-  position: string
-  chunkId: string
-  text: string
-}
-
-interface FetchResponse {
-  chunkId: string
-  documentId: string
-  sourceId: string
-  title: string | null
-  titlePath: string[]
-  text: string
-  markdown: string
-  keywords: string[]
-  pageFrom: number | null
-  pageTo: number | null
-  previousChunkId: string | null
-  nextChunkId: string | null
-  neighbors: FetchNeighbor[] | null
-}
-
 export const tools = [
   {
     name: 'search',
     description: 'Search knowledge chunks. Uses the configured default source when sourceIds is omitted.',
     inputSchema: {
-      type: 'object' as const,
+      type: 'object',
       properties: {
         query: {
           type: 'string',
@@ -96,7 +40,7 @@ export const tools = [
     name: 'fetch',
     description: 'Fetch a knowledge chunk by chunkId, with optional neighbor chunks.',
     inputSchema: {
-      type: 'object' as const,
+      type: 'object',
       properties: {
         chunkId: {
           type: 'string',
@@ -116,20 +60,20 @@ export const tools = [
       required: ['chunkId'],
     },
   },
-] as const
+]
 
-function normalizeSourceIds(sourceIds?: string[]): string[] {
+function normalizeSourceIds(sourceIds) {
   if (Array.isArray(sourceIds) && sourceIds.length > 0) {
     return sourceIds.filter(Boolean)
   }
   return KNOWLEDGE_DEFAULT_SOURCE_ID ? [KNOWLEDGE_DEFAULT_SOURCE_ID] : []
 }
 
-function createTimeoutSignal(): AbortSignal {
+function createTimeoutSignal() {
   return AbortSignal.timeout(Number.isFinite(KNOWLEDGE_REQUEST_TIMEOUT_MS) ? KNOWLEDGE_REQUEST_TIMEOUT_MS : 15000)
 }
 
-async function ks<T>(path: string, init?: RequestInit): Promise<T> {
+async function ks(path, init) {
   const response = await fetch(`${KNOWLEDGE_SERVICE_URL}${path}`, {
     ...init,
     headers: {
@@ -144,10 +88,10 @@ async function ks<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`Knowledge service ${path} returned ${response.status}: ${text}`)
   }
 
-  return response.json() as Promise<T>
+  return response.json()
 }
 
-export async function handleSearch(args: SearchArgs): Promise<string> {
+export async function handleSearch(args) {
   const query = args.query?.trim()
   if (!query) {
     throw new Error('search.query is required')
@@ -160,7 +104,7 @@ export async function handleSearch(args: SearchArgs): Promise<string> {
     topK: args.topK ?? 8,
   }
 
-  const result = await ks<SearchResponse>(`${API_PREFIX}/search`, {
+  const result = await ks(`${API_PREFIX}/search`, {
     method: 'POST',
     body: JSON.stringify(body),
   })
@@ -168,7 +112,7 @@ export async function handleSearch(args: SearchArgs): Promise<string> {
   return JSON.stringify(result, null, 2)
 }
 
-export async function handleFetch(args: FetchArgs): Promise<string> {
+export async function handleFetch(args) {
   const chunkId = args.chunkId?.trim()
   if (!chunkId) {
     throw new Error('fetch.chunkId is required')
@@ -185,16 +129,16 @@ export async function handleFetch(args: FetchArgs): Promise<string> {
   params.set('includeMarkdown', 'true')
   params.set('includeRawText', 'true')
 
-  const result = await ks<FetchResponse>(`${API_PREFIX}/fetch/${encodeURIComponent(chunkId)}?${params.toString()}`)
+  const result = await ks(`${API_PREFIX}/fetch/${encodeURIComponent(chunkId)}?${params.toString()}`)
   return JSON.stringify(result, null, 2)
 }
 
-export async function dispatch(name: string, args: Record<string, unknown>): Promise<string> {
+export async function dispatch(name, args = {}) {
   switch (name) {
     case 'search':
-      return handleSearch(args as SearchArgs)
+      return handleSearch(args)
     case 'fetch':
-      return handleFetch(args as FetchArgs)
+      return handleFetch(args)
     default:
       throw new Error(`Unknown tool: ${name}`)
   }

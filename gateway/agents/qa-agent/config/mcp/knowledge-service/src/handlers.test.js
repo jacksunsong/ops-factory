@@ -1,12 +1,10 @@
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 
-type FetchFn = typeof globalThis.fetch
+let routes = {}
+let originalFetch
 
-let routes: Record<string, unknown> = {}
-let originalFetch: FetchFn
-
-function mockFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+function mockFetch(input, init) {
   const url = typeof input === 'string' ? new URL(input) : input instanceof URL ? input : new URL(input.url)
   const key = `${init?.method || 'GET'} ${url.pathname}${url.search}`
 
@@ -22,7 +20,7 @@ function mockFetch(input: string | URL | Request, init?: RequestInit): Promise<R
 
 beforeEach(() => {
   originalFetch = globalThis.fetch
-  globalThis.fetch = mockFetch as FetchFn
+  globalThis.fetch = mockFetch
   routes = {}
 })
 
@@ -52,11 +50,11 @@ describe('handleSearch', () => {
       total: 0,
     }
 
-    let capturedBody: Record<string, unknown> | undefined
-    globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
+    let capturedBody
+    globalThis.fetch = ((input, init) => {
       capturedBody = JSON.parse(String(init?.body))
       return mockFetch(input, init)
-    }) as FetchFn
+    })
 
     const result = JSON.parse(await handleSearch({ query: '故障定位' }))
     assert.equal(result.query, '故障定位')
@@ -71,11 +69,11 @@ describe('handleSearch', () => {
       total: 1,
     }
 
-    let capturedBody: Record<string, unknown> | undefined
-    globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
+    let capturedBody
+    globalThis.fetch = ((input, init) => {
       capturedBody = JSON.parse(String(init?.body))
       return mockFetch(input, init)
-    }) as FetchFn
+    })
 
     const result = JSON.parse(await handleSearch({ query: '容量规划', sourceIds: ['src_custom'], topK: 3 }))
     assert.equal(result.total, 1)
