@@ -1,10 +1,19 @@
 import type { UserRole } from '../app/platform/providers/UserContext'
+import { trackedFetch } from '../app/platform/logging/requestClient'
+import { configureWebappLogging, type WebappLoggingRuntimeConfig } from '../app/platform/logging/settings'
 
 interface RuntimeConfig {
     gatewayUrl?: string
     gatewaySecretKey?: string
     knowledgeServiceUrl?: string
     businessIntelligenceServiceUrl?: string
+    logging?: {
+        level?: WebappLoggingRuntimeConfig['level']
+        consoleEnabled?: boolean
+        bufferSize?: number
+        sink?: 'console'
+        logDirectory?: string | null
+    }
 }
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1'])
@@ -81,10 +90,15 @@ function setRuntimeConfig(config: RuntimeConfig): void {
     GATEWAY_SECRET_KEY = config.gatewaySecretKey || DEFAULT_SECRET_KEY
     KNOWLEDGE_SERVICE_URL = resolveKnowledgeServiceUrl(config.knowledgeServiceUrl)
     BUSINESS_INTELLIGENCE_SERVICE_URL = resolveBusinessIntelligenceServiceUrl(config.businessIntelligenceServiceUrl)
+    configureWebappLogging(config.logging)
 }
 
 async function loadRuntimeConfig(): Promise<RuntimeConfig> {
-    const response = await fetch('/config.json', { cache: 'no-store' })
+    const response = await trackedFetch('/config.json', {
+        cache: 'no-store',
+        category: 'app',
+        name: 'app.context_init',
+    })
     if (!response.ok) {
         throw new Error(`Failed to load /config.json (${response.status})`)
     }

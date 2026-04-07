@@ -25,8 +25,8 @@
 
 不负责的内容：
 
-- 浏览器侧统一鉴权与租户隔离
-- 前端绕过网关访问的放开策略
+- 浏览器侧鉴权、租户隔离与访问控制策略
+- 跨服务入口收口策略
 - LLM 最终问答编排本身，这部分由 Agent 或上层编排服务承担
 
 ## 3. 总体架构
@@ -120,7 +120,7 @@
 
 ### 4.2 前端调用方式
 
-当前前端运行时通过 `KNOWLEDGE_SERVICE_URL` 直接访问 `knowledge-service`。这满足本地开发和当前实现，但仓库约束仍建议生产由 `gateway` 统一代理与鉴权收口。
+当前前端运行时通过 `KNOWLEDGE_SERVICE_URL` 直接访问 `knowledge-service`。在当前架构下，`knowledge-service` 作为独立服务对外提供能力，前端可按服务边界直接访问，无需再经由 `gateway` 收口。
 
 ### 4.3 前端检索测试链路
 
@@ -700,13 +700,13 @@ Caller            Facade                Search                Fetch
 3. 如果只需要快速拿证据，优先 `retrieve`
 4. 如果命中解释很重要，再补 `explain`
 
-### 9.3 给生产网关
+### 9.3 给生产部署
 
 推荐链路：
 
-1. 由网关统一代理 `knowledge-service`
-2. 在网关实现鉴权、审计、限流、租户边界
-3. 不建议浏览器在生产环境直接访问知识服务
+1. 保持 `knowledge-service` 作为独立服务部署与演进
+2. 由 `knowledge-service` 自身负责鉴权、审计、限流与租户边界
+3. 前端按服务边界直接访问知识服务，并保持接口契约稳定
 
 ## 10. 当前实现限制
 
@@ -715,7 +715,7 @@ Caller            Facade                Search                Fetch
 - `retrieve` 目前仍是“search 后逐条 fetch”的轻量封装，不是完整的上下文扩展器
 - `fetch` 的 `includeMarkdown` 与 `includeRawText` 目前不参与返回裁剪
 - profile 更新是浅合并，嵌套配置更新时要传完整一级对象
-- 前端当前直接访问 `knowledge-service`，生产部署仍建议经由 `gateway`
+- 前端当前直接访问 `knowledge-service`，这与独立服务部署模式一致
 
 ## 11. 结论
 
