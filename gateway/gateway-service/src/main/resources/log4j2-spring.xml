@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN" monitorInterval="30">
     <Properties>
-        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+        <Property name="APP_NAME">gateway</Property>
         <Property name="LOG_DIR">${sys:user.dir}/logs</Property>
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [service=${APP_NAME} requestId=%X{requestId} userId=%X{userId}] [%t] %logger{36} - %msg%n%throwable</Property>
     </Properties>
 
     <Appenders>
@@ -22,12 +23,12 @@
     </Appenders>
 
     <Loggers>
-        <Logger name="com.huawei.opsfactory.gateway" level="DEBUG" />
-        <Logger name="org.springframework" level="WARN" />
-        <Logger name="reactor" level="WARN" />
-        <Logger name="io.netty" level="WARN" />
+        <Logger name="com.huawei.opsfactory.gateway" level="${spring:logging.level.com.huawei.opsfactory.gateway:-INFO}" />
+        <Logger name="org.springframework" level="${spring:logging.level.org.springframework:-WARN}" />
+        <Logger name="reactor" level="${spring:logging.level.reactor:-WARN}" />
+        <Logger name="io.netty" level="${spring:logging.level.io.netty:-WARN}" />
 
-        <Root level="INFO">
+        <Root level="${spring:logging.level.root:-INFO}">
             <AppenderRef ref="Console" />
             <AppenderRef ref="File" />
         </Root>

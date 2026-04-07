@@ -3,8 +3,8 @@ package com.huawei.opsfactory.gateway.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -20,7 +20,7 @@ import java.util.Map;
 @Service
 public class CommandWhitelistService {
 
-    private static final Logger log = LogManager.getLogger(CommandWhitelistService.class);
+    private static final Logger log = LoggerFactory.getLogger(CommandWhitelistService.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private static final List<String> DEFAULT_COMMANDS = List.of(

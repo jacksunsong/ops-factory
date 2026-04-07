@@ -6,8 +6,8 @@ import com.huawei.opsfactory.gateway.common.model.ResidentInstanceTarget;
 import com.huawei.opsfactory.gateway.common.util.FileUtil;
 import com.huawei.opsfactory.gateway.common.util.YamlLoader;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -27,7 +27,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Service
 public class AgentConfigService {
 
-    private static final Logger log = LogManager.getLogger(AgentConfigService.class);
+    private static final Logger log = LoggerFactory.getLogger(AgentConfigService.class);
 
     private final GatewayProperties properties;
     private final CopyOnWriteArrayList<AgentRegistryEntry> registry = new CopyOnWriteArrayList<>();

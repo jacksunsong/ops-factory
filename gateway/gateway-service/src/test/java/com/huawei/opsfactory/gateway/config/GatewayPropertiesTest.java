@@ -47,6 +47,15 @@ public class GatewayPropertiesTest {
     }
 
     @Test
+    public void testLoggingDefaults() {
+        GatewayProperties.Logging logging = new GatewayProperties.Logging();
+        assertTrue(logging.isAccessLogEnabled());
+        assertFalse(logging.isIncludeUpstreamErrorBody());
+        assertFalse(logging.isIncludeSseChunkPreview());
+        assertEquals(160, logging.getSseChunkPreviewMaxChars());
+    }
+
+    @Test
     public void testSetters() {
         GatewayProperties props = new GatewayProperties();
         props.setSecretKey("new-key");
@@ -56,6 +65,20 @@ public class GatewayPropertiesTest {
         assertEquals("new-key", props.getSecretKey());
         assertEquals("http://localhost:8080", props.getCorsOrigin());
         assertEquals("/usr/bin/goosed", props.getGoosedBin());
+    }
+
+    @Test
+    public void testLoggingSetters() {
+        GatewayProperties.Logging logging = new GatewayProperties.Logging();
+        logging.setAccessLogEnabled(false);
+        logging.setIncludeUpstreamErrorBody(true);
+        logging.setIncludeSseChunkPreview(true);
+        logging.setSseChunkPreviewMaxChars(80);
+
+        assertFalse(logging.isAccessLogEnabled());
+        assertTrue(logging.isIncludeUpstreamErrorBody());
+        assertTrue(logging.isIncludeSseChunkPreview());
+        assertEquals(80, logging.getSseChunkPreviewMaxChars());
     }
 
     @Test

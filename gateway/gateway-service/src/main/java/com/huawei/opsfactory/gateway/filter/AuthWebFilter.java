@@ -2,6 +2,8 @@ package com.huawei.opsfactory.gateway.filter;
 
 import com.huawei.opsfactory.gateway.common.constants.GatewayConstants;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -12,8 +14,10 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 @Component
-@Order(1)
+@Order(2)
 public class AuthWebFilter implements WebFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthWebFilter.class);
 
     private final GatewayProperties properties;
 
@@ -37,6 +41,7 @@ public class AuthWebFilter implements WebFilter {
         }
 
         if (!properties.getSecretKey().equals(key)) {
+            log.warn("Rejecting unauthorized request path={} reason=invalid-secret-key", request.getURI().getPath());
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }

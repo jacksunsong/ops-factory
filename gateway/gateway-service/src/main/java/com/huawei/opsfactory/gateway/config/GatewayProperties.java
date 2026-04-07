@@ -1,17 +1,19 @@
 package com.huawei.opsfactory.gateway.config;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @Component
 @ConfigurationProperties(prefix = "gateway")
 public class GatewayProperties {
 
-    private static final Logger log = LogManager.getLogger(GatewayProperties.class);
+    private static final Logger log = LoggerFactory.getLogger(GatewayProperties.class);
 
     private String secretKey = "test";
     private String corsOrigin = "http://127.0.0.1:5173";
@@ -26,6 +28,7 @@ public class GatewayProperties {
     private Sse sse = new Sse();
     private Langfuse langfuse = new Langfuse();
     private OfficePreview officePreview = new OfficePreview();
+    private Logging logging = new Logging();
     private String credentialEncryptionKey = "changeit-changeit-changeit-32";
     private RemoteExecution remoteExecution = new RemoteExecution();
 
@@ -129,6 +132,14 @@ public class GatewayProperties {
 
     public void setOfficePreview(OfficePreview officePreview) {
         this.officePreview = officePreview;
+    }
+
+    public Logging getLogging() {
+        return logging;
+    }
+
+    public void setLogging(Logging logging) {
+        this.logging = logging;
     }
 
     public String getCredentialEncryptionKey() {
@@ -247,6 +258,22 @@ public class GatewayProperties {
         public void setFileBaseUrl(String fileBaseUrl) { this.fileBaseUrl = fileBaseUrl; }
     }
 
+    public static class Logging {
+        private boolean accessLogEnabled = true;
+        private boolean includeUpstreamErrorBody = false;
+        private boolean includeSseChunkPreview = false;
+        private int sseChunkPreviewMaxChars = 160;
+
+        public boolean isAccessLogEnabled() { return accessLogEnabled; }
+        public void setAccessLogEnabled(boolean accessLogEnabled) { this.accessLogEnabled = accessLogEnabled; }
+        public boolean isIncludeUpstreamErrorBody() { return includeUpstreamErrorBody; }
+        public void setIncludeUpstreamErrorBody(boolean includeUpstreamErrorBody) { this.includeUpstreamErrorBody = includeUpstreamErrorBody; }
+        public boolean isIncludeSseChunkPreview() { return includeSseChunkPreview; }
+        public void setIncludeSseChunkPreview(boolean includeSseChunkPreview) { this.includeSseChunkPreview = includeSseChunkPreview; }
+        public int getSseChunkPreviewMaxChars() { return sseChunkPreviewMaxChars; }
+        public void setSseChunkPreviewMaxChars(int sseChunkPreviewMaxChars) { this.sseChunkPreviewMaxChars = sseChunkPreviewMaxChars; }
+    }
+
     public static class RemoteExecution {
         private int defaultTimeout = 30;
         private int maxTimeout = 120;
@@ -261,7 +288,27 @@ public class GatewayProperties {
 
     @PostConstruct
     public void logConfiguration() {
+        normalizeGoosedBin();
         log.info("GatewayProperties loaded: gooseTls={}, gooseScheme={}, goosedBin={}",
                 gooseTls, gooseScheme(), goosedBin);
+    }
+
+    private void normalizeGoosedBin() {
+        if (goosedBin == null || goosedBin.isBlank()) {
+            return;
+        }
+        Path rawPath = Path.of(goosedBin);
+        if (rawPath.isAbsolute()) {
+            return;
+        }
+        Path candidate = Path.of(paths.getProjectRoot())
+            .toAbsolutePath()
+            .normalize()
+            .resolve("gateway")
+            .resolve(goosedBin)
+            .normalize();
+        if (Files.exists(candidate)) {
+            goosedBin = candidate.toString();
+        }
     }
 }

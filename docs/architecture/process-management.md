@@ -3,6 +3,8 @@
 ## Runtime Model
 The gateway manages `goosed` as per-user, per-agent runtime processes. Treat `(agentId, userId)` as the isolation boundary: each runtime gets its own port, working directory, uploads area, and process lifecycle.
 
+Gateway runtime configuration is loaded directly by Spring Boot from `gateway/config.yaml`. Standard framework logging uses `logging.level.*`; gateway-specific logging switches use `gateway.logging.*`.
+
 ## Required Properties
 - Spawn lazily on demand; do not pre-create user runtimes unless the prewarm path or configured resident-instance list explicitly owns that behavior.
 - Reap idle instances automatically rather than keeping all runtimes resident.
@@ -21,6 +23,12 @@ The gateway prepares runtime directories under `gateway/users/<userId>/agents/<a
 - Health checks, idle cleanup, and restart logic belong in gateway process-management classes, not in frontend code or ad hoc scripts.
 - Changes to watchdog, restart backoff, or instance limits require careful regression coverage because they affect all agents.
 - Preserve process-output draining and similar defensive runtime behavior; historical incidents show that missing drain logic can freeze otherwise healthy runtimes under tool-heavy workloads.
+
+## Logging Contract
+- `gateway/logs/gateway.log` is the single primary gateway application log file.
+- The gateway emits `X-Request-Id` on HTTP responses and records a unified access log for each request.
+- Operational debugging should correlate `requestId`, `userId`, `agentId`, `sessionId`, `port`, and `pid` across request logs, controller/service logs, and process-management logs.
+- Sensitive upstream response bodies and SSE previews remain behind explicit `gateway.logging.*` switches and are not logged by default.
 
 ## Review Triggers
 Request explicit review when changing:

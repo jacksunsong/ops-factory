@@ -26,6 +26,7 @@
 
 - 运行时可以继续使用 `Log4j2` 作为 backend
 - 代码层先收敛到 `SLF4J`，后续更换 backend 时成本更低
+- `gateway-service` 与 `knowledge-service` 当前代码层日志 API 已统一到 `SLF4J`
 
 ### 1.2 日志上下文优先使用 MDC
 
@@ -48,9 +49,15 @@
 
 例如：
 
+- `gateway` 的运行时配置入口应由 Spring 直接加载 `gateway/config.yaml`
+- `gateway` 的标准日志级别应使用 `logging.level.*`
+- `gateway` 的服务专有日志行为开关应使用 `gateway.logging.*`
+- `gateway` 默认应提供 `X-Request-Id` 与统一 access log
 - `knowledge-service` 的运行时配置入口是 `knowledge-service/config.yaml`
+- `knowledge-service` 的标准日志级别应使用 `logging.level.*`
+- `knowledge-service` 的服务专有日志行为开关应使用 `knowledge.logging.*`
 - `application.yaml` 可以用于启用日志框架或指定 `logging.config`
-- 但实际可调项，例如 `logging.level.*`、`knowledge.logging.*`，应从 `config.yaml` 进入
+- 但实际可调项，例如 `logging.level.*`、`gateway.logging.*`、`knowledge.logging.*`，应从服务配置入口进入
 
 ### 2.2 配置变更必须同步三个位置
 
@@ -223,6 +230,12 @@ access log 至少应包含：
 - 平台侧再次采集同一个文件
 
 如果需要同时保留应用日志和控制台输出，应区分文件用途，避免双写到同一个日志文件。
+
+当前仓库约束：
+
+- `gateway/logs/gateway.log` 是 `gateway` 的唯一主业务日志文件
+- `knowledge-service/logs/knowledge-service.log` 是 `knowledge-service` 的唯一主业务日志文件
+- 后台脚本不应再把 stdout/stderr 追加到同名业务日志文件
 
 ### 6.2 日志格式字段建议
 
