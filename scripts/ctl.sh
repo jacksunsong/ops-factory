@@ -7,7 +7,7 @@ set -euo pipefail
 # Usage: ./ctl.sh <action> [component ...]
 #
 #   action:    startup | shutdown | status | restart
-#   component: onlyoffice | langfuse | gateway | knowledge | business-intelligence | exporter | webapp | all (default)
+#   component: onlyoffice | langfuse | gateway | knowledge | business-intelligence | exporter | control-center | webapp | all (default)
 #              Multiple components can be specified.
 #
 # Examples:
@@ -39,6 +39,7 @@ ENABLE_EXPORTER="${ENABLE_EXPORTER:-true}"
 CTL_GATEWAY="${ROOT_DIR}/gateway/scripts/ctl.sh"
 CTL_KNOWLEDGE="${ROOT_DIR}/knowledge-service/scripts/ctl.sh"
 CTL_BUSINESS_INTELLIGENCE="${ROOT_DIR}/business-intelligence/scripts/ctl.sh"
+CTL_CONTROL_CENTER="${ROOT_DIR}/control-center/scripts/ctl.sh"
 CTL_WEBAPP="${ROOT_DIR}/web-app/scripts/ctl.sh"
 CTL_LANGFUSE="${ROOT_DIR}/langfuse/scripts/ctl.sh"
 CTL_ONLYOFFICE="${ROOT_DIR}/onlyoffice/scripts/ctl.sh"
@@ -64,7 +65,7 @@ run_if_enabled() {
 }
 
 # === Component validation ===
-VALID_COMPONENTS="onlyoffice langfuse gateway knowledge business-intelligence exporter webapp"
+VALID_COMPONENTS="onlyoffice langfuse gateway knowledge business-intelligence exporter control-center webapp"
 
 validate_component() {
     local comp="$1"
@@ -87,6 +88,7 @@ startup_one() {
         knowledge)  "${CTL_KNOWLEDGE}" startup ${bg_flag} ;;
         business-intelligence) run_if_enabled "${ENABLE_BUSINESS_INTELLIGENCE}" "Business Intelligence" "${CTL_BUSINESS_INTELLIGENCE}" startup ${bg_flag} ;;
         exporter)   run_if_enabled "${ENABLE_EXPORTER}" "Exporter" "${CTL_EXPORTER}" startup ${bg_flag} ;;
+        control-center) "${CTL_CONTROL_CENTER}" startup ${bg_flag} ;;
         webapp)     "${CTL_WEBAPP}" startup ${bg_flag} ;;
     esac
 }
@@ -99,6 +101,7 @@ shutdown_one() {
         knowledge)  "${CTL_KNOWLEDGE}" shutdown ;;
         business-intelligence) "${CTL_BUSINESS_INTELLIGENCE}" shutdown ;;
         exporter)   "${CTL_EXPORTER}" shutdown ;;
+        control-center) "${CTL_CONTROL_CENTER}" shutdown ;;
         webapp)     "${CTL_WEBAPP}" shutdown ;;
     esac
 }
@@ -123,6 +126,7 @@ status_one() {
             if [ "${ENABLE_EXPORTER}" = "true" ]; then
                 "${CTL_EXPORTER}" status || return 1
             fi ;;
+        control-center) "${CTL_CONTROL_CENTER}" status || return 1 ;;
         webapp)   "${CTL_WEBAPP}" status   || return 1 ;;
     esac
 }
@@ -155,7 +159,10 @@ do_startup() {
         # 6. Exporter (optional, background)
         run_if_enabled "${ENABLE_EXPORTER}" "Exporter" "${CTL_EXPORTER}" startup --background
 
-        # 7. Webapp (mandatory, background)
+        # 7. Control Center (mandatory, background)
+        "${CTL_CONTROL_CENTER}" startup --background
+
+        # 8. Webapp (mandatory, background)
         "${CTL_WEBAPP}" startup --background
     else
         for comp in "${components[@]}"; do
@@ -177,6 +184,7 @@ do_shutdown() {
 
     if [[ ${#components[@]} -eq 0 || "${components[0]}" == "all" ]]; then
         "${CTL_EXPORTER}" shutdown
+        "${CTL_CONTROL_CENTER}" shutdown
         "${CTL_BUSINESS_INTELLIGENCE}" shutdown
         "${CTL_KNOWLEDGE}" shutdown
         "${CTL_WEBAPP}" shutdown
@@ -209,6 +217,7 @@ do_status() {
         status_one knowledge  || has_fail=1
         status_one business-intelligence || has_fail=1
         status_one exporter   || has_fail=1
+        status_one control-center || has_fail=1
         status_one webapp     || has_fail=1
         echo
         if [ "${has_fail}" -eq 0 ]; then
@@ -253,6 +262,7 @@ Components (multiple allowed):
   knowledge   Knowledge ingestion / retrieval service  [mandatory]
   business-intelligence  Business intelligence service [optional]
   exporter    Prometheus metrics exporter              [optional]
+  control-center  Control Center service               [mandatory]
   webapp      Web application (Vite dev server)        [mandatory]
 
 Examples:

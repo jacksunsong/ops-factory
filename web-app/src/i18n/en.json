@@ -44,6 +44,7 @@
     "files": "Files",
     "scheduler": "Scheduler",
     "monitoring": "Monitoring",
+    "controlCenter": "Control Center",
     "businessIntelligence": "Business Intelligence",
     "remoteDiagnosis": "Remote Diagnosis",
     "faultDiagnosis": "SOP Workflow",
@@ -717,6 +718,31 @@
     "active": "active",
     "kill": "Kill",
     "cannotModifyRunning": "Cannot trigger or modify a schedule while it's already running."
+  },
+  "controlCenter": {
+    "title": "Control Center",
+    "servicesTitle": "Managed Services",
+    "runtimeTitle": "Platform Runtime",
+    "servicesReachable": "Reachable Services",
+    "tabEvents": "Events",
+    "eventsTitle": "Recent Events",
+    "eventsEmpty": "No events yet",
+    "required": "Required",
+    "optional": "Optional",
+    "serviceHost": "Host",
+    "lastChecked": "Last Checked",
+    "runtimeUnavailable": "Runtime data is temporarily unavailable",
+    "actionRunning": "Running...",
+    "actionConfirm": "Run {{action}} on {{service}}?",
+    "actionConfirmTitle": "{{action}} {{service}}",
+    "actionConfirmBody": "This will run {{action}} on {{service}}.",
+    "actionSuccess": "{{action}} succeeded for {{service}}",
+    "actionLabel": {
+      "probe": "Probe",
+      "restart": "Restart",
+      "start": "Start",
+      "stop": "Stop"
+    }
   },
   "monitoring": {
     "title": "Monitoring",

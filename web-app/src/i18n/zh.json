@@ -44,6 +44,7 @@
     "files": "文件",
     "scheduler": "定时任务",
     "monitoring": "监控",
+    "controlCenter": "控制中心",
     "businessIntelligence": "业务智能",
     "remoteDiagnosis": "远程诊断管理",
     "faultDiagnosis": "SOP 工作流",
@@ -717,6 +718,31 @@
     "active": "活跃",
     "kill": "终止",
     "cannotModifyRunning": "任务运行中无法触发或修改定时操作。"
+  },
+  "controlCenter": {
+    "title": "控制中心",
+    "servicesTitle": "受管服务",
+    "runtimeTitle": "平台运行态",
+    "servicesReachable": "可达服务",
+    "tabEvents": "事件",
+    "eventsTitle": "最近事件",
+    "eventsEmpty": "暂无事件",
+    "required": "必需",
+    "optional": "可选",
+    "serviceHost": "地址",
+    "lastChecked": "最近检查",
+    "runtimeUnavailable": "运行态数据暂时不可用",
+    "actionRunning": "执行中...",
+    "actionConfirm": "确认对 {{service}} 执行{{action}}？",
+    "actionConfirmTitle": "{{action}}{{service}}",
+    "actionConfirmBody": "这将对 {{service}} 执行{{action}}。",
+    "actionSuccess": "{{service}} {{action}}成功",
+    "actionLabel": {
+      "probe": "探测",
+      "restart": "重启",
+      "start": "启动",
+      "stop": "停止"
+    }
   },
   "monitoring": {
     "title": "监控",
