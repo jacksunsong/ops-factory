@@ -53,6 +53,9 @@
 - `gateway` 的标准日志级别应使用 `logging.level.*`
 - `gateway` 的服务专有日志行为开关应使用 `gateway.logging.*`
 - `gateway` 默认应提供 `X-Request-Id` 与统一 access log
+- `business-intelligence` 的运行时配置入口是 `business-intelligence/config.yaml`
+- `business-intelligence` 的标准日志级别应使用 `logging.level.*`
+- `business-intelligence` 的服务专有日志行为开关应使用 `business-intelligence.logging.*`
 - `knowledge-service` 的运行时配置入口是 `knowledge-service/config.yaml`
 - `knowledge-service` 的标准日志级别应使用 `logging.level.*`
 - `knowledge-service` 的服务专有日志行为开关应使用 `knowledge.logging.*`
@@ -234,6 +237,7 @@ access log 至少应包含：
 当前仓库约束：
 
 - `gateway/logs/gateway.log` 是 `gateway` 的唯一主业务日志文件
+- `business-intelligence/logs/business-intelligence.log` 是 `business-intelligence` 的唯一主业务日志文件
 - `knowledge-service/logs/knowledge-service.log` 是 `knowledge-service` 的唯一主业务日志文件
 - 后台脚本不应再把 stdout/stderr 追加到同名业务日志文件
 

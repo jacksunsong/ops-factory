@@ -29,6 +29,8 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -37,6 +39,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class BusinessIntelligenceService {
+
+    private static final Logger log = LoggerFactory.getLogger(BusinessIntelligenceService.class);
 
     private static final List<TabMeta> TABS = List.of(
         new TabMeta("executive-summary", "执行摘要"),
@@ -104,15 +108,41 @@ public class BusinessIntelligenceService {
     public Snapshot getOverview() {
         Snapshot snapshot = cache.get();
         if (snapshot != null && runtimeProperties.isCacheEnabled()) {
+            log.debug(
+                "Returning cached business intelligence snapshot refreshedAt={} tabCount={}",
+                snapshot.refreshedAt(),
+                snapshot.tabs().size()
+            );
             return snapshot;
         }
         return refresh();
     }
 
     public synchronized Snapshot refresh() {
-        Snapshot snapshot = buildSnapshot(dataProvider.load());
-        cache.set(snapshot);
-        return snapshot;
+        long startedAt = System.currentTimeMillis();
+        try {
+            BiRawData rawData = dataProvider.load();
+            Snapshot snapshot = buildSnapshot(rawData);
+            cache.set(snapshot);
+            log.info(
+                "Refreshed business intelligence snapshot incidents={} incidentSlaCriteria={} changes={} requests={} problems={} tabCount={} durationMs={}",
+                rawData.incidents().size(),
+                rawData.incidentSlaCriteria().size(),
+                rawData.changes().size(),
+                rawData.requests().size(),
+                rawData.problems().size(),
+                snapshot.tabs().size(),
+                System.currentTimeMillis() - startedAt
+            );
+            return snapshot;
+        } catch (RuntimeException ex) {
+            log.error(
+                "Failed to refresh business intelligence snapshot durationMs={}",
+                System.currentTimeMillis() - startedAt,
+                ex
+            );
+            throw ex;
+        }
     }
 
     public TabContent getTab(String tabId) {
@@ -121,11 +151,13 @@ public class BusinessIntelligenceService {
         if (content == null) {
             throw new IllegalArgumentException("Unknown tab: " + tabId);
         }
+        log.debug("Resolved business intelligence tab tabId={} label={}", tabId, content.label());
         return content;
     }
 
     public byte[] exportCurrentWorkbook() {
         Snapshot snapshot = getOverview();
+        long startedAt = System.currentTimeMillis();
         try (XSSFWorkbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             for (TabMeta tab : snapshot.tabs()) {
@@ -144,8 +176,23 @@ public class BusinessIntelligenceService {
                 }
             }
             workbook.write(outputStream);
-            return outputStream.toByteArray();
+            byte[] bytes = outputStream.toByteArray();
+            log.info(
+                "Exported business intelligence workbook refreshedAt={} tabCount={} byteSize={} durationMs={}",
+                snapshot.refreshedAt(),
+                snapshot.tabs().size(),
+                bytes.length,
+                System.currentTimeMillis() - startedAt
+            );
+            return bytes;
         } catch (IOException exception) {
+            log.error(
+                "Failed to export business intelligence workbook refreshedAt={} tabCount={} durationMs={}",
+                snapshot.refreshedAt(),
+                snapshot.tabs().size(),
+                System.currentTimeMillis() - startedAt,
+                exception
+            );
             throw new IllegalStateException("Failed to export business intelligence workbook", exception);
         }
     }
