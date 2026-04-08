@@ -25,7 +25,8 @@ public class CommandWhitelistService {
 
     private static final List<String> DEFAULT_COMMANDS = List.of(
             "ps", "tail", "grep", "cat", "ls", "df", "free", "netstat",
-            "top", "cd", "find", "wc", "head", "date", "uptime"
+            "top", "cd", "find", "wc", "head", "date", "uptime",
+            "iostat", "ping"
     );
 
     private final GatewayProperties properties;

@@ -79,7 +79,7 @@ public class SopService {
     }
 
     public Map<String, Object> getSop(String id) {
-        Path file = sopsDir.resolve(id + ".json");
+        Path file = resolveSopFile(id);
         Map<String, Object> sop = readSopFile(file);
         if (sop == null) {
             throw new IllegalArgumentException("SOP not found: " + id);
@@ -107,7 +107,7 @@ public class SopService {
     }
 
     public Map<String, Object> updateSop(String id, Map<String, Object> body) {
-        Path file = sopsDir.resolve(id + ".json");
+        Path file = resolveSopFile(id);
         Map<String, Object> sop = readSopFile(file);
         if (sop == null) {
             throw new IllegalArgumentException("SOP not found: " + id);
@@ -138,7 +138,7 @@ public class SopService {
     }
 
     public boolean deleteSop(String id) {
-        Path file = sopsDir.resolve(id + ".json");
+        Path file = resolveSopFile(id);
         try {
             if (Files.exists(file)) {
                 Files.delete(file);
@@ -186,6 +186,39 @@ public class SopService {
     }
 
     // ── File I/O Helpers ─────────────────────────────────────────────
+
+    /**
+     * Resolve the JSON file path for a given SOP id.
+     * Tries direct filename first ({id}.json), then scans all files
+     * to match by the internal "id" field (e.g. sub-nslb-{uuid}.json).
+     */
+    private Path resolveSopFile(String id) {
+        // Fast path: direct filename match
+        Path direct = sopsDir.resolve(id + ".json");
+        if (Files.exists(direct)) {
+            return direct;
+        }
+        // Fallback: scan directory for a file whose internal "id" field matches
+        if (Files.isDirectory(sopsDir)) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(sopsDir, "*.json")) {
+                for (Path file : stream) {
+                    if (!Files.isRegularFile(file)) continue;
+                    try {
+                        Map<String, Object> sop = readSopFile(file);
+                        if (sop != null && id.equals(sop.get("id"))) {
+                            return file;
+                        }
+                    } catch (Exception e) {
+                        // skip unreadable files
+                    }
+                }
+            } catch (IOException e) {
+                log.error("Failed to scan SOPs directory for id={}", id, e);
+            }
+        }
+        // Return the direct path even if not found (caller will handle null)
+        return direct;
+    }
 
     private Map<String, Object> readSopFile(Path file) {
         if (!Files.exists(file)) {

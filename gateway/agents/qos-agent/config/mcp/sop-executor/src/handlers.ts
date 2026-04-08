@@ -44,10 +44,13 @@ export async function gw<T>(path: string, params?: Record<string, string>, metho
 export const tools = [
   {
     name: 'list_sops',
-    description: '列出所有可用的SOP诊断流程，包含id、名称、触发条件。用于根据故障类型匹配适合的SOP。',
+    description: '列出所有可用的SOP诊断流程，包含id、名称、触发条件。可通过level和category过滤子SOP。level="sub"获取子SOP，不传则返回全部。',
     inputSchema: {
       type: 'object' as const,
-      properties: {},
+      properties: {
+        level: { type: 'string', description: '按层级过滤，如"sub"仅返回子SOP' },
+        category: { type: 'string', description: '按类别过滤，如NSLB/RCPA/RCPADB/GMDB/KAFKA' },
+      },
     },
   },
   {
@@ -98,7 +101,7 @@ interface SopNode {
   id?: string
   name: string
   type: string
-  transitions?: { condition: string; nextNodeId: string }[]
+  transitions?: { condition: string; nextNodes?: string[]; nextNodeId?: string; requireHumanConfirm?: boolean }[]
 }
 
 interface SopData {
@@ -122,6 +125,10 @@ export function sopToMermaid(sop: SopData): string {
     const label = node.name.replace(/"/g, "'")
     if (node.type === 'start') {
       lines.push(`    N${i}(["${label}"])`)
+    } else if (node.type === 'browser') {
+      lines.push(`    N${i}{{"${label}"}}`)
+    } else if (node.type === 'end') {
+      lines.push(`    N${i}((("${label}")))`)
     } else {
       lines.push(`    N${i}["${label}"]`)
     }
@@ -130,18 +137,27 @@ export function sopToMermaid(sop: SopData): string {
   // Edges with conditions
   nodes.forEach((node, i) => {
     for (const t of node.transitions ?? []) {
-      const targetIdx = nameToIndex.get(t.nextNodeId)
-      if (targetIdx !== undefined) {
-        const cond = t.condition.replace(/"/g, "'")
-        lines.push(`    N${i} -->|"${cond}"| N${targetIdx}`)
+      // nextNodes is an array of target node names
+      const targets = t.nextNodes ?? (t.nextNodeId ? [t.nextNodeId] : [])
+      for (const targetName of targets) {
+        const targetIdx = nameToIndex.get(targetName)
+        if (targetIdx !== undefined) {
+          const cond = (t.condition || '').replace(/"/g, "'")
+          const suffix = t.requireHumanConfirm ? ' (需确认)' : ''
+          lines.push(`    N${i} -->|"${cond}${suffix}"| N${targetIdx}`)
+        }
       }
     }
   })
 
-  // Style start nodes (indigo)
+  // Style start nodes (indigo), browser nodes (amber), and human-confirm nodes (green)
   nodes.forEach((node, i) => {
     if (node.type === 'start') {
       lines.push(`    style N${i} fill:#e0e7ff,stroke:#6366f1,stroke-width:2px`)
+    } else if (node.type === 'browser') {
+      lines.push(`    style N${i} fill:#fef3c7,stroke:#f59e0b,stroke-width:2px`)
+    } else if (node.type === 'end') {
+      lines.push(`    style N${i} fill:#fee2e2,stroke:#dc2626,stroke-width:2px`)
     }
   })
 
@@ -173,20 +189,65 @@ export function buildMermaidResource(mermaidCode: string, title: string): Conten
 // Tool handlers
 // ---------------------------------------------------------------------------
 
-export async function handleListSops(): Promise<string> {
+export async function handleListSops(level?: string, category?: string): Promise<string> {
   const data = await gw<{ sops: Record<string, unknown>[] }>(`${API_PREFIX}/sops`)
-  return JSON.stringify(data, null, 2)
+  let sops = data.sops ?? []
+  if (level) {
+    sops = sops.filter(s => String(s.level ?? '') === level)
+  }
+  if (category) {
+    sops = sops.filter(s => String(s.category ?? '') === category)
+  }
+  return JSON.stringify({ sops }, null, 2)
 }
 
 export async function handleGetSopDetail(sopId: string): Promise<ContentItem[]> {
   const data = await gw<Record<string, unknown>>(`${API_PREFIX}/sops/${sopId}`)
   // API returns { success: true, sop: { nodes: [...] } } — extract inner sop object
   const sop = (data.sop ?? data) as SopData
+  const mermaidCode = sopToMermaid(sop)
+
+  // Embed confirmation warning directly into each transition that requires it.
+  // This makes the warning appear inline within the JSON data where the agent reads it,
+  // rather than as a separate note that the agent might skip over.
+  const confirmWarning = '⛔ 匹配到此条件时必须立即停止，向用户确认后才能继续执行后续节点'
+  const sopWithWarnings = JSON.parse(JSON.stringify(data)) as Record<string, unknown>
+  const inner = (sopWithWarnings.sop ?? sopWithWarnings) as SopData
+  let hasConfirm = false
+  for (const node of inner.nodes ?? []) {
+    for (const tr of node.transitions ?? []) {
+      if (tr.requireHumanConfirm) {
+        hasConfirm = true
+        ;(tr as Record<string, unknown>)['_confirmWarning'] = confirmWarning
+      }
+    }
+  }
+
+  const parts: string[] = []
+
+  if (hasConfirm) {
+    parts.push('⚠️ 本 SOP 包含需要人工确认的条件分支（requireHumanConfirm=true）。')
+    parts.push('当 transitions 条件匹配到 requireHumanConfirm=true 的分支时：')
+    parts.push('1. 立即停止，不调用任何工具')
+    parts.push('2. 输出：⏸️ 请确认是否继续检查「{后续节点名称}」？回复「继续」或「否」。')
+    parts.push('3. 结束本轮对话，等用户回复后再继续')
+    parts.push('')
+  }
+
+  parts.push(JSON.stringify(sopWithWarnings, null, 2))
+  parts.push('')
+  parts.push('---')
+  parts.push('')
+  parts.push('SOP 流程图（必须向用户展示）：')
+  parts.push('')
+  parts.push('```mermaid')
+  parts.push(mermaidCode)
+  parts.push('```')
+
   const textContent: ContentItem = {
     type: 'text',
-    text: JSON.stringify(data, null, 2),
+    text: parts.join('\n'),
   }
-  const mermaidCode = sopToMermaid(sop)
   const mermaidResource = buildMermaidResource(mermaidCode, String(sop.name ?? sopId))
   return [textContent, mermaidResource]
 }
@@ -251,7 +312,10 @@ export async function handleExecuteRemote(hostId: string, command: string, timeo
 export async function dispatch(name: string, args: Record<string, unknown>): Promise<string | ContentItem[]> {
   switch (name) {
     case 'list_sops':
-      return handleListSops()
+      return handleListSops(
+        (args as { level?: string }).level,
+        (args as { category?: string }).category,
+      )
     case 'get_sop_detail':
       return handleGetSopDetail((args as { sopId?: string }).sopId ?? '')
     case 'get_hosts':

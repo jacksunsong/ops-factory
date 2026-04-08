@@ -179,6 +179,15 @@ function TransitionEditor({
         [transitions, onChange],
     )
 
+    const toggleRequireHumanConfirm = useCallback(
+        (index: number) => {
+            const next = [...transitions]
+            next[index] = { ...next[index], requireHumanConfirm: !next[index].requireHumanConfirm }
+            onChange(next)
+        },
+        [transitions, onChange],
+    )
+
     return (
         <div className="sop-workflow-inline-editor">
             <div className="sop-workflow-inline-editor-head">
@@ -211,6 +220,21 @@ function TransitionEditor({
                             <TrashIcon />
                         </button>
                     </div>
+                    <label className="sop-workflow-transition-confirm" title={t('remoteDiagnosis.sops.transitionConfirmHint')}>
+                        <span
+                            className={`sop-workflow-switch${tr.requireHumanConfirm ? ' is-on' : ''}`}
+                            role="switch"
+                            aria-checked={!!tr.requireHumanConfirm}
+                            tabIndex={0}
+                            onClick={() => toggleRequireHumanConfirm(i)}
+                            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRequireHumanConfirm(i) } }}
+                        >
+                            <span className="sop-workflow-switch-thumb" />
+                        </span>
+                        <span className="sop-workflow-transition-confirm-label">
+                            {t('remoteDiagnosis.sops.transitionConfirm')}
+                        </span>
+                    </label>
                     {nodeNames.length > 0 && (
                         <div className="sop-workflow-next-nodes">
                             <span className="sop-workflow-next-label">
@@ -310,7 +334,7 @@ function SopFormModal({
         // Validate all node commands against whitelist (skip browser nodes)
         const errors: Record<number, string> = {}
         nodes.forEach((node, idx) => {
-            if (node.type === 'browser') return
+            if (node.type === 'browser' || node.type === 'end') return
             const rejected = validateNodeCommand(node.command || '')
             if (rejected.length > 0) {
                 errors[idx] = t('remoteDiagnosis.sops.commandNotInWhitelist', { commands: rejected.join(', ') })
@@ -472,6 +496,7 @@ function SopFormModal({
                                     <option value="start">{t('remoteDiagnosis.sops.startNode')}</option>
                                     <option value="analysis">{t('remoteDiagnosis.sops.analysisNode')}</option>
                                     <option value="browser">{t('remoteDiagnosis.sops.browserNode')}</option>
+                                    <option value="end">{t('remoteDiagnosis.sops.endNode')}</option>
                                 </select>
                             </div>
                         </div>
@@ -509,7 +534,7 @@ function SopFormModal({
                                     </select>
                                 </div>
                             </>
-                        ) : (
+                        ) : node.type === 'end' ? null : (
                             <>
                                 <div className="form-group sop-workflow-compact-field">
                                     <label className="form-label">{t('remoteDiagnosis.sops.nodeTags')}</label>
@@ -662,14 +687,18 @@ function SopExpandableRow({ sop, onEdit, onDelete }: {
                                                             ? 'sop-workflow-node-type-start'
                                                             : node.type === 'browser'
                                                               ? 'sop-workflow-node-type-browser'
-                                                              : 'sop-workflow-node-type-analysis'
+                                                              : node.type === 'end'
+                                                                ? 'sop-workflow-node-type-end'
+                                                                : 'sop-workflow-node-type-analysis'
                                                     }`}
                                                 >
                                                     {node.type === 'start'
                                                         ? t('remoteDiagnosis.sops.startNode')
                                                         : node.type === 'browser'
                                                           ? t('remoteDiagnosis.sops.browserNode')
-                                                          : t('remoteDiagnosis.sops.analysisNode')}
+                                                          : node.type === 'end'
+                                                            ? t('remoteDiagnosis.sops.endNode')
+                                                            : t('remoteDiagnosis.sops.analysisNode')}
                                                 </span>
                                             </div>
                                             <div className="sop-workflow-node-grid">
@@ -694,7 +723,7 @@ function SopExpandableRow({ sop, onEdit, onDelete }: {
                                                             </div>
                                                         )}
                                                     </>
-                                                ) : (
+                                                ) : node.type === 'end' ? null : (
                                                     <>
                                                         {node.hostTags && node.hostTags.length > 0 && (
                                                             <div className="sop-workflow-node-item">
@@ -731,13 +760,13 @@ function SopExpandableRow({ sop, onEdit, onDelete }: {
                                                     </>
                                                 )}
                                                 {node.transitions && node.transitions.length > 0 && (
-                                                    <div className="sop-workflow-node-item">
+                                                    <div className="sop-workflow-node-item" style={{ gridColumn: '1 / -1' }}>
                                                         <span className="sop-workflow-node-label">
                                                             {t('remoteDiagnosis.sops.nodeTransitions')}
                                                         </span>
                                                         <span className="sop-workflow-node-value">
                                                             {node.transitions
-                                                                .map(tr => `${tr.condition} -> ${tr.nextNodeId}`)
+                                                                .map(tr => `${tr.condition} -> ${(tr.nextNodes ?? []).join(', ') || tr.nextNodeId || '—'}${tr.requireHumanConfirm ? ' [' + t('remoteDiagnosis.sops.transitionConfirm') + ']' : ''}`)
                                                                 .join('; ')}
                                                         </span>
                                                     </div>
