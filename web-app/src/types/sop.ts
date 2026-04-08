@@ -8,7 +8,7 @@ export interface SopNodeVariable {
 export interface SopNode {
     id: string
     name: string
-    type: 'start' | 'analysis' | 'browser'
+    type: 'start' | 'analysis' | 'browser' | 'end'
     hostTags: string[]
     command: string
     commandVariables: Record<string, SopCommandVariable>
@@ -32,6 +32,7 @@ export interface SopTransition {
     description: string
     nextNodes: string[]
     nextNodeId?: string
+    requireHumanConfirm?: boolean
 }
 
 export interface Sop {
