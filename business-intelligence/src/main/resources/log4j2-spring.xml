@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN" monitorInterval="30">
     <Properties>
-        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+        <Property name="APP_NAME">business-intelligence</Property>
         <Property name="LOG_DIR">${sys:user.dir}/logs</Property>
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [service=${APP_NAME} requestId=%X{requestId}] [%t] %logger{36} - %msg%n%throwable</Property>
     </Properties>
 
     <Appenders>
@@ -10,8 +11,9 @@
             <PatternLayout pattern="${LOG_PATTERN}" />
         </Console>
 
-        <RollingFile name="File" fileName="${LOG_DIR}/gateway.log"
-                     filePattern="${LOG_DIR}/gateway-%d{yyyy-MM-dd}-%i.log.gz">
+        <RollingFile name="File"
+                     fileName="${LOG_DIR}/business-intelligence.log"
+                     filePattern="${LOG_DIR}/business-intelligence-%d{yyyy-MM-dd}-%i.log.gz">
             <PatternLayout pattern="${LOG_PATTERN}" />
             <Policies>
                 <TimeBasedTriggeringPolicy interval="1" />
@@ -22,12 +24,10 @@
     </Appenders>
 
     <Loggers>
-        <Logger name="com.huawei.opsfactory.gateway" level="DEBUG" />
-        <Logger name="org.springframework" level="WARN" />
-        <Logger name="reactor" level="WARN" />
-        <Logger name="io.netty" level="WARN" />
+        <Logger name="com.huawei.opsfactory.businessintelligence" level="${spring:logging.level.com.huawei.opsfactory.businessintelligence:-INFO}" />
+        <Logger name="org.springframework" level="${spring:logging.level.org.springframework:-WARN}" />
 
-        <Root level="INFO">
+        <Root level="${spring:logging.level.root:-INFO}">
             <AppenderRef ref="Console" />
             <AppenderRef ref="File" />
         </Root>

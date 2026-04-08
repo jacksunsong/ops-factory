@@ -4,8 +4,8 @@ import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -18,7 +18,7 @@ import java.util.Map;
 @Service
 public class RemoteExecutionService {
 
-    private static final Logger log = LogManager.getLogger(RemoteExecutionService.class);
+    private static final Logger log = LoggerFactory.getLogger(RemoteExecutionService.class);
 
     private final HostService hostService;
     private final CommandWhitelistService commandWhitelistService;

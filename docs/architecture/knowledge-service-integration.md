@@ -33,7 +33,7 @@
 
 配置分为两类：
 
-- 业务配置：`ops-knowledge.*`
+- 业务配置：`knowledge.*`
 - 运行时存储配置：`knowledge.runtime.*`
 - 数据库连接配置：`knowledge.database.*`
 
@@ -211,7 +211,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 
 ### 3.2 业务配置
 
-#### `ops-knowledge.ingest`
+#### `knowledge.ingest`
 
 - `max-file-size-mb`：单文件最大大小，默认 `100`
 - `allowed-content-types`：允许导入的 MIME 类型。当前实现默认支持：
@@ -226,7 +226,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `deduplication`：去重方式，当前默认 `sha256`
 - `skip-existing-by-default`：是否默认跳过已存在文档，当前实现按 `sourceId + sha256` 去重
 
-#### `ops-knowledge.convert`
+#### `knowledge.convert`
 
 - `engine`：转换引擎，默认 `tika`
 - `enable-pdfbox-fallback`：PDF 回退能力开关
@@ -235,13 +235,13 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `normalize-full-half-width`：是否规范全角/半角
 - `keep-markdown-artifact`：是否保留 markdown 产物
 
-#### `ops-knowledge.analysis`
+#### `knowledge.analysis`
 
 - `language`：语言标记，默认 `zh`
 - `index-analyzer`：索引分词器，默认 `smartcn`
 - `query-analyzer`：查询分词器，默认 `smartcn`
 
-#### `ops-knowledge.chunking`
+#### `knowledge.chunking`
 
 - `mode`：切块模式，默认 `hierarchical`
 - `target-tokens`：目标 token 数
@@ -253,7 +253,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `min-chunk-tokens`：chunk 最小 token 数
 - `max-chunk-tokens`：chunk 最大 token 数
 
-#### `ops-knowledge.metadata`
+#### `knowledge.metadata`
 
 - `extract-keywords`：是否抽关键词
 - `max-keywords`：最大关键词数量
@@ -261,7 +261,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `extract-summary`：是否抽摘要
 - `store-page-refs`：是否保存页码引用
 
-#### `ops-knowledge.embedding`
+#### `knowledge.embedding`
 
 - `base-url`：embedding 服务地址
 - `api-key`：embedding 服务密钥
@@ -276,7 +276,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - 数据库中只保留按 `content_hash + model + dimension` 复用的 embedding 缓存
 - 文档、chunk、source 删除不会级联清空 embedding 缓存，因为缓存不再绑定单个 chunk id
 
-#### `ops-knowledge.indexing`
+#### `knowledge.indexing`
 
 - `title-boost`
 - `title-path-boost`
@@ -294,7 +294,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `keywords = 2.0`
 - `text/content = 1.0`
 
-#### `ops-knowledge.retrieval`
+#### `knowledge.retrieval`
 
 - `mode`：`lexical | semantic | hybrid`
 - `lexical-top-k`
@@ -306,15 +306,15 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 
 默认 `max-top-k = 64`，用于限制运行态检索与召回测试 compare 采样的最大候选数。
 
-#### `ops-knowledge.fetch`
+#### `knowledge.fetch`
 
 - `include-neighbors-by-default`
 - `default-neighbor-window`
 - `max-neighbor-window`
 
-注意：`GET /ops-knowledge/fetch/{chunkId}` 传入的 `neighborWindow` 不能超过这里的 `max-neighbor-window`。
+注意：`GET /knowledge/fetch/{chunkId}` 传入的 `neighborWindow` 不能超过这里的 `max-neighbor-window`。
 
-#### `ops-knowledge.retrieve`
+#### `knowledge.retrieve`
 
 - `expand-context`
 - `expand-mode`
@@ -324,7 +324,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `include-metadata`
 - `include-references`
 
-#### `ops-knowledge.features`
+#### `knowledge.features`
 
 - `allow-chunk-edit`
 - `allow-chunk-delete`
@@ -338,8 +338,8 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 ### 4.1 基础约定
 
 - Base Path：
-  - 资源管理类接口：`/ops-knowledge`
-  - job 接口：`/ops-knowledge/jobs`
+  - 资源管理类接口：`/knowledge`
+  - job 接口：`/knowledge/jobs`
 - 数据格式：
   - 普通接口：`application/json`
   - 文档导入：`multipart/form-data`
@@ -414,7 +414,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 
 ### 6.1 系统能力接口
 
-#### `GET /ops-knowledge/capabilities`
+#### `GET /knowledge/capabilities`
 
 用途：返回服务支持的检索模式、融合模式、分词器、可编辑字段和特性开关。
 
@@ -423,7 +423,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - 管理台初始化表单选项
 - 其他服务在运行时探测能力，而不是硬编码支持矩阵
 
-#### `GET /ops-knowledge/system/defaults`
+#### `GET /knowledge/system/defaults`
 
 用途：返回当前服务生效的业务默认配置视图，包括 ingest、chunking、retrieval、features。
 
@@ -434,14 +434,14 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 
 ### 6.2 Source 管理
 
-#### `GET /ops-knowledge/sources`
+#### `GET /knowledge/sources`
 
 查询参数：
 
 - `page`
 - `pageSize`
 
-#### `POST /ops-knowledge/sources`
+#### `POST /knowledge/sources`
 
 请求体：
 
@@ -459,11 +459,11 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `name` 必填，最大 64 字符
 - 不传 profile 时，会自动绑定系统默认 profile
 
-#### `GET /ops-knowledge/sources/{sourceId}`
+#### `GET /knowledge/sources/{sourceId}`
 
 获取 source 详情。
 
-#### `PATCH /ops-knowledge/sources/{sourceId}`
+#### `PATCH /knowledge/sources/{sourceId}`
 
 可更新字段：
 
@@ -473,7 +473,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `indexProfileId`
 - `retrievalProfileId`
 
-#### `GET /ops-knowledge/sources/{sourceId}/stats`
+#### `GET /knowledge/sources/{sourceId}/stats`
 
 返回：
 
@@ -485,7 +485,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - 用户编辑 chunk 数
 - 最近一次成功导入时间
 
-#### `POST /ops-knowledge/sources/{sourceId}:rebuild`
+#### `POST /knowledge/sources/{sourceId}:rebuild`
 
 用途：按当前 source 绑定的索引配置与系统默认值，重新触发该知识源下文档的处理与索引构建。
 
@@ -507,7 +507,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 
 ### 6.3 文档导入与文档管理
 
-#### `POST /ops-knowledge/sources/{sourceId}/documents:ingest`
+#### `POST /knowledge/sources/{sourceId}/documents:ingest`
 
 请求类型：`multipart/form-data`
 
@@ -533,7 +533,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - 基于 `sourceId + sha256` 去重，重复文件会被跳过，不会重复创建 document
 - 若文件类型不在允许列表内，会返回 `400`
 
-#### `GET /ops-knowledge/documents`
+#### `GET /knowledge/documents`
 
 查询参数：
 
@@ -541,7 +541,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `page`
 - `pageSize`
 
-#### `GET /ops-knowledge/documents/{documentId}`
+#### `GET /knowledge/documents/{documentId}`
 
 获取文档详情，包括：
 
@@ -553,7 +553,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `chunkCount`
 - `userEditedChunkCount`
 
-#### `PATCH /ops-knowledge/documents/{documentId}`
+#### `PATCH /knowledge/documents/{documentId}`
 
 可更新字段：
 
@@ -561,7 +561,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `description`
 - `tags`
 
-#### `DELETE /ops-knowledge/documents/{documentId}`
+#### `DELETE /knowledge/documents/{documentId}`
 
 行为：
 
@@ -570,11 +570,11 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - 删除上传原件目录
 - 删除转换产物目录
 
-#### `GET /ops-knowledge/documents/{documentId}/chunks`
+#### `GET /knowledge/documents/{documentId}/chunks`
 
 查看文档下的 chunk 列表。
 
-#### `GET /ops-knowledge/documents/{documentId}/preview`
+#### `GET /knowledge/documents/{documentId}/preview`
 
 返回：
 
@@ -582,33 +582,33 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 
 适合管理台预览，不适合直接作为检索证据接口。
 
-#### `GET /ops-knowledge/documents/{documentId}/artifacts`
+#### `GET /knowledge/documents/{documentId}/artifacts`
 
 返回该文档是否存在以下产物：
 
 - markdown
 
-#### `GET /ops-knowledge/documents/{documentId}/artifacts/markdown`
+#### `GET /knowledge/documents/{documentId}/artifacts/markdown`
 
 直接返回转换后的 markdown 文本。
 
-#### `GET /ops-knowledge/documents/{documentId}/original`
+#### `GET /knowledge/documents/{documentId}/original`
 
 下载导入时保存的原始文件。
 
-#### `POST /ops-knowledge/documents/{documentId}:rebuild`
-#### `POST /ops-knowledge/documents/{documentId}:reindex`
-#### `POST /ops-knowledge/documents/{documentId}:rechunk`
+#### `POST /knowledge/documents/{documentId}:rebuild`
+#### `POST /knowledge/documents/{documentId}:reindex`
+#### `POST /knowledge/documents/{documentId}:rechunk`
 
 当前实现会直接生成一条成功状态的 job 记录，作为后续异步化扩展入口。
 
-#### `GET /ops-knowledge/documents/{documentId}/stats`
+#### `GET /knowledge/documents/{documentId}/stats`
 
 返回文档维度统计信息。
 
 ### 6.4 Chunk 管理
 
-#### `GET /ops-knowledge/chunks`
+#### `GET /knowledge/chunks`
 
 查询参数：
 
@@ -617,7 +617,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `page`
 - `pageSize`
 
-#### `GET /ops-knowledge/chunks/{chunkId}`
+#### `GET /knowledge/chunks/{chunkId}`
 
 返回 chunk 详情，包括：
 
@@ -632,7 +632,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `textLength`
 - `editStatus`
 
-#### `POST /ops-knowledge/documents/{documentId}/chunks`
+#### `POST /knowledge/documents/{documentId}/chunks`
 
 用途：手工新增 chunk。
 
@@ -657,7 +657,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - 刷新文档 chunk 统计
 - 标记 `editStatus = USER_EDITED`
 
-#### `PATCH /ops-knowledge/chunks/{chunkId}`
+#### `PATCH /knowledge/chunks/{chunkId}`
 
 可更新：
 
@@ -669,15 +669,15 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `pageFrom`
 - `pageTo`
 
-#### `PATCH /ops-knowledge/chunks/{chunkId}/keywords`
+#### `PATCH /knowledge/chunks/{chunkId}/keywords`
 
 只更新关键词，适合轻量运营动作。
 
-#### `DELETE /ops-knowledge/chunks/{chunkId}`
+#### `DELETE /knowledge/chunks/{chunkId}`
 
 删除 chunk，并同步刷新文档统计。
 
-#### `POST /ops-knowledge/documents/{documentId}/chunks:reorder`
+#### `POST /knowledge/documents/{documentId}/chunks:reorder`
 
 请求体：
 
@@ -692,13 +692,13 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 
 用途：重排 chunk 顺序。
 
-#### `POST /ops-knowledge/chunks/{chunkId}:reindex`
+#### `POST /knowledge/chunks/{chunkId}:reindex`
 
 当前返回同步成功结果，保留为后续索引重建扩展点。
 
 ### 6.5 检索接口
 
-#### `POST /ops-knowledge/search`
+#### `POST /knowledge/search`
 
 用途：返回命中 chunk 的搜索结果列表，适合“先召回、再展示或再取详情”的场景。
 
@@ -729,7 +729,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 
 当前实现说明：
 
-- `topK` 必须大于 0 且不能超过 `ops-knowledge.retrieval.max-top-k`
+- `topK` 必须大于 0 且不能超过 `knowledge.retrieval.max-top-k`
 - `filters.contentTypes` 会按 document 的 `contentType` 过滤
 - `retrievalProfileId` 与 `override` 会共同参与运行时检索参数解析，优先级为 `override > profile > system defaults`
 - `mode=lexical` 返回关键词分数路径
@@ -751,7 +751,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `pageFrom`
 - `pageTo`
 
-#### `GET /ops-knowledge/fetch/{chunkId}`
+#### `GET /knowledge/fetch/{chunkId}`
 
 查询参数：
 
@@ -771,7 +771,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - 拼接上下文
 - 管理台查看 chunk 详情
 
-#### `POST /ops-knowledge/retrieve`
+#### `POST /knowledge/retrieve`
 
 用途：直接返回适合喂给 LLM 的 evidence 列表。
 
@@ -807,7 +807,7 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - 需要直接给大模型做 RAG 时优先用这个接口
 - 如果你要做自定义重排或前端搜索结果页，优先用 `/search`
 
-#### `POST /ops-knowledge/explain`
+#### `POST /knowledge/explain`
 
 用途：解释某个 query 为什么命中某个 chunk。
 
@@ -836,19 +836,19 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 
 #### Index Profile
 
-- `GET /ops-knowledge/profiles/index`
-- `POST /ops-knowledge/profiles/index`
-- `GET /ops-knowledge/profiles/index/{profileId}`
-- `PATCH /ops-knowledge/profiles/index/{profileId}`
-- `DELETE /ops-knowledge/profiles/index/{profileId}`
+- `GET /knowledge/profiles/index`
+- `POST /knowledge/profiles/index`
+- `GET /knowledge/profiles/index/{profileId}`
+- `PATCH /knowledge/profiles/index/{profileId}`
+- `DELETE /knowledge/profiles/index/{profileId}`
 
 #### Retrieval Profile
 
-- `GET /ops-knowledge/profiles/retrieval`
-- `POST /ops-knowledge/profiles/retrieval`
-- `GET /ops-knowledge/profiles/retrieval/{profileId}`
-- `PATCH /ops-knowledge/profiles/retrieval/{profileId}`
-- `DELETE /ops-knowledge/profiles/retrieval/{profileId}`
+- `GET /knowledge/profiles/retrieval`
+- `POST /knowledge/profiles/retrieval`
+- `GET /knowledge/profiles/retrieval/{profileId}`
+- `PATCH /knowledge/profiles/retrieval/{profileId}`
+- `DELETE /knowledge/profiles/retrieval/{profileId}`
 
 profile 请求体通用格式：
 
@@ -874,9 +874,9 @@ profile 请求体通用格式：
 
 #### Binding
 
-- `GET /ops-knowledge/profiles/bindings`
-- `POST /ops-knowledge/profiles/bind`
-- `PATCH /ops-knowledge/profiles/bindings/{sourceId}`
+- `GET /knowledge/profiles/bindings`
+- `POST /knowledge/profiles/bind`
+- `PATCH /knowledge/profiles/bindings/{sourceId}`
 
 推荐做法：
 
@@ -887,11 +887,11 @@ profile 请求体通用格式：
 
 #### Job
 
-- `GET /ops-knowledge/jobs`
-- `GET /ops-knowledge/jobs/{jobId}`
-- `POST /ops-knowledge/jobs/{jobId}:cancel`
-- `POST /ops-knowledge/jobs/{jobId}:retry`
-- `GET /ops-knowledge/jobs/{jobId}/logs`
+- `GET /knowledge/jobs`
+- `GET /knowledge/jobs/{jobId}`
+- `POST /knowledge/jobs/{jobId}:cancel`
+- `POST /knowledge/jobs/{jobId}:retry`
+- `GET /knowledge/jobs/{jobId}/logs`
 
 注意：
 
@@ -900,7 +900,7 @@ profile 请求体通用格式：
 
 #### Stats
 
-- `GET /ops-knowledge/stats/overview`
+- `GET /knowledge/stats/overview`
 
 用于平台级概览：
 
@@ -945,7 +945,7 @@ profile 请求体通用格式：
 ### 8.1 创建 source
 
 ```bash
-curl -X POST http://127.0.0.1:8080/ops-knowledge/sources \
+curl -X POST http://127.0.0.1:8080/knowledge/sources \
   -H 'Content-Type: application/json' \
   -d '{
     "name": "report-agent-docs",
@@ -956,7 +956,7 @@ curl -X POST http://127.0.0.1:8080/ops-knowledge/sources \
 ### 8.2 上传文档
 
 ```bash
-curl -X POST http://127.0.0.1:8080/ops-knowledge/sources/src_xxx/documents:ingest \
+curl -X POST http://127.0.0.1:8080/knowledge/sources/src_xxx/documents:ingest \
   -F 'files=@/path/to/sample-knowledge.pdf' \
   -F 'files=@/path/to/sample-runbook.txt'
 ```
@@ -964,7 +964,7 @@ curl -X POST http://127.0.0.1:8080/ops-knowledge/sources/src_xxx/documents:inges
 ### 8.3 搜索
 
 ```bash
-curl -X POST http://127.0.0.1:8080/ops-knowledge/search \
+curl -X POST http://127.0.0.1:8080/knowledge/search \
   -H 'Content-Type: application/json' \
   -d '{
     "query": "incident",
@@ -976,13 +976,13 @@ curl -X POST http://127.0.0.1:8080/ops-knowledge/search \
 ### 8.4 获取 chunk 完整内容
 
 ```bash
-curl 'http://127.0.0.1:8080/ops-knowledge/fetch/chk_xxx?includeNeighbors=true&neighborWindow=1'
+curl 'http://127.0.0.1:8080/knowledge/fetch/chk_xxx?includeNeighbors=true&neighborWindow=1'
 ```
 
 ### 8.5 直接取 RAG 证据
 
 ```bash
-curl -X POST http://127.0.0.1:8080/ops-knowledge/retrieve \
+curl -X POST http://127.0.0.1:8080/knowledge/retrieve \
   -H 'Content-Type: application/json' \
   -d '{
     "query": "incident",

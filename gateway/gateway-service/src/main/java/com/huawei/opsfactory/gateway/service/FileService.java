@@ -3,8 +3,8 @@ package com.huawei.opsfactory.gateway.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.huawei.opsfactory.gateway.common.util.PathSanitizer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -208,7 +208,7 @@ public class FileService {
 
     // ── File capsule persistence ────────────────────────────────────────
 
-    private static final Logger log = LogManager.getLogger(FileService.class);
+    private static final Logger log = LoggerFactory.getLogger(FileService.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String CAPSULE_FILE = "file-capsules.json";
 

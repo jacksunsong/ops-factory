@@ -12,15 +12,6 @@ knowledge:
       min-idle: 1
   logging:
     include-query-text: false
-
-logging:
-  level:
-    root: INFO
-    com.huawei.opsfactory.knowledge: INFO
-    com.huawei.opsfactory.knowledge.service.EmbeddingService: WARN
-    com.huawei.opsfactory.knowledge.service.SearchService: INFO
-
-ops-knowledge:
   ingest:
     max-file-size-mb: 100
     allowed-content-types:
@@ -113,3 +104,10 @@ ops-knowledge:
     allow-chunk-delete: true
     allow-explain: true
     allow-request-override: true
+
+logging:
+  level:
+    root: INFO
+    com.huawei.opsfactory.knowledge: INFO
+    com.huawei.opsfactory.knowledge.service.EmbeddingService: WARN
+    com.huawei.opsfactory.knowledge.service.SearchService: INFO

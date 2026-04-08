@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -31,7 +31,7 @@ import java.util.UUID;
 @Service
 public class HostService {
 
-    private static final Logger log = LogManager.getLogger(HostService.class);
+    private static final Logger log = LoggerFactory.getLogger(HostService.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String AES_ALGORITHM = "AES/GCM/NoPadding";
     private static final int GCM_IV_LENGTH = 12;
@@ -48,8 +48,7 @@ public class HostService {
 
     @PostConstruct
     public void init() {
-        this.gatewayRoot = Path.of(properties.getPaths().getProjectRoot())
-                .toAbsolutePath().normalize().resolve("gateway");
+        this.gatewayRoot = properties.getGatewayRootPath();
         this.hostsDir = gatewayRoot.resolve("data").resolve("hosts");
 
         // Derive AES key from configuration (ensure exactly 32 bytes for AES-256)

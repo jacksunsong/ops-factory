@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "ops-knowledge")
+@ConfigurationProperties(prefix = "knowledge")
 public class KnowledgeProperties {
 
     private Ingest ingest = new Ingest();

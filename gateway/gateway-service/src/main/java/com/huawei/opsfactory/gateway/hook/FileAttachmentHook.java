@@ -3,8 +3,8 @@ package com.huawei.opsfactory.gateway.hook;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.huawei.opsfactory.gateway.service.AgentConfigService;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 @Order(2)
 public class FileAttachmentHook implements RequestHook {
 
-    private static final Logger log = LogManager.getLogger(FileAttachmentHook.class);
+    private static final Logger log = LoggerFactory.getLogger(FileAttachmentHook.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final AgentConfigService agentConfigService;
@@ -43,28 +43,6 @@ public class FileAttachmentHook implements RequestHook {
             JsonNode content = userMessage.path("content");
             if (!content.isArray()) {
                 return Mono.just(ctx);
-            }
-
-            boolean hasMeaningfulContent = false;
-            for (JsonNode item : content) {
-                String type = item.path("type").asText("");
-                if ("text".equals(type)) {
-                    if (!item.path("text").asText("").trim().isEmpty()) {
-                        hasMeaningfulContent = true;
-                        break;
-                    }
-                } else if ("image".equals(type)) {
-                    if (!item.path("data").asText("").trim().isEmpty()) {
-                        hasMeaningfulContent = true;
-                        break;
-                    }
-                } else if (!type.isEmpty()) {
-                    hasMeaningfulContent = true;
-                    break;
-                }
-            }
-            if (!hasMeaningfulContent) {
-                return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Empty user message"));
             }
 
             // Find text content and extract file paths

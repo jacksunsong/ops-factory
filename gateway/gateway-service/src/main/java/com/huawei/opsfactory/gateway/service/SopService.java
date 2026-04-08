@@ -3,8 +3,8 @@ package com.huawei.opsfactory.gateway.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -22,7 +22,7 @@ import java.util.UUID;
 @Service
 public class SopService {
 
-    private static final Logger log = LogManager.getLogger(SopService.class);
+    private static final Logger log = LoggerFactory.getLogger(SopService.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final GatewayProperties properties;
@@ -37,8 +37,7 @@ public class SopService {
 
     @PostConstruct
     public void init() {
-        this.gatewayRoot = Path.of(properties.getPaths().getProjectRoot())
-                .toAbsolutePath().normalize().resolve("gateway");
+        this.gatewayRoot = properties.getGatewayRootPath();
         this.sopsDir = gatewayRoot.resolve("agents").resolve("qos-agent")
                 .resolve("config").resolve("skills")
                 .resolve("sop-diagnosis-execution").resolve("sops");

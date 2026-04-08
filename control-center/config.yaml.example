@@ -1,0 +1,41 @@
+server:
+  port: 8094
+
+control-center:
+  secret-key: "change-me"
+  cors-origin: "http://localhost:5173"
+  request-timeout-ms: 5000
+
+  services:
+    - id: gateway
+      name: Gateway
+      base-url: "http://127.0.0.1:3000"
+      required: true
+      health-path: "/gateway/status"
+      ctl-component: "gateway"
+      auth:
+        type: "secret-key"
+        secret-key: "test"
+
+    - id: knowledge-service
+      name: Knowledge Service
+      base-url: "http://127.0.0.1:8092"
+      required: true
+      health-path: "/actuator/health"
+      ctl-component: "knowledge"
+      auth:
+        type: "none"
+
+    - id: business-intelligence
+      name: Business Intelligence
+      base-url: "http://127.0.0.1:8093"
+      required: false
+      health-path: "/actuator/health"
+      ctl-component: "business-intelligence"
+      auth:
+        type: "none"
+
+  langfuse:
+    host: ""
+    public-key: ""
+    secret-key: ""

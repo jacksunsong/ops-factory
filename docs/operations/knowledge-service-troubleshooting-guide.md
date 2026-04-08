@@ -52,7 +52,7 @@ knowledge-service/config.yaml
 - `knowledge.database.*`
 - `knowledge.logging.include-query-text`
 - `logging.level.*`
-- `ops-knowledge.*`
+- `knowledge.*`
 
 ### 2.3 运行目录
 
@@ -276,7 +276,7 @@ tail -n 200 logs/knowledge-service-console.log
 
 常见原因：
 
-- 文件类型不在 `ops-knowledge.ingest.allowed-content-types`
+- 文件类型不在 `knowledge.ingest.allowed-content-types`
 - Tika 解析失败
 - 上传文件损坏
 - `data/upload` 或 `data/artifacts` 无法写入
@@ -324,8 +324,8 @@ rg "Search completed|Compare search completed|Retrieve completed|Explain complet
 
 建议检查：
 
-- `ops-knowledge.embedding.base-url`
-- `ops-knowledge.embedding.api-key`
+- `knowledge.embedding.base-url`
+- `knowledge.embedding.api-key`
 - 目标服务网络连通性
 - timeout 是否合理
 
