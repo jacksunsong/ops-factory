@@ -128,6 +128,7 @@ public class HostService {
         Path file = hostsDir.resolve(id + ".json");
         Map<String, Object> host = readHostFile(file);
         if (host == null) {
+            log.warn("Host not found when loading with credential id={}", id);
             throw new IllegalArgumentException("Host not found: " + id);
         }
         // Decrypt credential for internal use
@@ -267,6 +268,7 @@ public class HostService {
         try {
             host = getHostWithCredential(id);
         } catch (IllegalArgumentException e) {
+            log.warn("SSH connection test skipped hostId={} reason=host-not-found", id);
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("success", false);
             result.put("message", "Host not found: " + id);
@@ -281,6 +283,7 @@ public class HostService {
 
         Map<String, Object> result = new LinkedHashMap<>();
         long start = System.currentTimeMillis();
+        log.info("SSH connection test started hostId={} ip={} port={} authType={}", id, hostname, port, authType);
 
         try {
             JSch jsch = new JSch();
@@ -302,9 +305,13 @@ public class HostService {
             result.put("success", true);
             result.put("message", "Connection successful");
             result.put("latency", latency + "ms");
+            log.info("SSH connection test succeeded hostId={} ip={} port={} latencyMs={}", id, hostname, port, latency);
         } catch (Exception e) {
             long latency = System.currentTimeMillis() - start;
-            log.warn("SSH connection test failed for host {}: {}", id, e.getMessage());
+            log.warn(
+                    "SSH connection test failed hostId={} ip={} port={} latencyMs={} error={}",
+                    id, hostname, port, latency, e.getMessage()
+            );
             result.put("success", false);
             result.put("message", "Connection failed: " + e.getMessage());
             result.put("latency", latency + "ms");

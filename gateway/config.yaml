@@ -53,7 +53,6 @@ logging:
     org.springframework: WARN
     reactor: WARN
     io.netty: WARN
-
 residentInstances:
   enabled: true
   entries:
@@ -62,7 +61,6 @@ residentInstances:
 agents:
 - {id: universal-agent, name: Universal Agent}
 - {id: kb-agent, name: KB Agent}
-- {id: report-agent, name: Report Agent}
 - {id: supervisor-agent, name: Supervisor Agent}
 - {id: qos-agent, name: QoS Agent}
 - {id: qa-agent, name: QA Agent}

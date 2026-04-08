@@ -9,6 +9,7 @@ import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.yaml.snakeyaml.error.YAMLException;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -217,7 +218,7 @@ public class AgentConfigService {
                             if (frontmatter.containsKey("description")) {
                                 skill.put("description", frontmatter.get("description"));
                             }
-                        } catch (IOException e) {
+                        } catch (Exception e) {
                             log.warn("Failed to parse SKILL.md for skill {}/{}", agentId, dirName, e);
                         }
                     }
@@ -245,7 +246,13 @@ public class AgentConfigService {
         }
         String yamlBlock = content.substring(3, endIndex).trim();
         org.yaml.snakeyaml.Yaml yaml = new org.yaml.snakeyaml.Yaml();
-        Object parsed = yaml.load(yamlBlock);
+        Object parsed;
+        try {
+            parsed = yaml.load(yamlBlock);
+        } catch (YAMLException e) {
+            log.warn("Invalid YAML frontmatter in {}: {}", mdPath, e.getMessage());
+            return result;
+        }
         if (parsed instanceof Map<?, ?> map) {
             for (Map.Entry<?, ?> e : map.entrySet()) {
                 if (e.getKey() != null && e.getValue() != null) {
