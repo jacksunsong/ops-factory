@@ -735,6 +735,7 @@
     "detailTabLogs": "Logs",
     "serviceDetailTitle": "Managed Service",
     "configSectionTitle": "Configuration File",
+    "configUnavailable": "Configuration file is unavailable",
     "configSaved": "Configuration saved",
     "configSaveFailed": "Failed to save configuration",
     "logsSectionTitle": "Recent Logs",

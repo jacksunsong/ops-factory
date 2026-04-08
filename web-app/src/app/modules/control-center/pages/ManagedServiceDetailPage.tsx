@@ -32,6 +32,13 @@ export default function ManagedServiceDetailPage() {
         }
     }, [config])
 
+    useEffect(() => {
+        if (!config && logs && activeTab === 'config') {
+            setActiveTab('logs')
+            setIsEditing(false)
+        }
+    }, [activeTab, config, logs])
+
     const handleSave = async () => {
         if (!serviceId) return
         const result = await saveConfig(serviceId, draftConfig)
@@ -89,6 +96,7 @@ export default function ManagedServiceDetailPage() {
                     type="button"
                     className={`config-tab ${activeTab === 'config' ? 'config-tab-active' : ''}`}
                     onClick={() => setActiveTab('config')}
+                    disabled={!config}
                 >
                     {t('controlCenter.detailTabConfig')}
                 </button>
@@ -115,7 +123,7 @@ export default function ManagedServiceDetailPage() {
                             <p className="control-center-detail-section-meta">{config?.path}</p>
                         </div>
                         <div className="control-center-detail-actions">
-                            {!isEditing ? (
+                            {!config ? null : !isEditing ? (
                                 <Button variant="secondary" onClick={() => setIsEditing(true)}>
                                     {t('common.edit')}
                                 </Button>
@@ -138,13 +146,17 @@ export default function ManagedServiceDetailPage() {
                             )}
                         </div>
                     </div>
-                    <TextSurface
-                        className="control-center-detail-surface"
-                        value={draftConfig}
-                        onChange={(event) => setDraftConfig(event.target.value)}
-                        readOnly={!isEditing}
-                        spellCheck={false}
-                    />
+                    {config ? (
+                        <TextSurface
+                            className="control-center-detail-surface"
+                            value={draftConfig}
+                            onChange={(event) => setDraftConfig(event.target.value)}
+                            readOnly={!isEditing}
+                            spellCheck={false}
+                        />
+                    ) : (
+                        <div className="mon-no-data">{t('controlCenter.configUnavailable')}</div>
+                    )}
                 </section>
             )}
 

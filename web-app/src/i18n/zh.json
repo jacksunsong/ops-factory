@@ -735,6 +735,7 @@
     "detailTabLogs": "日志",
     "serviceDetailTitle": "受管服务",
     "configSectionTitle": "配置文件",
+    "configUnavailable": "配置文件暂不可用",
     "configSaved": "配置已保存",
     "configSaveFailed": "保存配置失败",
     "logsSectionTitle": "最近日志",
