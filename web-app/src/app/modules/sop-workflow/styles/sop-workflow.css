@@ -228,6 +228,11 @@
     background: rgba(245, 158, 11, 0.14);
 }
 
+.sop-workflow-node-type-end {
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.10);
+}
+
 .sop-workflow-node-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -525,6 +530,18 @@
     font-size: var(--font-size-xs);
     color: var(--color-text-primary);
     cursor: pointer;
+}
+
+.sop-workflow-transition-confirm {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.sop-workflow-transition-confirm-label {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
 }
 
 @media (max-width: 900px) {
