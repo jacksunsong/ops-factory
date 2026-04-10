@@ -1,5 +1,31 @@
 #!/usr/bin/env bash
 
+daemon_list_listener_pids() {
+    local port="$1"
+    lsof -nP -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true
+}
+
+daemon_port_has_listener() {
+    local port="$1"
+    local pids
+
+    pids="$(daemon_list_listener_pids "${port}")"
+    [ -n "${pids}" ]
+}
+
+daemon_stop_listener_port() {
+    local port="$1"
+    local name="$2"
+    local pids
+
+    pids="$(daemon_list_listener_pids "${port}")"
+    [ -n "${pids}" ] || return 1
+
+    log_info "Stopping ${name} listener on port ${port}..."
+    kill ${pids} 2>/dev/null || true
+    sleep 1
+}
+
 daemon_read_pid() {
     local pid_file="$1"
     [ -f "${pid_file}" ] || return 1
@@ -131,7 +157,7 @@ daemon_wait_for_port_release() {
     local attempt
 
     for ((attempt=0; attempt<attempts; attempt++)); do
-        if ! lsof -ti:"${port}" >/dev/null 2>&1; then
+        if ! daemon_port_has_listener "${port}"; then
             return 0
         fi
         sleep "${delay}"

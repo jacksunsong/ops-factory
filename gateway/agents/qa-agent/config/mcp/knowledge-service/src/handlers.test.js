@@ -43,23 +43,19 @@ describe('tool definitions', () => {
 })
 
 describe('handleSearch', () => {
-  it('uses the configured default source when sourceIds is omitted', async () => {
-    routes['POST /knowledge/search'] = {
-      query: '故障定位',
-      hits: [],
-      total: 0,
-    }
-
+  it('returns empty results when no knowledge scope is configured', async () => {
     let capturedBody
     globalThis.fetch = ((input, init) => {
-      capturedBody = JSON.parse(String(init?.body))
+      if (init?.body) {
+        capturedBody = JSON.parse(String(init.body))
+      }
       return mockFetch(input, init)
     })
 
     const result = JSON.parse(await handleSearch({ query: '故障定位' }))
     assert.equal(result.query, '故障定位')
-    assert.deepStrictEqual(capturedBody?.sourceIds, ['src_ac8da09a7cfd'])
-    assert.equal(capturedBody?.topK, 8)
+    assert.equal(result.total, 0)
+    assert.equal(capturedBody, undefined)
   })
 
   it('passes explicit sourceIds through', async () => {

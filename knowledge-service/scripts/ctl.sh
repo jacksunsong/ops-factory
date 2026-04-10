@@ -43,14 +43,12 @@ DAEMON_HELPER="${ROOT_DIR}/scripts/lib/service-daemon.sh"
 # shellcheck source=/dev/null
 source "${DAEMON_HELPER}"
 
-check_port() { lsof -ti:"$1" >/dev/null 2>&1; }
+check_port() { daemon_port_has_listener "$1"; }
 
 stop_port() {
     local port=$1 name=$2
-    if lsof -ti:"${port}" >/dev/null 2>&1; then
-        log_info "Stopping ${name} on port ${port}..."
-        kill $(lsof -ti:"${port}") 2>/dev/null || true
-        sleep 1
+    if check_port "${port}"; then
+        daemon_stop_listener_port "${port}" "${name}" || true
     fi
 }
 

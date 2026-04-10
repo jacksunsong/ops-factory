@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '../../../../platform/ui/primitives/Button'
+import { useToast } from '../../../../platform/providers/ToastContext'
 import type { McpAddRequest, McpEntry, McpType } from '../../../../../types/mcp'
 
 interface AddMcpModalProps {
@@ -22,6 +23,7 @@ export default function AddMcpModal({
   initialEntry = null,
 }: AddMcpModalProps) {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [connectionType, setConnectionType] = useState<ConnectionType>('stdio')
@@ -53,7 +55,6 @@ export default function AddMcpModal({
 
     resetForm()
   }, [isOpen, isEditMode, initialEntry])
-
   const resetForm = () => {
     setName('')
     setDescription('')
@@ -91,17 +92,23 @@ export default function AddMcpModal({
 
     // Validation
     if (!name.trim()) {
-      setError(t('mcp.nameRequired'))
+      const message = t('mcp.nameRequired')
+      setError(message)
+      showToast('warning', message)
       return
     }
 
     if (connectionType === 'stdio' && !command.trim()) {
-      setError(t('mcp.commandRequired'))
+      const message = t('mcp.commandRequired')
+      setError(message)
+      showToast('warning', message)
       return
     }
 
     if (connectionType === 'streamable_http' && !uri.trim()) {
-      setError(t('mcp.uriRequired'))
+      const message = t('mcp.uriRequired')
+      setError(message)
+      showToast('warning', message)
       return
     }
 
@@ -158,9 +165,12 @@ export default function AddMcpModal({
     setIsSubmitting(true)
     try {
       await onSubmit(request)
+      showToast('success', t('mcp.configUpdatedRestarting'))
       handleClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : t(isEditMode ? 'mcp.updateFailed' : 'mcp.addFailed'))
+      const nextError = err instanceof Error ? err.message : t(isEditMode ? 'mcp.updateFailed' : 'mcp.addFailed')
+      setError(nextError)
+      showToast('error', nextError)
     } finally {
       setIsSubmitting(false)
     }
@@ -353,6 +363,7 @@ export default function AddMcpModal({
                 max="3600"
               />
             </div>
+
           </div>
 
           <div className="modal-footer">

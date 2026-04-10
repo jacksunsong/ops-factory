@@ -216,6 +216,9 @@ KNOWLEDGE_LOG_QUERY_TEXT=false \
 - `max-file-size-mb`：单文件最大大小，默认 `100`
 - `allowed-content-types`：允许导入的 MIME 类型。当前实现默认支持：
   - `application/pdf`
+  - `application/vnd.ms-htmlhelp`
+  - `application/chm`
+  - `application/x-chm`
   - `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
   - `application/vnd.openxmlformats-officedocument.presentationml.presentation`
   - `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
@@ -857,7 +860,9 @@ profile 请求体通用格式：
   "name": "retrieval-prod",
   "config": {
     "retrieval": {
-      "mode": "hybrid"
+      "mode": "hybrid",
+      "semanticThreshold": 0.47,
+      "lexicalThreshold": 0.61
     },
     "result": {
       "finalTopK": 7
@@ -869,6 +874,9 @@ profile 请求体通用格式：
 说明：
 
 - `config` 是 `Map<String, Object>` 结构，适合承载扩展配置
+- retrieval profile 当前只支持 `retrieval.semanticThreshold` 与 `retrieval.lexicalThreshold`
+- `hybrid` 当前没有 profile 级阈值配置；hybrid 主要由两路候选 TopK 和 RRF 排序决定
+- 请求 `override.scoreThreshold` 仅在 `semantic / lexical` 模式下参与后端过滤
 - `PATCH` 时当前实现是浅合并，不是深合并；同名一级 key 会被整体覆盖
 - 删除 profile 前，要确保该 profile 没有被 source 绑定，否则会返回 `400`
 

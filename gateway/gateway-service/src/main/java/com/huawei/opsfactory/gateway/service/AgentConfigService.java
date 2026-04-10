@@ -9,6 +9,7 @@ import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.error.YAMLException;
 
 import javax.annotation.PostConstruct;
@@ -359,6 +360,116 @@ public class AgentConfigService {
         } catch (java.nio.file.NoSuchFileException e) {
             throw new IllegalArgumentException("Memory file '" + category + "' not found");
         }
+    }
+
+    public Map<String, Object> readMcpSettings(String agentId, String mcpName) throws IOException {
+        if ("knowledge-service".equals(mcpName)) {
+            return readKnowledgeServiceScopeFromConfig(agentId);
+        }
+        Path settingsPath = getAgentConfigDir(agentId).resolve("mcp").resolve(mcpName).resolve("settings.json");
+        if (!Files.exists(settingsPath)) {
+            return null;
+        }
+        try {
+            String content = Files.readString(settingsPath);
+            if (content == null || content.isBlank()) {
+                return null;
+            }
+            Yaml yaml = new Yaml();
+            Object parsed = yaml.load(content);
+            if (parsed instanceof Map<?, ?> rawMap) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> cast = (Map<String, Object>) rawMap;
+                return cast;
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("Failed to parse MCP settings for {}/{}: {}", agentId, mcpName, e.getMessage());
+            return null;
+        }
+    }
+
+    public void writeMcpSettings(String agentId, String mcpName, Map<String, Object> settings) throws IOException {
+        if ("knowledge-service".equals(mcpName)) {
+            writeKnowledgeServiceScopeToConfig(agentId, settings);
+            invalidateCache(agentId);
+            return;
+        }
+        Path mcpDir = getAgentConfigDir(agentId).resolve("mcp").resolve(mcpName);
+        if (!Files.isDirectory(mcpDir)) {
+            throw new IllegalArgumentException("MCP '" + mcpName + "' not found for agent '" + agentId + "'");
+        }
+        Path settingsPath = mcpDir.resolve("settings.json");
+        Files.createDirectories(mcpDir);
+        Yaml yaml = new Yaml();
+        Files.writeString(settingsPath, yaml.dump(settings));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> readKnowledgeServiceScopeFromConfig(String agentId) {
+        Map<String, Object> config = loadAgentConfigYaml(agentId);
+        Object extensionsObj = config.get("extensions");
+        if (!(extensionsObj instanceof Map<?, ?> extensions)) {
+            return null;
+        }
+        Object extensionObj = extensions.get("knowledge-service");
+        if (!(extensionObj instanceof Map<?, ?> extension)) {
+            return null;
+        }
+        Object opsfactoryObj = extension.get("x-opsfactory");
+        if (!(opsfactoryObj instanceof Map<?, ?> opsfactory)) {
+            return null;
+        }
+        Object knowledgeScopeObj = opsfactory.get("knowledgeScope");
+        if (!(knowledgeScopeObj instanceof Map<?, ?> knowledgeScope)) {
+            return null;
+        }
+        Object sourceId = knowledgeScope.get("sourceId");
+        Map<String, Object> result = new HashMap<>();
+        result.put("sourceId", sourceId instanceof String source ? source : null);
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void writeKnowledgeServiceScopeToConfig(String agentId, Map<String, Object> settings) throws IOException {
+        Path configPath = getAgentConfigDir(agentId).resolve("config.yaml");
+        Map<String, Object> config = YamlLoader.load(configPath);
+
+        Object extensionsObj = config.get("extensions");
+        if (!(extensionsObj instanceof Map<?, ?> rawExtensions)) {
+            throw new IllegalArgumentException("Agent config for '" + agentId + "' does not contain extensions");
+        }
+        Map<String, Object> extensions = (Map<String, Object>) rawExtensions;
+        Object extensionObj = extensions.get("knowledge-service");
+        if (!(extensionObj instanceof Map<?, ?> rawExtension)) {
+            throw new IllegalArgumentException("MCP 'knowledge-service' not found for agent '" + agentId + "'");
+        }
+        Map<String, Object> extension = (Map<String, Object>) rawExtension;
+
+        Map<String, Object> opsfactory;
+        Object opsfactoryObj = extension.get("x-opsfactory");
+        if (opsfactoryObj instanceof Map<?, ?> rawOpsfactory) {
+            opsfactory = (Map<String, Object>) rawOpsfactory;
+        } else {
+            opsfactory = new HashMap<>();
+            extension.put("x-opsfactory", opsfactory);
+        }
+
+        Map<String, Object> knowledgeScope;
+        Object knowledgeScopeObj = opsfactory.get("knowledgeScope");
+        if (knowledgeScopeObj instanceof Map<?, ?> rawKnowledgeScope) {
+            knowledgeScope = (Map<String, Object>) rawKnowledgeScope;
+        } else {
+            knowledgeScope = new HashMap<>();
+            opsfactory.put("knowledgeScope", knowledgeScope);
+        }
+
+        Object sourceIdObj = settings != null ? settings.get("sourceId") : null;
+        String sourceId = sourceIdObj instanceof String s && !s.isBlank() ? s.trim() : null;
+        knowledgeScope.put("sourceId", sourceId);
+
+        Yaml yaml = new Yaml();
+        Files.writeString(configPath, yaml.dump(config));
     }
 
     /**
