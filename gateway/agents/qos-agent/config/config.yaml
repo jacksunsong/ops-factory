@@ -125,7 +125,7 @@ extensions:
     description: SOP workflow executor - list/run SOPs, query hosts, execute remote commands
     cmd: node
     args:
-    - D:/ss/code/TMP/ops-factory-main/gateway/agents/qos-agent/config/mcp/sop-executor/dist/index.js
+    - config/mcp/sop-executor/dist/index.js
     envs:
       GATEWAY_URL: http://127.0.0.1:3000
       GATEWAY_SECRET_KEY: test
