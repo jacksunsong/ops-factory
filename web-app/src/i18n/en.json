@@ -116,6 +116,7 @@
     "typePlaceholder": "Type a message...",
     "sendMessage": "Send message",
     "stopGeneration": "Stop generation",
+    "jumpToBottom": "Jump to bottom",
     "dropFilesHere": "Drop files here",
     "attachFiles": "Attach files ({{current}}/{{max}})",
     "removeFile": "Remove file",
