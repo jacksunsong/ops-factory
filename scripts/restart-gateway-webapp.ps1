@@ -2,7 +2,7 @@
 # ops-factory Windows service restart script
 #
 # Usage: restart-gateway-webapp.ps1 [gateway|webapp|all] [nobuild]
-#   gateway  - restart gateway only (default)
+#   gateway  - restart gateway (includes sop-executor build) only (default)
 #   webapp   - restart webapp only
 #   all      - restart both gateway and webapp
 #   nobuild  - (optional) skip build steps, restart only
@@ -211,6 +211,35 @@ function Build-Gateway {
     Write-Status "OK" "Gateway build complete"
 }
 
+function Build-SopExecutor {
+    Write-Status "INFO" "Building sop-executor (TypeScript)..."
+
+    $SOP_DIR = "$ROOT_DIR\gateway\agents\qos-agent\config\mcp\sop-executor"
+    if (-not (Test-Path "$SOP_DIR\node_modules")) {
+        Write-Status "INFO" "Installing sop-executor npm dependencies..."
+        Push-Location $SOP_DIR
+        & npm.cmd install 2>&1 | ForEach-Object { Write-Host $_ }
+        $exitCode = $LASTEXITCODE
+        Pop-Location
+        if ($exitCode -ne 0) {
+            Write-Status "FAIL" "sop-executor npm install failed"
+            exit 1
+        }
+    }
+
+    Push-Location $SOP_DIR
+    & npm.cmd run build 2>&1 | ForEach-Object { Write-Host $_ }
+    $exitCode = $LASTEXITCODE
+    Pop-Location
+
+    if ($exitCode -ne 0) {
+        Write-Status "FAIL" "sop-executor build failed"
+        exit 1
+    }
+
+    Write-Status "OK" "sop-executor build complete"
+}
+
 function Build-Webapp {
     Write-Status "INFO" "Building webapp (Vite)..."
 
@@ -292,6 +321,7 @@ Write-Status "INFO" "Using Java: $JAVA_CMD"
 switch ($Component.ToLower()) {
     "gateway" {
         if (-not $NoBuild) { Build-Gateway }
+        if (-not $NoBuild) { Build-SopExecutor }
         Stop-Gateway
         Start-GatewayService -JavaCmd $JAVA_CMD
     }
@@ -302,6 +332,7 @@ switch ($Component.ToLower()) {
     }
     "all" {
         if (-not $NoBuild) { Build-Gateway }
+        if (-not $NoBuild) { Build-SopExecutor }
         if (-not $NoBuild) { Build-Webapp }
         Stop-Webapp
         Stop-Gateway
