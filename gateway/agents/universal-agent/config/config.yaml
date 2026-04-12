@@ -1,5 +1,5 @@
-GOOSE_PROVIDER: custom_op-qwen3.5-35b-a3b
-GOOSE_MODEL: qwen/Qwen3.5-35B-A3B
+GOOSE_PROVIDER: custom_qwen3.5-27b
+GOOSE_MODEL: qwen/qwen3.5-27b
 
 #GOOSE_PROVIDER: custom_glm
 #GOOSE_MODEL: GLM-4.7
