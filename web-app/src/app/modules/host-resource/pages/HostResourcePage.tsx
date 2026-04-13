@@ -216,11 +216,11 @@ export default function HostResourcePage() {
     }, [])
 
     return (
-        <div className="page-container resource-page">
+        <div className="page-container page-shell-fluid host-resource-page">
             <PageHeader
                 title={t('hostResource.title')}
                 action={
-                    <button className="btn btn-primary btn-sm" onClick={openCreateModal}>
+                    <button className="btn btn-primary host-resource-create-btn" onClick={openCreateModal}>
                         + {t('hostResource.createResource')}
                     </button>
                 }

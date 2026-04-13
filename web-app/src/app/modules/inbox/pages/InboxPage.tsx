@@ -77,7 +77,7 @@ export default function InboxPage() {
     }
 
     return (
-        <div className="page-container sidebar-top-page inbox-page">
+        <div className="page-container sidebar-top-page page-shell-wide inbox-page">
             <PageHeader title={t('inbox.title')} subtitle={t('inbox.subtitle')} />
 
             {!isConnected && connectionError && (
