@@ -1,16 +1,13 @@
 /* Host Resource Module Styles — Three-Zone Layout */
 
-/* Override .page-container constraints for full-width three-zone layout */
-.page-container.resource-page {
-    max-width: 100%;
+/* Full-width host resource workbench */
+.page-container.host-resource-page {
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 0;
-    margin: 0;
 }
 
-.page-container.resource-page .page-header {
+.page-container.host-resource-page .page-header {
     padding: var(--spacing-4, 16px) var(--spacing-4, 16px);
     margin-bottom: 0;
     border-bottom: 1px solid var(--border-color, #e2e8f0);
@@ -529,7 +526,7 @@
     flex: 1;
 }
 
-.btn-sm {
+.host-resource-create-btn {
     padding: 4px 10px;
     font-size: 0.75rem;
 }

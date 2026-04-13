@@ -391,7 +391,7 @@ export default function ScheduledActions() {
     }
 
     return (
-        <div className="page-container sidebar-top-page scheduled-page">
+        <div className="page-container sidebar-top-page page-shell-wide scheduled-page">
             <PageHeader
                 title={t('scheduler.title')}
                 subtitle={t('scheduler.subtitle')}

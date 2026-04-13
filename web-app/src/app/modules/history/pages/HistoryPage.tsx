@@ -197,7 +197,7 @@ export default function HistoryPage() {
     }
 
     return (
-        <div className="page-container sidebar-top-page history-page">
+        <div className="page-container sidebar-top-page page-shell-wide history-page">
             <PageHeader title={t('history.title')} subtitle={t('history.subtitle')} />
 
             {(error || (!isConnected && connectionError)) && (
