@@ -29,3 +29,4 @@ For a lighter loop, start only the required services:
   - `docs/development/logging-guidelines.md`
   - `docs/operations/gateway-troubleshooting-guide.md`
   - `docs/operations/knowledge-service-troubleshooting-guide.md`
+- Treat temporary verification artifacts as disposable by default: after Playwright runs, ad hoc validation, or one-off debug sessions, clean up directories such as `output/`, `.playwright-cli/`, and any temporary `gateway/users/<test-user>/...` runtime data unless the task explicitly requires preserving them.

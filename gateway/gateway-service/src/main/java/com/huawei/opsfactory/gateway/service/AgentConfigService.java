@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.error.YAMLException;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -292,11 +293,15 @@ public class AgentConfigService {
 
     private static final int MAX_MEMORY_CONTENT_SIZE = 100 * 1024; // 100KB
 
+    private Path getGooseMemoryDir(String agentId) {
+        return getAgentConfigDir(agentId).resolve("goose").resolve("memory");
+    }
+
     /**
      * List all memory files (*.txt) for an agent, returning category name + content.
      */
     public List<Map<String, String>> listMemoryFiles(String agentId) {
-        Path memoryDir = getAgentConfigDir(agentId).resolve("memory");
+        Path memoryDir = getGooseMemoryDir(agentId);
         List<Map<String, String>> files = new ArrayList<>();
         if (!Files.isDirectory(memoryDir)) {
             return files;
@@ -327,7 +332,7 @@ public class AgentConfigService {
      * Read a single memory file content.
      */
     public String readMemoryFile(String agentId, String category) {
-        Path filePath = getAgentConfigDir(agentId).resolve("memory").resolve(category + ".txt");
+        Path filePath = getGooseMemoryDir(agentId).resolve(category + ".txt");
         try {
             return Files.readString(filePath);
         } catch (java.nio.file.NoSuchFileException e) {
@@ -345,7 +350,7 @@ public class AgentConfigService {
         if (content != null && content.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_MEMORY_CONTENT_SIZE) {
             throw new IllegalArgumentException("Memory file content exceeds maximum size of 100KB");
         }
-        Path memoryDir = getAgentConfigDir(agentId).resolve("memory");
+        Path memoryDir = getGooseMemoryDir(agentId);
         Files.createDirectories(memoryDir);
         Files.writeString(memoryDir.resolve(category + ".txt"), content != null ? content : "");
     }
@@ -354,7 +359,7 @@ public class AgentConfigService {
      * Delete a memory file.
      */
     public void deleteMemoryFile(String agentId, String category) throws IOException {
-        Path filePath = getAgentConfigDir(agentId).resolve("memory").resolve(category + ".txt");
+        Path filePath = getGooseMemoryDir(agentId).resolve(category + ".txt");
         try {
             Files.delete(filePath);
         } catch (java.nio.file.NoSuchFileException e) {
@@ -627,5 +632,58 @@ public class AgentConfigService {
 
     public Path getGatewayRoot() {
         return gatewayRoot;
+    }
+
+    // ── LLM Config for Host Discovery ──────────────────────────────────
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    public record LlmConfig(String baseUrl, String apiKey, String model, String engine) {}
+
+    /**
+     * Read LLM connection info from an agent's config.yaml → custom_providers/*.json → secrets.yaml chain.
+     */
+    @SuppressWarnings("unchecked")
+    public LlmConfig getLlmConfig(String agentId) {
+        Map<String, Object> config = loadAgentConfigYaml(agentId);
+        String providerName = (String) config.get("GOOSE_PROVIDER");
+        String model = (String) config.get("GOOSE_MODEL");
+        if (providerName == null || providerName.isEmpty()) {
+            throw new IllegalArgumentException("Agent '" + agentId + "' has no GOOSE_PROVIDER configured");
+        }
+        if (model == null || model.isEmpty()) {
+            throw new IllegalArgumentException("Agent '" + agentId + "' has no GOOSE_MODEL configured");
+        }
+
+        Path providerJson = getAgentConfigDir(agentId)
+                .resolve("custom_providers").resolve(providerName + ".json");
+        if (!Files.exists(providerJson)) {
+            throw new IllegalArgumentException("Custom provider file not found: " + providerJson);
+        }
+
+        Map<String, Object> provider;
+        try {
+            provider = OBJECT_MAPPER.readValue(Files.readString(providerJson), Map.class);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Failed to parse provider JSON: " + providerJson, e);
+        }
+
+        String baseUrl = (String) provider.get("base_url");
+        String apiKeyEnv = (String) provider.get("api_key_env");
+        String engine = (String) provider.get("engine");
+        if (baseUrl == null || baseUrl.isEmpty()) {
+            throw new IllegalArgumentException("Provider '" + providerName + "' has no base_url");
+        }
+
+        String apiKey = "";
+        if (apiKeyEnv != null && !apiKeyEnv.isEmpty()) {
+            Map<String, Object> secrets = loadAgentSecretsYaml(agentId);
+            Object keyObj = secrets.get(apiKeyEnv);
+            if (keyObj instanceof String s && !s.isEmpty()) {
+                apiKey = s;
+            }
+        }
+
+        return new LlmConfig(baseUrl, apiKey, model, engine);
     }
 }

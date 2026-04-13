@@ -1,4 +1,4 @@
-# change-management #crm 
+# change-management #crm
 变更窗口：工作日 10:00-12:00 或 14:00-16:00，禁止周五下午和节假日前一天变更
 所有生产变更必须有回滚方案，回滚时间不超过 5 分钟
 数据库 DDL 变更必须使用 pt-online-schema-change 或 gh-ost，禁止直接 ALTER TABLE

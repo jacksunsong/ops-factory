@@ -55,6 +55,10 @@ Use Vitest for frontend and integration coverage, Playwright for E2E, Node’s t
   - static boundary/structure tests
   - Playwright or higher-level integration coverage for real page workflows
 - If a test requires extensive request mocking to simulate a full page, it usually belongs in E2E or should be redesigned around a narrower unit seam.
+- Manual verification, Playwright runs, ad hoc debug scripts, and temporary E2E exercises must clean up their process artifacts before ending the task unless the user explicitly asks to keep them.
+- Remove temporary process files and directories such as `output/`, `.playwright-cli/`, throwaway screenshots, scratch logs, and one-off generated fixtures when they were created only for the verification flow.
+- Remove temporary runtime users or sessions created only for testing from `gateway/users/<test-user>/...`; do not leave throwaway `e2e-*`, `debug-*`, `test-*`, or similar runtime directories behind once verification is complete.
+- Do not delete retained real-user runtime data such as long-lived `admin` or explicitly requested preservation targets.
 
 ## Commit & Pull Request Guidelines
 Recent history favors short Conventional Commit-style subjects such as `feat：support reasoning block` and `fix：startup script`. Prefer `feat:`, `fix:`, `test:`, or `docs:` with a focused summary. PRs should describe user-visible impact, list touched services, link related issues, and include screenshots or GIFs for frontend changes. Call out config changes explicitly when `config.yaml` or service startup behavior changes.

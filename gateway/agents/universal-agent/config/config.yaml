@@ -1,8 +1,5 @@
 GOOSE_PROVIDER: custom_qwen3.5-27b
 GOOSE_MODEL: qwen/qwen3.5-27b
-
-#GOOSE_PROVIDER: custom_glm
-#GOOSE_MODEL: GLM-4.7
 GOOSE_MODE: auto
 GOOSE_DISABLE_KEYRING: '1'
 GOOSE_TELEMETRY_ENABLED: false
@@ -111,14 +108,6 @@ extensions:
     name: analyze
     description: 'Analyze code structure with tree-sitter: directory overviews, file details, symbol call graphs'
     display_name: Analyze
-    bundled: true
-    available_tools: []
-  skills:
-    enabled: true
-    type: platform
-    name: skills
-    description: Load and use skills from relevant directories
-    display_name: Skills
     bundled: true
     available_tools: []
   summarize:

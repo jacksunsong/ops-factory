@@ -460,7 +460,7 @@ public class AgentConfigServiceTest {
     @Test
     public void testListMemoryFiles_withFiles() throws IOException {
         Path memoryDir = gatewayRoot.resolve("agents").resolve("test-agent")
-                .resolve("config").resolve("memory");
+                .resolve("config").resolve("goose").resolve("memory");
         Files.createDirectories(memoryDir);
         Files.writeString(memoryDir.resolve("development.txt"), "# tools\nuse black for formatting");
         Files.writeString(memoryDir.resolve("personal.txt"), "prefer Chinese replies");
@@ -480,7 +480,7 @@ public class AgentConfigServiceTest {
     @Test
     public void testListMemoryFiles_ignoresNonTxt() throws IOException {
         Path memoryDir = gatewayRoot.resolve("agents").resolve("test-agent")
-                .resolve("config").resolve("memory");
+                .resolve("config").resolve("goose").resolve("memory");
         Files.createDirectories(memoryDir);
         Files.writeString(memoryDir.resolve("valid.txt"), "content");
         Files.writeString(memoryDir.resolve("ignored.md"), "markdown");
@@ -493,7 +493,7 @@ public class AgentConfigServiceTest {
     @Test
     public void testReadMemoryFile_exists() throws IOException {
         Path memoryDir = gatewayRoot.resolve("agents").resolve("test-agent")
-                .resolve("config").resolve("memory");
+                .resolve("config").resolve("goose").resolve("memory");
         Files.createDirectories(memoryDir);
         Files.writeString(memoryDir.resolve("dev.txt"), "hello world");
 
@@ -512,7 +512,7 @@ public class AgentConfigServiceTest {
         service.writeMemoryFile("test-agent", "new-category", "some content");
 
         Path file = gatewayRoot.resolve("agents").resolve("test-agent")
-                .resolve("config").resolve("memory").resolve("new-category.txt");
+                .resolve("config").resolve("goose").resolve("memory").resolve("new-category.txt");
         assertTrue(Files.exists(file));
         assertEquals("some content", Files.readString(file));
     }
@@ -534,7 +534,7 @@ public class AgentConfigServiceTest {
     @Test
     public void testDeleteMemoryFile_success() throws IOException {
         Path memoryDir = gatewayRoot.resolve("agents").resolve("test-agent")
-                .resolve("config").resolve("memory");
+                .resolve("config").resolve("goose").resolve("memory");
         Files.createDirectories(memoryDir);
         Files.writeString(memoryDir.resolve("toDelete.txt"), "bye");
 

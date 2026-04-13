@@ -479,6 +479,8 @@ public class InstanceManager {
         env.put("GOOSE_SERVER__SECRET_KEY", hexSecret.toString());
         env.put("GOOSE_PATH_ROOT", runtimeRoot.toString());
         env.put("GOOSE_DISABLE_KEYRING", "1");
+        env.put("XDG_CONFIG_HOME",
+                agentConfigService.getAgentConfigDir(agentId).toAbsolutePath().normalize().toString());
 
         // Goose memory MCP server uses etcetera crate which resolves global memory
         // via $XDG_CONFIG_HOME/goose/memory/ (defaults to ~/.config/goose/memory/).
