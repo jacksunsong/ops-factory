@@ -28,6 +28,7 @@ When spawning `goosed`, the gateway also injects `XDG_CONFIG_HOME` to the shared
 
 ## Logging Contract
 - `gateway/logs/gateway.log` is the single primary gateway application log file.
+- `gateway/logs/gateway-stdout-stderr.log` may exist for background-start stdout/stderr capture, but it is an auxiliary diagnostic file rather than a primary business log.
 - The gateway emits `X-Request-Id` on HTTP responses and records a unified access log for each request.
 - Operational debugging should correlate `requestId`, `userId`, `agentId`, `sessionId`, `port`, and `pid` across request logs, controller/service logs, and process-management logs.
 - Sensitive upstream response bodies and SSE previews remain behind explicit `gateway.logging.*` switches and are not logged by default.

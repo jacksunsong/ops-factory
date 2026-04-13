@@ -65,6 +65,14 @@ gateway/logs/gateway.log
 
 当前设计下，`gateway.log` 是唯一主业务日志文件，由应用内 Log4j2 负责写入与滚动。
 
+后台启动时还可能看到辅助输出捕获文件：
+
+```bash
+gateway/logs/gateway-stdout-stderr.log
+```
+
+该文件只用于保留后台进程的 `stdout/stderr` 输出，不是常规业务排障入口。默认先看 `gateway.log`；只有启动早期异常、日志框架未接管前输出、或第三方库直接写标准错误时再看它。
+
 代码层说明：
 
 - `gateway-service` 当前代码层统一使用 `SLF4J API`
@@ -194,8 +202,9 @@ GOOSE_TLS=true \
 
 1. `./scripts/ctl.sh status`
 2. `logs/gateway.log`
-3. `gateway/config.yaml`
-4. TLS 配置和 keystore 路径
+3. `logs/gateway-stdout-stderr.log`
+4. `gateway/config.yaml`
+5. TLS 配置和 keystore 路径
 
 重点关键词：
 

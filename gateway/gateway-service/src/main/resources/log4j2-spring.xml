@@ -9,6 +9,7 @@
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="${LOG_PATTERN}" />
+            <ThresholdFilter level="${sys:gateway.console.threshold:-INFO}" onMatch="ACCEPT" onMismatch="DENY" />
         </Console>
 
         <RollingFile name="File" fileName="${LOG_DIR}/gateway.log"

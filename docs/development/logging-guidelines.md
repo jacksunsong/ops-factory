@@ -237,6 +237,7 @@ access log 至少应包含：
 当前仓库约束：
 
 - `gateway/logs/gateway.log` 是 `gateway` 的唯一主业务日志文件
+- `gateway/logs/gateway-stdout-stderr.log` 仅用于后台启动时的 stdout/stderr 捕获，不属于主业务日志
 - `business-intelligence/logs/business-intelligence.log` 是 `business-intelligence` 的唯一主业务日志文件
 - `knowledge-service/logs/knowledge-service.log` 是 `knowledge-service` 的唯一主业务日志文件
 - 后台脚本不应再把 stdout/stderr 追加到同名业务日志文件

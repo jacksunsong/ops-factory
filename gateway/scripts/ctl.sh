@@ -376,12 +376,17 @@ do_startup() {
         fi
     fi
 
-    java_opts+=("-DGATEWAY_CONFIG_PATH=${GATEWAY_CONFIG_PATH}")
+    if [ "${mode}" = "background" ]; then
+        java_opts+=("-Dgateway.console.threshold=OFF")
+    else
+        java_opts+=("-Dgateway.console.threshold=INFO")
+    fi
 
+    java_opts+=("-DGATEWAY_CONFIG_PATH=${GATEWAY_CONFIG_PATH}")
     java_opts+=("-jar" "${jar}")
 
     if [ "${mode}" = "background" ]; then
-        local console_log="${LOG_DIR}/gateway-console.log"
+        local console_log="${LOG_DIR}/gateway-stdout-stderr.log"
         local app_log="${LOG_DIR}/gateway.log"
         GATEWAY_PID="$(daemon_start "${PID_FILE}" "${console_log}" env GATEWAY_CONFIG_PATH="${GATEWAY_CONFIG_PATH}" "${java_cmd}" "${java_opts[@]}")"
         if ! kill -0 "${GATEWAY_PID}" 2>/dev/null; then
@@ -394,7 +399,7 @@ do_startup() {
             daemon_stop "${PID_FILE}" "gateway" 5 || true
             return 1
         fi
-        log_info "Gateway started (PID: ${GATEWAY_PID}, app log: ${app_log}, console log: ${console_log})"
+        log_info "Gateway started (PID: ${GATEWAY_PID}, log: ${app_log})"
         check_agents_configured || true
     else
         exec env GATEWAY_CONFIG_PATH="${GATEWAY_CONFIG_PATH}" ${java_cmd} "${java_opts[@]}"
