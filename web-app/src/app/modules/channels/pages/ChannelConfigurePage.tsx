@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import PageBackLink from '../../../platform/ui/primitives/PageBackLink'
@@ -100,6 +100,8 @@ export default function ChannelConfigurePage() {
     const [loginState, setLoginState] = useState<ChannelLoginState | null>(null)
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
     const [activeTab, setActiveTab] = useState<ChannelConfigTab>('overview')
+    const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false)
+    const actionsMenuRef = useRef<HTMLDivElement | null>(null)
 
     useEffect(() => {
         if (channelId) {
@@ -149,6 +151,16 @@ export default function ChannelConfigurePage() {
         return undefined
     }, [isLoginModalOpen, loginState])
 
+    useEffect(() => {
+        const handlePointerDown = (event: MouseEvent) => {
+            if (!actionsMenuRef.current?.contains(event.target as Node)) {
+                setIsActionsMenuOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handlePointerDown)
+        return () => document.removeEventListener('mousedown', handlePointerDown)
+    }, [])
+
     const updateConfigField = (field: keyof WhatsAppChannelConfig, value: string) => {
         setForm(current => ({
             ...current,
@@ -196,6 +208,7 @@ export default function ChannelConfigurePage() {
             return
         }
 
+        setIsActionsMenuOpen(false)
         if (result.verification.ok) {
             showToast('success', t('channels.verifySuccess'))
         } else {
@@ -207,6 +220,7 @@ export default function ChannelConfigurePage() {
     const handleToggleEnabled = async () => {
         if (!channelId) {
             setForm(current => ({ ...current, enabled: !current.enabled }))
+            setIsActionsMenuOpen(false)
             return
         }
         const result = await setChannelEnabled(channelId, !form.enabled)
@@ -214,6 +228,7 @@ export default function ChannelConfigurePage() {
             showToast('error', result.error || t('channels.statusUpdateFailed'))
             return
         }
+        setIsActionsMenuOpen(false)
         setForm(toFormState(result.channel))
         showToast('success', result.channel.enabled ? t('channels.enabledSuccess') : t('channels.disabledSuccess'))
     }
@@ -238,6 +253,7 @@ export default function ChannelConfigurePage() {
             showToast('error', result.error || t('channels.loginStateFailed'))
             return
         }
+        setIsActionsMenuOpen(false)
         setLoginState(result.state)
         showToast('success', result.state.message)
     }
@@ -275,7 +291,6 @@ export default function ChannelConfigurePage() {
         )
     }
 
-    const verification = channel?.verification
     const bindings = channel?.bindings ?? []
     const events = channel?.events ?? []
     const loginStatus = loginState?.status || form.config.loginStatus || 'disconnected'
@@ -301,6 +316,9 @@ export default function ChannelConfigurePage() {
     const showQrLoading = isLoginModalOpen && loginState?.status === 'pending' && !loginState?.qrCodeDataUrl
     const showQrReady = isLoginModalOpen && !!loginState?.qrCodeDataUrl
     const showQrError = isLoginModalOpen && loginState?.status === 'error'
+    const primaryLoginLabel = loginStatus === 'connected' || loginStatus === 'pending'
+        ? t('channels.reconnect')
+        : t('channels.connect')
     const tabs: Array<{ key: ChannelConfigTab; label: string }> = [
         { key: 'overview', label: t('configTabs.overview') },
         { key: 'connection', label: t('channels.connectionTab') },
@@ -328,20 +346,34 @@ export default function ChannelConfigurePage() {
                         </div>
                         <div className="channel-configure-actions">
                             <Button variant="secondary" onClick={() => void handleStartLogin()} disabled={loginActionsDisabled}>
-                                {t('channels.startLogin')}
-                            </Button>
-                            <Button variant="secondary" onClick={() => void handleRefreshLoginState()} disabled={loginActionsDisabled}>
-                                {t('channels.refreshLogin')}
+                                {primaryLoginLabel}
                             </Button>
                             <Button variant="secondary" onClick={() => void handleLogout()} disabled={loginActionsDisabled}>
                                 {t('channels.logout')}
                             </Button>
-                            <Button variant="secondary" onClick={() => void handleToggleEnabled()} disabled={isSaving}>
-                                {form.enabled ? t('channels.disable') : t('channels.enable')}
-                            </Button>
-                            <Button variant="secondary" onClick={() => void handleVerify()} disabled={loginActionsDisabled}>
-                                {t('channels.checkStatus')}
-                            </Button>
+                            <div className="channel-actions-menu" ref={actionsMenuRef}>
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setIsActionsMenuOpen(current => !current)}
+                                    disabled={isSaving}
+                                    aria-expanded={isActionsMenuOpen}
+                                >
+                                    {t('channels.moreActions')}
+                                </Button>
+                                {isActionsMenuOpen && (
+                                    <div className="channel-actions-menu-panel">
+                                        <button type="button" onClick={() => void handleRefreshLoginState()}>
+                                            {t('channels.refreshStatus')}
+                                        </button>
+                                        <button type="button" onClick={() => void handleVerify()}>
+                                            {t('channels.checkStatus')}
+                                        </button>
+                                        <button type="button" onClick={() => void handleToggleEnabled()}>
+                                            {form.enabled ? t('channels.disable') : t('channels.enable')}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                             <Button variant="primary" onClick={() => void handleSave()} disabled={isSaving}>
                                 {isSaving ? t('common.saving') : t('common.save')}
                             </Button>
@@ -465,27 +497,6 @@ export default function ChannelConfigurePage() {
                                     <p className="channel-webhook-hint">
                                         {loginState?.message || form.config.lastError || t('channels.connectionHint')}
                                     </p>
-                                </div>
-                            </section>
-
-                            <section className="channel-configure-section">
-                                <div className="channel-configure-section-header">
-                                    <div>
-                                        <h2 className="channel-configure-section-title">{t('channels.statusTitle')}</h2>
-                                        <p className="channel-configure-section-desc">{t('channels.statusDesc')}</p>
-                                    </div>
-                                </div>
-                                <div className="channel-verification-card">
-                                    <div className={`channel-verification-status ${verification?.ok ? 'is-ok' : 'is-warning'}`}>
-                                        {verification?.ok ? t('channels.verifySuccess') : t('channels.verifyIssues')}
-                                    </div>
-                                    {verification?.issues?.length ? (
-                                        <ul className="channel-issue-list">
-                                            {verification.issues.map(issue => <li key={issue}>{issue}</li>)}
-                                        </ul>
-                                    ) : (
-                                        <p className="channel-issue-empty">{t('channels.noIssues')}</p>
-                                    )}
                                 </div>
                             </section>
                         </>

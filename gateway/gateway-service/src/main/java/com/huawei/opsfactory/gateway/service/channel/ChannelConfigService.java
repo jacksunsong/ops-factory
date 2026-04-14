@@ -248,6 +248,7 @@ public class ChannelConfigService {
                 existing.type(),
                 existing.enabled(),
                 existing.defaultAgentId(),
+                normalizeOwnerUserId(existing.ownerUserId()),
                 existing.createdAt(),
                 Instant.now().toString(),
                 updater.apply(normalizeConfig(existing.config()))

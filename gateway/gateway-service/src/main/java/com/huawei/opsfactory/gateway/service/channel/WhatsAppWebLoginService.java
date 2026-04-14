@@ -107,19 +107,7 @@ public class WhatsAppWebLoginService {
         channelConfigService.recordEvent(channelId, "info", "whatsapp.login_requested",
                 "WhatsApp Web login requested; auth directory prepared at " + authDir);
 
-        ChannelLoginState latest = getLoginState(channelId);
-        return new ChannelLoginState(
-                latest.channelId(),
-                latest.status(),
-                "WhatsApp Web login requested. QR runtime is the next integration step.",
-                latest.authStateDir(),
-                latest.sessionLabel(),
-                latest.selfPhone(),
-                latest.lastConnectedAt(),
-                latest.lastDisconnectedAt(),
-                latest.lastError(),
-                latest.qrCodeDataUrl()
-        );
+        return getLoginState(channelId);
     }
 
     public ChannelLoginState logout(String channelId) {
