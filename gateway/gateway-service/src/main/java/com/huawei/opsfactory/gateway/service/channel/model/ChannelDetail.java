@@ -12,7 +12,7 @@ public record ChannelDetail(
         String createdAt,
         String updatedAt,
         String webhookPath,
-        WhatsAppChannelConfig config,
+        ChannelConnectionConfig config,
         ChannelVerificationResult verification,
         List<ChannelBinding> bindings,
         List<ChannelEvent> events

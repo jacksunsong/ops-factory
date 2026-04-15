@@ -8,7 +8,7 @@ import DetailDialog from '../../../platform/ui/primitives/DetailDialog'
 import { useChannels } from '../hooks/useChannels'
 import { useToast } from '../../../platform/providers/ToastContext'
 import { useGoosed } from '../../../platform/providers/GoosedContext'
-import type { ChannelDetail, ChannelLoginState, ChannelSelfTestResult, ChannelUpsertRequest, WhatsAppChannelConfig } from '../../../../types/channel'
+import type { ChannelConnectionConfig, ChannelDetail, ChannelLoginState, ChannelSelfTestResult, ChannelType, ChannelUpsertRequest } from '../../../../types/channel'
 import '../styles/channels.css'
 
 type ChannelConfigTab = 'overview' | 'connection' | 'runtime'
@@ -17,18 +17,20 @@ type ChannelFormState = {
     name: string
     enabled: boolean
     defaultAgentId: string
-    type: string
-    config: WhatsAppChannelConfig
+    type: ChannelType
+    config: ChannelConnectionConfig
 }
 
-const EMPTY_CONFIG: WhatsAppChannelConfig = {
+const EMPTY_CONFIG: ChannelConnectionConfig = {
     loginStatus: 'disconnected',
     sessionLabel: '',
-    selfPhone: '',
     authStateDir: 'auth',
     lastConnectedAt: '',
     lastDisconnectedAt: '',
     lastError: '',
+    selfPhone: '',
+    wechatId: '',
+    displayName: '',
 }
 
 function createInitialForm(defaultAgentId: string): ChannelFormState {
@@ -153,7 +155,7 @@ export default function ChannelConfigurePage() {
         return undefined
     }, [isLoginModalOpen, loginState])
 
-    const updateConfigField = (field: keyof WhatsAppChannelConfig, value: string) => {
+    const updateConfigField = (field: keyof ChannelConnectionConfig, value: string) => {
         setForm(current => ({
             ...current,
             config: {
@@ -328,6 +330,11 @@ export default function ChannelConfigurePage() {
         { key: 'connection', label: t('channels.connectionTab') },
         { key: 'runtime', label: t('channels.runtimeTab') },
     ]
+    const isWhatsApp = form.type === 'whatsapp'
+    const isWeChat = form.type === 'wechat'
+    const supportsQrLogin = isWhatsApp || isWeChat
+    const supportsSelfTest = isWhatsApp
+    const typeLabel = isWeChat ? t('channels.type_wechat') : t('channels.type_whatsapp')
     const actionMenuItems: ActionMenuItem[] = [
         {
             key: 'refresh-status',
@@ -371,10 +378,10 @@ export default function ChannelConfigurePage() {
                             <div className="channel-configure-subtitle">{channelId}</div>
                         </div>
                         <div className="channel-configure-actions">
-                            <Button variant="secondary" onClick={() => void handleStartLogin()} disabled={loginActionsDisabled}>
+                            <Button variant="secondary" onClick={() => void handleStartLogin()} disabled={loginActionsDisabled || !supportsQrLogin}>
                                 {primaryLoginLabel}
                             </Button>
-                            <Button variant="secondary" onClick={() => void handleLogout()} disabled={loginActionsDisabled}>
+                            <Button variant="secondary" onClick={() => void handleLogout()} disabled={loginActionsDisabled || !supportsQrLogin}>
                                 {t('channels.logout')}
                             </Button>
                             <ActionMenu
@@ -424,7 +431,7 @@ export default function ChannelConfigurePage() {
                                     </label>
                                     <label className="channel-form-field">
                                         <span>{t('channels.type')}</span>
-                                        <input value={form.type} readOnly />
+                                        <input value={typeLabel} readOnly />
                                     </label>
                                     <label className="channel-form-field">
                                         <span>{t('channels.defaultAgent')}</span>
@@ -448,8 +455,12 @@ export default function ChannelConfigurePage() {
                             <section className="channel-configure-section">
                                 <div className="channel-configure-section-header">
                                     <div>
-                                        <h2 className="channel-configure-section-title">{t('channels.whatsappTitle')}</h2>
-                                        <p className="channel-configure-section-desc">{t('channels.whatsappDesc')}</p>
+                                        <h2 className="channel-configure-section-title">
+                                            {isWeChat ? t('channels.wechatTitle') : t('channels.whatsappTitle')}
+                                        </h2>
+                                        <p className="channel-configure-section-desc">
+                                            {isWeChat ? t('channels.wechatDesc') : t('channels.whatsappDesc')}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="channel-form-grid">
@@ -460,13 +471,33 @@ export default function ChannelConfigurePage() {
                                             onChange={(event) => updateConfigField('sessionLabel', event.target.value)}
                                         />
                                     </label>
-                                    <label className="channel-form-field">
-                                        <span>{t('channels.selfPhone')}</span>
-                                        <input
-                                            value={form.config.selfPhone}
-                                            onChange={(event) => updateConfigField('selfPhone', event.target.value)}
-                                        />
-                                    </label>
+                                    {isWhatsApp && (
+                                        <label className="channel-form-field">
+                                            <span>{t('channels.selfPhone')}</span>
+                                            <input
+                                                value={form.config.selfPhone}
+                                                onChange={(event) => updateConfigField('selfPhone', event.target.value)}
+                                            />
+                                        </label>
+                                    )}
+                                    {isWeChat && (
+                                        <>
+                                            <label className="channel-form-field">
+                                                <span>{t('channels.wechatId')}</span>
+                                                <input
+                                                    value={form.config.wechatId}
+                                                    onChange={(event) => updateConfigField('wechatId', event.target.value)}
+                                                />
+                                            </label>
+                                            <label className="channel-form-field">
+                                                <span>{t('channels.displayName')}</span>
+                                                <input
+                                                    value={form.config.displayName}
+                                                    onChange={(event) => updateConfigField('displayName', event.target.value)}
+                                                />
+                                            </label>
+                                        </>
+                                    )}
                                     <label className="channel-form-field">
                                         <span>{t('channels.authStateDir')}</span>
                                         <input
@@ -504,59 +535,61 @@ export default function ChannelConfigurePage() {
                                         <code className="channel-webhook-value">{formatTimestamp(form.config.lastDisconnectedAt, t('channels.never'))}</code>
                                     </div>
                                     <p className="channel-webhook-hint">
-                                        {loginState?.message || form.config.lastError || t('channels.connectionHint')}
+                                        {loginState?.message || form.config.lastError || (isWeChat ? t('channels.wechatConnectionHint') : t('channels.connectionHint'))}
                                     </p>
                                 </div>
                             </section>
 
-                            <section className="channel-configure-section">
-                                <div className="channel-configure-section-header">
-                                    <div>
-                                        <h2 className="channel-configure-section-title">{t('channels.selfTestTitle')}</h2>
-                                        <p className="channel-configure-section-desc">{t('channels.selfTestDesc')}</p>
+                            {supportsSelfTest && (
+                                <section className="channel-configure-section">
+                                    <div className="channel-configure-section-header">
+                                        <div>
+                                            <h2 className="channel-configure-section-title">{t('channels.selfTestTitle')}</h2>
+                                            <p className="channel-configure-section-desc">{t('channels.selfTestDesc')}</p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="channel-self-test-card">
-                                    <label className="channel-form-field">
-                                        <span>{t('channels.selfTestPrompt')}</span>
-                                        <textarea
-                                            className="channel-self-test-textarea"
-                                            value={selfTestInput}
-                                            onChange={(event) => setSelfTestInput(event.target.value)}
-                                            placeholder={t('channels.selfTestPlaceholder')}
-                                        />
-                                    </label>
-                                    <div className="channel-self-test-actions">
-                                        <Button
-                                            variant="secondary"
-                                            onClick={() => void handleRunSelfTest()}
-                                            disabled={loginActionsDisabled || loginStatus !== 'connected'}
-                                        >
-                                            {t('channels.runSelfTest')}
-                                        </Button>
-                                        {selfTestResult && (
+                                    <div className="channel-self-test-card">
+                                        <label className="channel-form-field">
+                                            <span>{t('channels.selfTestPrompt')}</span>
+                                            <textarea
+                                                className="channel-self-test-textarea"
+                                                value={selfTestInput}
+                                                onChange={(event) => setSelfTestInput(event.target.value)}
+                                                placeholder={t('channels.selfTestPlaceholder')}
+                                            />
+                                        </label>
+                                        <div className="channel-self-test-actions">
                                             <Button
-                                                variant="ghost"
-                                                onClick={() => navigate(`/chat?sessionId=${selfTestResult.sessionId}&agent=${selfTestResult.agentId}`)}
+                                                variant="secondary"
+                                                onClick={() => void handleRunSelfTest()}
+                                                disabled={loginActionsDisabled || loginStatus !== 'connected'}
                                             >
-                                                {t('channels.openSession')}
+                                                {t('channels.runSelfTest')}
                                             </Button>
+                                            {selfTestResult && (
+                                                <Button
+                                                    variant="ghost"
+                                                    onClick={() => navigate(`/chat?sessionId=${selfTestResult.sessionId}&agent=${selfTestResult.agentId}`)}
+                                                >
+                                                    {t('channels.openSession')}
+                                                </Button>
+                                            )}
+                                        </div>
+                                        {selfTestResult && (
+                                            <div className="channel-self-test-result">
+                                                <div className="channel-self-test-meta">
+                                                    <span>{t('channels.selfTestPhone')}: {selfTestResult.selfPhone}</span>
+                                                    <span>{t('channels.selfTestSession')}: {selfTestResult.sessionId}</span>
+                                                </div>
+                                                <div className="channel-self-test-reply">
+                                                    <strong>{t('channels.selfTestReply')}</strong>
+                                                    <p>{selfTestResult.replyText}</p>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
-                                    {selfTestResult && (
-                                        <div className="channel-self-test-result">
-                                            <div className="channel-self-test-meta">
-                                                <span>{t('channels.selfTestPhone')}: {selfTestResult.selfPhone}</span>
-                                                <span>{t('channels.selfTestSession')}: {selfTestResult.sessionId}</span>
-                                            </div>
-                                            <div className="channel-self-test-reply">
-                                                <strong>{t('channels.selfTestReply')}</strong>
-                                                <p>{selfTestResult.replyText}</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </section>
+                                </section>
+                            )}
                         </>
                     )}
 
@@ -611,7 +644,7 @@ export default function ChannelConfigurePage() {
 
             {isLoginModalOpen && (
                 <DetailDialog
-                    title={t('channels.loginModalTitle')}
+                    title={isWeChat ? t('channels.loginModalTitle_wechat') : t('channels.loginModalTitle')}
                     onClose={() => setIsLoginModalOpen(false)}
                     className="channel-login-dialog"
                 >

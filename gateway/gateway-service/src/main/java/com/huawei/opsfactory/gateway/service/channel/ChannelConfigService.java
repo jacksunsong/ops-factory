@@ -12,7 +12,7 @@ import com.huawei.opsfactory.gateway.service.channel.model.ChannelInstance;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelSummary;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelUpsertRequest;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelVerificationResult;
-import com.huawei.opsfactory.gateway.service.channel.model.WhatsAppChannelConfig;
+import com.huawei.opsfactory.gateway.service.channel.model.ChannelConnectionConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -40,6 +40,7 @@ public class ChannelConfigService {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Pattern CHANNEL_ID_PATTERN = Pattern.compile("^[a-z0-9-]+$");
     private static final int MAX_EVENTS = 200;
+    private static final List<String> SUPPORTED_TYPES = List.of("whatsapp", "wechat");
 
     private final GatewayProperties properties;
     private final AgentConfigService agentConfigService;
@@ -104,7 +105,7 @@ public class ChannelConfigService {
                 effectiveChannel.ownerUserId(),
                 effectiveChannel.createdAt(),
                 effectiveChannel.updatedAt(),
-                "whatsapp".equals(effectiveChannel.type()) ? "" : webhookPath(effectiveChannel),
+                usesWebhook(effectiveChannel.type()) ? webhookPath(effectiveChannel) : "",
                 effectiveChannel.config(),
                 verifyChannel(effectiveChannel),
                 bindings,
@@ -130,7 +131,7 @@ public class ChannelConfigService {
                 normalizeOwnerUserId(ownerUserId),
                 now,
                 now,
-                normalizeConfig(request.config())
+                    normalizeConfig(request.type(), request.config())
         );
         channels.add(created);
         writeChannelConfig(created);
@@ -156,7 +157,7 @@ public class ChannelConfigService {
                 normalizeOwnerUserId(existing.ownerUserId()),
                 existing.createdAt(),
                 Instant.now().toString(),
-                mergeConfig(existing.config(), request.config())
+                mergeConfig(existing.type(), existing.config(), request.config())
         );
 
         writeChannelConfig(updated);
@@ -236,7 +237,7 @@ public class ChannelConfigService {
         appendEvent(channelId, level, type, summary);
     }
 
-    public ChannelDetail updateWhatsAppConfig(String channelId, UnaryOperator<WhatsAppChannelConfig> updater) {
+    public ChannelDetail updateChannelConfig(String channelId, UnaryOperator<ChannelConnectionConfig> updater) {
         ChannelInstance existing = findChannel(channelId);
         if (existing == null) {
             throw new IllegalArgumentException("Channel '" + channelId + "' not found");
@@ -251,13 +252,13 @@ public class ChannelConfigService {
                 normalizeOwnerUserId(existing.ownerUserId()),
                 existing.createdAt(),
                 Instant.now().toString(),
-                updater.apply(normalizeConfig(existing.config()))
+                updater.apply(normalizeConfig(existing.type(), existing.config()))
         );
         writeChannelConfig(updated);
         return getChannel(channelId);
     }
 
-    public ChannelDetail resetWhatsAppRuntimeState(String channelId) {
+    public ChannelDetail resetChannelRuntimeState(String channelId) {
         ChannelInstance existing = findChannel(channelId);
         if (existing == null) {
             throw new IllegalArgumentException("Channel '" + channelId + "' not found");
@@ -272,14 +273,16 @@ public class ChannelConfigService {
                 existing.ownerUserId(),
                 existing.createdAt(),
                 Instant.now().toString(),
-                new WhatsAppChannelConfig(
+                new ChannelConnectionConfig(
                         "disconnected",
                         existing.config().sessionLabel(),
-                        "",
                         existing.config().authStateDir(),
                         "",
                         "",
-                        ""
+                        "",
+                        "",
+                        existing.type().equals("wechat") ? existing.config().wechatId() : "",
+                        existing.type().equals("wechat") ? existing.config().displayName() : ""
                 )
         );
         writeChannelConfig(updated);
@@ -323,6 +326,7 @@ public class ChannelConfigService {
                 channel.type(),
                 channel.enabled(),
                 channel.defaultAgentId(),
+                channel.ownerUserId(),
                 status,
                 lastInboundAt,
                 lastOutboundAt,
@@ -332,9 +336,6 @@ public class ChannelConfigService {
 
     private ChannelVerificationResult verifyChannel(ChannelInstance channel) {
         List<String> issues = new ArrayList<>();
-        if (!"whatsapp".equals(channel.type())) {
-            issues.add("Only whatsapp channels are supported in V1");
-        }
         if (isBlank(channel.name())) {
             issues.add("Channel name is required");
         }
@@ -343,13 +344,15 @@ public class ChannelConfigService {
             issues.add("Default agent '" + channel.defaultAgentId() + "' not found");
         }
 
-        WhatsAppChannelConfig config = channel.config();
+        ChannelConnectionConfig config = channel.config();
         if (config == null) {
-            issues.add("WhatsApp config is required");
+            issues.add("Channel config is required");
         } else {
             if (!isConfiguredValue(config.authStateDir())) issues.add("authStateDir is required");
             if ("error".equals(config.loginStatus()) && isConfiguredValue(config.lastError())) {
                 issues.add(config.lastError());
+            } else if ("wechat".equals(channel.type()) && channel.enabled()) {
+                issues.add("WeChat channel runtime is not implemented yet");
             } else if (channel.enabled() && !"connected".equals(config.loginStatus())) {
                 issues.add("WhatsApp Web login required");
             }
@@ -393,8 +396,8 @@ public class ChannelConfigService {
             throw new IllegalArgumentException("Default agent '" + request.defaultAgentId().trim() + "' not found");
         }
         String type = normalizeType(request.type());
-        if (!"whatsapp".equals(type)) {
-            throw new IllegalArgumentException("Only whatsapp channels are supported in V1");
+        if (!SUPPORTED_TYPES.contains(type)) {
+            throw new IllegalArgumentException("Unsupported channel type '" + type + "'");
         }
     }
 
@@ -414,39 +417,57 @@ public class ChannelConfigService {
         return isBlank(ownerUserId) ? "admin" : ownerUserId.trim();
     }
 
-    private WhatsAppChannelConfig normalizeConfig(WhatsAppChannelConfig config) {
+    private ChannelConnectionConfig normalizeConfig(String type, ChannelConnectionConfig config) {
         if (config == null) {
-            return new WhatsAppChannelConfig("disconnected", "", "", "auth", "", "", "");
+            return defaultConfig(type);
         }
-        return new WhatsAppChannelConfig(
+        return new ChannelConnectionConfig(
                 normalizeLoginStatus(config.loginStatus()),
                 emptyIfNull(config.sessionLabel()),
-                emptyIfNull(config.selfPhone()),
                 emptyIfNull(config.authStateDir()).isBlank() ? "auth" : config.authStateDir().trim(),
                 emptyIfNull(config.lastConnectedAt()),
                 emptyIfNull(config.lastDisconnectedAt()),
-                emptyIfNull(config.lastError())
+                emptyIfNull(config.lastError()),
+                "whatsapp".equals(type) ? emptyIfNull(config.selfPhone()) : "",
+                "wechat".equals(type) ? emptyIfNull(config.wechatId()) : "",
+                "wechat".equals(type) ? emptyIfNull(config.displayName()) : ""
         );
     }
 
-    private WhatsAppChannelConfig mergeConfig(WhatsAppChannelConfig existing, WhatsAppChannelConfig updates) {
-        WhatsAppChannelConfig current = normalizeConfig(existing);
+    private ChannelConnectionConfig mergeConfig(String type, ChannelConnectionConfig existing, ChannelConnectionConfig updates) {
+        ChannelConnectionConfig current = normalizeConfig(type, existing);
         if (updates == null) {
             return current;
         }
-        return new WhatsAppChannelConfig(
+        return new ChannelConnectionConfig(
                 normalizeLoginStatus(choose(updates.loginStatus(), current.loginStatus())),
                 choose(updates.sessionLabel(), current.sessionLabel()),
-                choose(updates.selfPhone(), current.selfPhone()),
                 choose(updates.authStateDir(), current.authStateDir()),
                 choose(updates.lastConnectedAt(), current.lastConnectedAt()),
                 choose(updates.lastDisconnectedAt(), current.lastDisconnectedAt()),
-                choose(updates.lastError(), current.lastError())
+                choose(updates.lastError(), current.lastError()),
+                "whatsapp".equals(type) ? choose(updates.selfPhone(), current.selfPhone()) : "",
+                "wechat".equals(type) ? choose(updates.wechatId(), current.wechatId()) : "",
+                "wechat".equals(type) ? choose(updates.displayName(), current.displayName()) : ""
         );
     }
 
     private String choose(String candidate, String fallback) {
         return candidate == null ? fallback : candidate;
+    }
+
+    private ChannelConnectionConfig defaultConfig(String type) {
+        return new ChannelConnectionConfig(
+                "disconnected",
+                "wechat".equals(type) ? "Personal WeChat" : "Personal WhatsApp",
+                "auth",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+        );
     }
 
     private String emptyIfNull(String value) {
@@ -580,29 +601,35 @@ public class ChannelConfigService {
                 normalizeOwnerUserId((String) raw.get("ownerUserId")),
                 emptyIfNull((String) raw.get("createdAt")),
                 emptyIfNull((String) raw.get("updatedAt")),
-                deserializeWhatsAppConfig(rawConfig)
+                deserializeChannelConfig((String) raw.get("type"), rawConfig)
         );
     }
 
-    private WhatsAppChannelConfig deserializeWhatsAppConfig(Map<String, Object> rawConfig) {
+    private ChannelConnectionConfig deserializeChannelConfig(String type, Map<String, Object> rawConfig) {
+        String normalizedType = normalizeType(type);
         if (rawConfig.containsKey("loginStatus")
                 || rawConfig.containsKey("sessionLabel")
-                || rawConfig.containsKey("authStateDir")) {
-            return normalizeConfig(MAPPER.convertValue(rawConfig, WhatsAppChannelConfig.class));
+                || rawConfig.containsKey("authStateDir")
+                || rawConfig.containsKey("selfPhone")
+                || rawConfig.containsKey("wechatId")
+                || rawConfig.containsKey("displayName")) {
+            return normalizeConfig(normalizedType, MAPPER.convertValue(rawConfig, ChannelConnectionConfig.class));
         }
 
-        // Legacy Cloud API configs are migrated into a disconnected WhatsApp Web state.
-        return new WhatsAppChannelConfig(
-                "disconnected",
-                "",
-                "",
-                "auth",
-                "",
-                "",
-                rawConfig.isEmpty()
-                        ? ""
-                        : "Legacy WhatsApp Cloud API config detected. Switch this channel to WhatsApp Web login."
-        );
+        if ("whatsapp".equals(normalizedType) && !rawConfig.isEmpty()) {
+            return new ChannelConnectionConfig(
+                    "disconnected",
+                    "Personal WhatsApp",
+                    "auth",
+                    "",
+                    "",
+                    "Legacy WhatsApp Cloud API config detected. Switch this channel to WhatsApp Web login.",
+                    "",
+                    "",
+                    ""
+            );
+        }
+        return defaultConfig(normalizedType);
     }
 
     private void writeChannelConfig(ChannelInstance channel) {
@@ -742,9 +769,13 @@ public class ChannelConfigService {
         return "/gateway/channels/webhooks/" + normalizeType(channel.type()) + "/" + channel.id();
     }
 
+    private boolean usesWebhook(String type) {
+        return !List.of("whatsapp", "wechat").contains(normalizeType(type));
+    }
+
     @SuppressWarnings("unchecked")
     private ChannelInstance applyRuntimeState(ChannelInstance channel) {
-        if (!"whatsapp".equals(channel.type())) {
+        if (!List.of("whatsapp", "wechat").contains(channel.type())) {
             return channel;
         }
 
@@ -755,21 +786,31 @@ public class ChannelConfigService {
 
         try {
             Map<String, Object> raw = MAPPER.readValue(Files.readString(runtimeFile, StandardCharsets.UTF_8), Map.class);
-            WhatsAppChannelConfig current = channel.config();
+            ChannelConnectionConfig current = channel.config();
             String runtimeStatus = asString(raw.get("status"));
             String runtimeSelfPhone = asString(raw.get("selfPhone"));
             String runtimeConnectedAt = asString(raw.get("lastConnectedAt"));
             String runtimeDisconnectedAt = asString(raw.get("lastDisconnectedAt"));
             String runtimeError = asString(raw.get("lastError"));
+            String runtimeWechatId = asString(raw.get("wechatId"));
+            String runtimeDisplayName = asString(raw.get("displayName"));
 
-            WhatsAppChannelConfig merged = new WhatsAppChannelConfig(
+            ChannelConnectionConfig merged = new ChannelConnectionConfig(
                     runtimeStatus != null ? normalizeLoginStatus(runtimeStatus) : current.loginStatus(),
                     current.sessionLabel(),
-                    runtimeSelfPhone != null ? runtimeSelfPhone : current.selfPhone(),
                     current.authStateDir(),
                     runtimeConnectedAt != null ? runtimeConnectedAt : current.lastConnectedAt(),
                     runtimeDisconnectedAt != null ? runtimeDisconnectedAt : current.lastDisconnectedAt(),
-                    runtimeError != null ? runtimeError : current.lastError()
+                    runtimeError != null ? runtimeError : current.lastError(),
+                    "whatsapp".equals(channel.type())
+                            ? (runtimeSelfPhone != null ? runtimeSelfPhone : current.selfPhone())
+                            : current.selfPhone(),
+                    "wechat".equals(channel.type())
+                            ? (runtimeWechatId != null ? runtimeWechatId : current.wechatId())
+                            : current.wechatId(),
+                    "wechat".equals(channel.type())
+                            ? (runtimeDisplayName != null ? runtimeDisplayName : current.displayName())
+                            : current.displayName()
             );
 
             return new ChannelInstance(

@@ -2,7 +2,7 @@ package com.huawei.opsfactory.gateway.service.channel;
 
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelDetail;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelLoginState;
-import com.huawei.opsfactory.gateway.service.channel.model.WhatsAppChannelConfig;
+import com.huawei.opsfactory.gateway.service.channel.model.ChannelConnectionConfig;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -31,7 +31,7 @@ public class WhatsAppWebLoginService {
 
     public ChannelLoginState getLoginState(String channelId) {
         ChannelDetail channel = requireChannel(channelId);
-        WhatsAppChannelConfig config = channel.config();
+        ChannelConnectionConfig config = channel.config();
         Map<String, Object> runtimeState = readRuntimeState(channel);
         String status = normalizeStatus(config.loginStatus());
         if (runtimeState.get("status") instanceof String runtimeStatus && !runtimeStatus.isBlank()) {
@@ -92,14 +92,16 @@ public class WhatsAppWebLoginService {
             throw new IllegalStateException("Failed to create WhatsApp auth directory", e);
         }
 
-        channelConfigService.updateWhatsAppConfig(channelId, current -> new WhatsAppChannelConfig(
+        channelConfigService.updateChannelConfig(channelId, current -> new ChannelConnectionConfig(
                 "pending",
                 current.sessionLabel(),
-                current.selfPhone(),
                 current.authStateDir(),
                 current.lastConnectedAt(),
                 current.lastDisconnectedAt(),
-                ""
+                "",
+                current.selfPhone(),
+                current.wechatId(),
+                current.displayName()
         ));
 
         writeInitialStateFile(channel, stateFile);
@@ -131,14 +133,16 @@ public class WhatsAppWebLoginService {
             // best-effort
         }
 
-        ChannelDetail updated = channelConfigService.updateWhatsAppConfig(channelId, current -> new WhatsAppChannelConfig(
+        ChannelDetail updated = channelConfigService.updateChannelConfig(channelId, current -> new ChannelConnectionConfig(
                 "disconnected",
                 current.sessionLabel(),
-                "",
                 current.authStateDir(),
                 current.lastConnectedAt(),
                 Instant.now().toString(),
-                ""
+                "",
+                "",
+                current.wechatId(),
+                current.displayName()
         ));
         channelConfigService.recordEvent(channelId, "info", "whatsapp.logged_out",
                 "Cleared WhatsApp Web auth state");

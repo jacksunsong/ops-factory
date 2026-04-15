@@ -6,6 +6,6 @@ public record ChannelUpsertRequest(
         String type,
         Boolean enabled,
         String defaultAgentId,
-        WhatsAppChannelConfig config
+        ChannelConnectionConfig config
 ) {
 }

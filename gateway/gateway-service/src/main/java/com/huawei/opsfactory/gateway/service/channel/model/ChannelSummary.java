@@ -6,6 +6,7 @@ public record ChannelSummary(
         String type,
         boolean enabled,
         String defaultAgentId,
+        String ownerUserId,
         String status,
         String lastInboundAt,
         String lastOutboundAt,

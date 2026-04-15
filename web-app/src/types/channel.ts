@@ -1,11 +1,15 @@
-export interface WhatsAppChannelConfig {
+export type ChannelType = 'whatsapp' | 'wechat'
+
+export interface ChannelConnectionConfig {
     loginStatus: string
     sessionLabel: string
-    selfPhone: string
     authStateDir: string
     lastConnectedAt: string
     lastDisconnectedAt: string
     lastError: string
+    selfPhone: string
+    wechatId: string
+    displayName: string
 }
 
 export interface ChannelBinding {
@@ -39,7 +43,7 @@ export interface ChannelVerificationResult {
 export interface ChannelSummary {
     id: string
     name: string
-    type: string
+    type: ChannelType
     enabled: boolean
     defaultAgentId: string
     ownerUserId: string
@@ -52,14 +56,14 @@ export interface ChannelSummary {
 export interface ChannelDetail {
     id: string
     name: string
-    type: string
+    type: ChannelType
     enabled: boolean
     defaultAgentId: string
     ownerUserId: string
     createdAt: string
     updatedAt: string
     webhookPath: string
-    config: WhatsAppChannelConfig
+    config: ChannelConnectionConfig
     verification: ChannelVerificationResult
     bindings: ChannelBinding[]
     events: ChannelEvent[]
@@ -68,10 +72,10 @@ export interface ChannelDetail {
 export interface ChannelUpsertRequest {
     id?: string
     name: string
-    type: string
+    type: ChannelType
     enabled: boolean
     defaultAgentId: string
-    config: WhatsAppChannelConfig
+    config: ChannelConnectionConfig
 }
 
 export interface ChannelMutationResponse {

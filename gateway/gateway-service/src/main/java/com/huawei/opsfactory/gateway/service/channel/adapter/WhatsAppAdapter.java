@@ -4,7 +4,7 @@ import com.huawei.opsfactory.gateway.service.channel.ChannelAdapter;
 import com.huawei.opsfactory.gateway.service.channel.ChannelConfigService;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelConnectivityResult;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelDetail;
-import com.huawei.opsfactory.gateway.service.channel.model.WhatsAppChannelConfig;
+import com.huawei.opsfactory.gateway.service.channel.model.ChannelConnectionConfig;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
@@ -43,7 +43,7 @@ public class WhatsAppAdapter implements ChannelAdapter {
     @Override
     public Mono<ChannelConnectivityResult> testConnectivity(String channelId) {
         ChannelDetail channel = requireChannel(channelId);
-        WhatsAppChannelConfig config = channel.config();
+        ChannelConnectionConfig config = channel.config();
         String status = config.loginStatus() == null || config.loginStatus().isBlank()
                 ? "disconnected"
                 : config.loginStatus().trim().toLowerCase();

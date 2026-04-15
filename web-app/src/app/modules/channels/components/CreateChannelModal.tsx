@@ -6,7 +6,7 @@ import { useChannels } from '../hooks/useChannels'
 import { useGoosed } from '../../../platform/providers/GoosedContext'
 import { useToast } from '../../../platform/providers/ToastContext'
 import { slugify } from '../../../../config/runtime'
-import type { ChannelUpsertRequest } from '../../../../types/channel'
+import type { ChannelType, ChannelUpsertRequest } from '../../../../types/channel'
 
 function buildSuggestedChannelId(value: string, fallbackSuffix: string): string {
     if (!value.trim()) return ''
@@ -36,9 +36,15 @@ export default function CreateChannelModal({
     }, [agents])
 
     const [name, setName] = useState('')
+    const [type, setType] = useState<ChannelType>('whatsapp')
     const [sessionLabel, setSessionLabel] = useState('Personal WhatsApp')
     const [agentId, setAgentId] = useState(defaultAgentId)
     const [fallbackSuffix] = useState(() => Math.random().toString(36).slice(2, 8))
+
+    const handleTypeChange = (nextType: ChannelType) => {
+        setType(nextType)
+        setSessionLabel(nextType === 'wechat' ? 'Personal WeChat' : 'Personal WhatsApp')
+    }
 
     const handleCreate = async () => {
         if (!name.trim()) {
@@ -54,16 +60,18 @@ export default function CreateChannelModal({
             id: buildSuggestedChannelId(name, fallbackSuffix),
             name: name.trim(),
             enabled: true,
-            type: 'whatsapp',
+            type,
             defaultAgentId: agentId,
             config: {
                 loginStatus: 'disconnected',
-                sessionLabel: sessionLabel.trim() || 'Personal WhatsApp',
-                selfPhone: '',
+                sessionLabel: sessionLabel.trim() || (type === 'wechat' ? 'Personal WeChat' : 'Personal WhatsApp'),
                 authStateDir: 'auth',
                 lastConnectedAt: '',
                 lastDisconnectedAt: '',
                 lastError: '',
+                selfPhone: '',
+                wechatId: '',
+                displayName: '',
             },
         }
 
@@ -104,6 +112,18 @@ export default function CreateChannelModal({
                             onChange={(event) => setName(event.target.value)}
                             autoFocus
                         />
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">{t('channels.type')}</label>
+                        <select
+                            className="form-input"
+                            value={type}
+                            onChange={(event) => handleTypeChange(event.target.value as ChannelType)}
+                        >
+                            <option value="whatsapp">{t('channels.type_whatsapp')}</option>
+                            <option value="wechat">{t('channels.type_wechat')}</option>
+                        </select>
                     </div>
 
                     <div className="form-group">

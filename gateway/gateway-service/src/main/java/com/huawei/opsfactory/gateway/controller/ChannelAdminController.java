@@ -222,6 +222,13 @@ public class ChannelAdminController {
         UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
+                ChannelDetail detail = channelConfigService.getChannel(channelId);
+                if (detail == null) {
+                    return ResponseEntity.badRequest().body(errorBody("Channel '" + channelId + "' not found"));
+                }
+                if (!"whatsapp".equals(detail.type())) {
+                    return ResponseEntity.badRequest().body(errorBody(detail.type() + " login is not implemented yet"));
+                }
                 ChannelLoginState state = whatsAppWebLoginService.startLogin(channelId);
                 return ResponseEntity.ok(Map.<String, Object>of("success", true, "state", state));
             } catch (IllegalArgumentException e) {
@@ -240,8 +247,15 @@ public class ChannelAdminController {
         UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
+                ChannelDetail detail = channelConfigService.getChannel(channelId);
+                if (detail == null) {
+                    return ResponseEntity.badRequest().body(errorBody("Channel '" + channelId + "' not found"));
+                }
+                if (!"whatsapp".equals(detail.type())) {
+                    return ResponseEntity.badRequest().body(errorBody(detail.type() + " login is not implemented yet"));
+                }
                 whatsAppWebLoginService.logout(channelId);
-                ChannelDetail detail = channelConfigService.resetWhatsAppRuntimeState(channelId);
+                detail = channelConfigService.resetChannelRuntimeState(channelId);
                 ChannelLoginState state = new ChannelLoginState(
                         detail.id(),
                         "disconnected",
@@ -259,7 +273,7 @@ public class ChannelAdminController {
                 return ResponseEntity.badRequest().body(errorBody(e.getMessage()));
             } catch (Throwable e) {
                 log.error("Failed to logout channel {}", channelId, e);
-                ChannelDetail detail = channelConfigService.resetWhatsAppRuntimeState(channelId);
+                ChannelDetail detail = channelConfigService.resetChannelRuntimeState(channelId);
                 if (detail == null) {
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                             .body(errorBody(e.getMessage() != null ? e.getMessage() : "Failed to clear WhatsApp login state"));
@@ -288,6 +302,13 @@ public class ChannelAdminController {
         UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
+                ChannelDetail detail = channelConfigService.getChannel(channelId);
+                if (detail == null) {
+                    return ResponseEntity.badRequest().body(errorBody("Channel '" + channelId + "' not found"));
+                }
+                if (!"whatsapp".equals(detail.type())) {
+                    return ResponseEntity.badRequest().body(errorBody(detail.type() + " self-test is not implemented yet"));
+                }
                 ChannelSelfTestResult result = whatsAppMessagePumpService.runSelfTest(channelId, request.text());
                 return ResponseEntity.ok(Map.<String, Object>of("success", true, "result", result));
             } catch (IllegalArgumentException e) {

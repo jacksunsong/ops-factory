@@ -122,6 +122,7 @@ async function runLogin(args) {
   let connectedSelfPhone = selfPhone;
   const sentMessageIds = new Set();
   let isSendingOutbox = false;
+  let restartInProgress = false;
   const outboxTimer = setInterval(async () => {
     if (isSendingOutbox || !sock) {
       return;
@@ -155,6 +156,8 @@ async function runLogin(args) {
   }
 
   async function restartAfterPairing() {
+    restartInProgress = true;
+    await appendLog(debugLogFile, "connection.update.restart_after_pairing", { channelId });
     if (saveCredsRef) {
       try {
         await Promise.resolve(saveCredsRef());
@@ -173,6 +176,7 @@ async function runLogin(args) {
     } catch {
       // ignore
     }
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     sock = await createSocket();
     attachSocketHandlers(sock);
   }
@@ -196,6 +200,7 @@ async function runLogin(args) {
           userId: activeSock.user?.id ?? null,
           resolvedSelfPhone,
         });
+        restartInProgress = false;
         connectedSelfPhone = resolvedSelfPhone || connectedSelfPhone;
         await updateState(stateFile, {
           status: "connected",
@@ -215,6 +220,11 @@ async function runLogin(args) {
           return;
         }
 
+        if (restartInProgress && (code === 408 || code === undefined)) {
+          await appendLog(debugLogFile, "connection.update.close.ignored_during_restart", { code });
+          return;
+        }
+
         const message =
           code === LOGGED_OUT_STATUS
             ? "WhatsApp Web session logged out. Start login again."
@@ -227,6 +237,7 @@ async function runLogin(args) {
           lastDisconnectedAt: new Date().toISOString(),
           lastError: code === LOGGED_OUT_STATUS ? "" : message,
         });
+        restartInProgress = false;
       }
     });
 

@@ -9,6 +9,6 @@ public record ChannelInstance(
         String ownerUserId,
         String createdAt,
         String updatedAt,
-        WhatsAppChannelConfig config
+        ChannelConnectionConfig config
 ) {
 }
