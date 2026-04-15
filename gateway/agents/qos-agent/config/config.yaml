@@ -140,6 +140,23 @@ extensions:
     timeout: 120
     bundled: null
     available_tools: []
+  system-health-analysis:
+    enabled: true
+    type: stdio
+    name: system-health-analysis
+    description: QoS system health analysis MCP - query health score, alarms, topology, and sub-topology
+    cmd: node
+    args:
+    - config/mcp/system-health-analysis/dist/index.js
+    envs:
+    env_keys:
+    - QOS_BASE_URL
+    - QOS_USERNAME
+    - QOS_PASSWORD
+    - GATEWAY_API_PASSWORD
+    timeout: 60
+    bundled: null
+    available_tools: []
   orchestrator:
     enabled: false
     type: platform
