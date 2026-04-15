@@ -1,8 +1,9 @@
 package com.huawei.opsfactory.gateway.service.channel;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.huawei.opsfactory.gateway.service.channel.model.ChannelConnectionConfig;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelDetail;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelLoginState;
-import com.huawei.opsfactory.gateway.service.channel.model.ChannelConnectionConfig;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -10,22 +11,20 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 @Service
-public class WhatsAppWebLoginService {
+public class WeChatLoginService {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final ChannelConfigService channelConfigService;
 
-    public WhatsAppWebLoginService(ChannelConfigService channelConfigService) {
+    public WeChatLoginService(ChannelConfigService channelConfigService) {
         this.channelConfigService = channelConfigService;
     }
 
@@ -38,30 +37,30 @@ public class WhatsAppWebLoginService {
             status = normalizeStatus(runtimeStatus);
         }
         String message = switch (status) {
-            case "connected" -> "WhatsApp Web session connected";
-            case "pending" -> "Login pending. QR runtime will be attached next.";
+            case "connected" -> "WeChat session connected";
+            case "pending" -> "WeChat QR login is pending";
             case "error" -> config.lastError() == null || config.lastError().isBlank()
-                    ? "WhatsApp Web connection error"
+                    ? "WeChat connection error"
                     : config.lastError();
-            default -> "WhatsApp Web login required";
+            default -> "WeChat login required";
         };
 
         String stateMessage = asString(runtimeState.get("message"));
         if (stateMessage != null && !stateMessage.isBlank()) {
             message = stateMessage;
         }
-        String stateSelfPhone = asString(runtimeState.get("selfPhone"));
         String stateConnectedAt = asString(runtimeState.get("lastConnectedAt"));
         String stateDisconnectedAt = asString(runtimeState.get("lastDisconnectedAt"));
         String stateError = asString(runtimeState.get("lastError"));
         String stateQr = asString(runtimeState.get("qrCodeDataUrl"));
+        String stateWechatId = asString(runtimeState.get("wechatId"));
 
         return new ChannelLoginState(
                 channel.id(),
                 status,
                 message,
                 config.authStateDir(),
-                stateSelfPhone != null ? stateSelfPhone : config.selfPhone(),
+                stateWechatId != null ? stateWechatId : config.wechatId(),
                 stateConnectedAt != null ? stateConnectedAt : config.lastConnectedAt(),
                 stateDisconnectedAt != null ? stateDisconnectedAt : config.lastDisconnectedAt(),
                 stateError != null ? stateError : config.lastError(),
@@ -88,7 +87,7 @@ public class WhatsAppWebLoginService {
             Files.createDirectories(outboxErrorDir);
             Files.createDirectories(logFile.getParent());
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to create WhatsApp auth directory", e);
+            throw new IllegalStateException("Failed to create WeChat runtime directory", e);
         }
 
         channelConfigService.updateChannelConfig(channelId, current -> new ChannelConnectionConfig(
@@ -104,8 +103,8 @@ public class WhatsAppWebLoginService {
 
         writeInitialStateFile(channel, stateFile);
         startHelperProcess(channel, authDir, stateFile, pidFile, logFile, inboxDir, outboxPendingDir, outboxSentDir, outboxErrorDir);
-        channelConfigService.recordEvent(channelId, "info", "whatsapp.login_requested",
-                "WhatsApp Web login requested; auth directory prepared at " + authDir);
+        channelConfigService.recordEvent(channelId, "info", "wechat.login_requested",
+                "WeChat login requested; auth directory prepared at " + authDir);
 
         return getLoginState(channelId);
     }
@@ -137,19 +136,19 @@ public class WhatsAppWebLoginService {
                 current.lastConnectedAt(),
                 Instant.now().toString(),
                 "",
-                "",
+                current.selfPhone(),
                 current.wechatId(),
                 current.displayName()
         ));
-        channelConfigService.recordEvent(channelId, "info", "whatsapp.logged_out",
-                "Cleared WhatsApp Web auth state");
+        channelConfigService.recordEvent(channelId, "info", "wechat.logged_out",
+                "Cleared WeChat auth state");
 
         return new ChannelLoginState(
                 updated.id(),
                 "disconnected",
-                "WhatsApp Web login required",
+                "WeChat login required",
                 updated.config().authStateDir(),
-                updated.config().selfPhone(),
+                updated.config().wechatId(),
                 updated.config().lastConnectedAt(),
                 updated.config().lastDisconnectedAt(),
                 updated.config().lastError(),
@@ -162,8 +161,8 @@ public class WhatsAppWebLoginService {
         if (channel == null) {
             throw new IllegalArgumentException("Channel '" + channelId + "' not found");
         }
-        if (!"whatsapp".equals(channel.type())) {
-            throw new IllegalArgumentException("Channel '" + channelId + "' is not a WhatsApp channel");
+        if (!"wechat".equals(channel.type())) {
+            throw new IllegalArgumentException("Channel '" + channelId + "' is not a WeChat channel");
         }
         return channel;
     }
@@ -216,9 +215,10 @@ public class WhatsAppWebLoginService {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("channelId", channel.id());
         payload.put("status", "pending");
-        payload.put("message", "Initializing WhatsApp Web helper...");
+        payload.put("message", "Preparing WeChat QR login...");
         payload.put("authStateDir", channel.config().authStateDir());
-        payload.put("selfPhone", channel.config().selfPhone());
+        payload.put("wechatId", channel.config().wechatId());
+        payload.put("displayName", channel.config().displayName());
         payload.put("lastConnectedAt", channel.config().lastConnectedAt());
         payload.put("lastDisconnectedAt", channel.config().lastDisconnectedAt());
         payload.put("lastError", "");
@@ -226,7 +226,7 @@ public class WhatsAppWebLoginService {
         try {
             Files.writeString(stateFile, MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(payload), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to write WhatsApp login state file", e);
+            throw new IllegalStateException("Failed to write WeChat login state file", e);
         }
     }
 
@@ -239,10 +239,10 @@ public class WhatsAppWebLoginService {
                                     Path outboxPendingDir,
                                     Path outboxSentDir,
                                     Path outboxErrorDir) {
-        Path helperDir = channelConfigService.getGatewayRoot().resolve("tools").resolve("whatsapp-web-helper");
-        Path helperEntry = helperDir.resolve("index.js");
+        Path helperDir = channelConfigService.getGatewayRoot().resolve("tools").resolve("wechat-helper");
+        Path helperEntry = helperDir.resolve("index.mjs");
         if (!Files.exists(helperEntry)) {
-            throw new IllegalStateException("WhatsApp Web helper not found: " + helperEntry);
+            throw new IllegalStateException("WeChat helper not found: " + helperEntry);
         }
 
         List<String> command = new ArrayList<>();
@@ -266,11 +266,8 @@ public class WhatsAppWebLoginService {
         command.add(outboxSentDir.toString());
         command.add("--outbox-error-dir");
         command.add(outboxErrorDir.toString());
-
-        if (channel.config().selfPhone() != null && !channel.config().selfPhone().isBlank()) {
-            command.add("--self-phone");
-            command.add(channel.config().selfPhone());
-        }
+        command.add("--log-file");
+        command.add(logFile.toString());
 
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.directory(helperDir.toFile());
@@ -279,7 +276,7 @@ public class WhatsAppWebLoginService {
         try {
             builder.start();
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to start WhatsApp Web helper", e);
+            throw new IllegalStateException("Failed to start WeChat helper", e);
         }
     }
 

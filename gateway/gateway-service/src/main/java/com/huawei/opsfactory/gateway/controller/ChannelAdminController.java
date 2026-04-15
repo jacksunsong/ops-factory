@@ -3,6 +3,7 @@ package com.huawei.opsfactory.gateway.controller;
 import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.channel.ChannelAdapterRegistry;
 import com.huawei.opsfactory.gateway.service.channel.ChannelConfigService;
+import com.huawei.opsfactory.gateway.service.channel.WeChatLoginService;
 import com.huawei.opsfactory.gateway.service.channel.WhatsAppMessagePumpService;
 import com.huawei.opsfactory.gateway.service.channel.WhatsAppWebLoginService;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelDetail;
@@ -41,15 +42,18 @@ public class ChannelAdminController {
     private final ChannelAdapterRegistry channelAdapterRegistry;
     private final WhatsAppWebLoginService whatsAppWebLoginService;
     private final WhatsAppMessagePumpService whatsAppMessagePumpService;
+    private final WeChatLoginService weChatLoginService;
 
     public ChannelAdminController(ChannelConfigService channelConfigService,
                                   ChannelAdapterRegistry channelAdapterRegistry,
                                   WhatsAppWebLoginService whatsAppWebLoginService,
-                                  WhatsAppMessagePumpService whatsAppMessagePumpService) {
+                                  WhatsAppMessagePumpService whatsAppMessagePumpService,
+                                  WeChatLoginService weChatLoginService) {
         this.channelConfigService = channelConfigService;
         this.channelAdapterRegistry = channelAdapterRegistry;
         this.whatsAppWebLoginService = whatsAppWebLoginService;
         this.whatsAppMessagePumpService = whatsAppMessagePumpService;
+        this.weChatLoginService = weChatLoginService;
     }
 
     @GetMapping
@@ -208,7 +212,15 @@ public class ChannelAdminController {
         UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
-                ChannelLoginState state = whatsAppWebLoginService.getLoginState(channelId);
+                ChannelDetail detail = channelConfigService.getChannel(channelId);
+                if (detail == null) {
+                    return ResponseEntity.badRequest().body(errorBody("Channel '" + channelId + "' not found"));
+                }
+                ChannelLoginState state = switch (detail.type()) {
+                    case "wechat" -> weChatLoginService.getLoginState(channelId);
+                    case "whatsapp" -> whatsAppWebLoginService.getLoginState(channelId);
+                    default -> throw new IllegalArgumentException(detail.type() + " login is not implemented yet");
+                };
                 return ResponseEntity.ok(Map.<String, Object>of("state", state));
             } catch (IllegalArgumentException e) {
                 return ResponseEntity.badRequest().body(errorBody(e.getMessage()));
@@ -226,17 +238,18 @@ public class ChannelAdminController {
                 if (detail == null) {
                     return ResponseEntity.badRequest().body(errorBody("Channel '" + channelId + "' not found"));
                 }
-                if (!"whatsapp".equals(detail.type())) {
-                    return ResponseEntity.badRequest().body(errorBody(detail.type() + " login is not implemented yet"));
-                }
-                ChannelLoginState state = whatsAppWebLoginService.startLogin(channelId);
+                ChannelLoginState state = switch (detail.type()) {
+                    case "wechat" -> weChatLoginService.startLogin(channelId);
+                    case "whatsapp" -> whatsAppWebLoginService.startLogin(channelId);
+                    default -> throw new IllegalArgumentException(detail.type() + " login is not implemented yet");
+                };
                 return ResponseEntity.ok(Map.<String, Object>of("success", true, "state", state));
             } catch (IllegalArgumentException e) {
                 return ResponseEntity.badRequest().body(errorBody(e.getMessage()));
             } catch (Exception e) {
                 log.error("Failed to start login for channel {}", channelId, e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(errorBody("Failed to start WhatsApp login"));
+                        .body(errorBody("Failed to start channel login"));
             }
         }).subscribeOn(Schedulers.boundedElastic());
     }
@@ -251,18 +264,23 @@ public class ChannelAdminController {
                 if (detail == null) {
                     return ResponseEntity.badRequest().body(errorBody("Channel '" + channelId + "' not found"));
                 }
-                if (!"whatsapp".equals(detail.type())) {
+                if ("wechat".equals(detail.type())) {
+                    weChatLoginService.logout(channelId);
+                } else if ("whatsapp".equals(detail.type())) {
+                    whatsAppWebLoginService.logout(channelId);
+                } else {
                     return ResponseEntity.badRequest().body(errorBody(detail.type() + " login is not implemented yet"));
                 }
-                whatsAppWebLoginService.logout(channelId);
                 detail = channelConfigService.resetChannelRuntimeState(channelId);
+                String disconnectedMessage = "wechat".equals(detail.type())
+                        ? "WeChat login required"
+                        : "WhatsApp Web login required";
                 ChannelLoginState state = new ChannelLoginState(
                         detail.id(),
                         "disconnected",
-                        "WhatsApp Web login required",
+                        disconnectedMessage,
                         detail.config().authStateDir(),
-                        detail.config().sessionLabel(),
-                        detail.config().selfPhone(),
+                        "wechat".equals(detail.type()) ? detail.config().wechatId() : detail.config().selfPhone(),
                         detail.config().lastConnectedAt(),
                         detail.config().lastDisconnectedAt(),
                         detail.config().lastError(),
@@ -273,18 +291,23 @@ public class ChannelAdminController {
                 return ResponseEntity.badRequest().body(errorBody(e.getMessage()));
             } catch (Throwable e) {
                 log.error("Failed to logout channel {}", channelId, e);
-                ChannelDetail detail = channelConfigService.resetChannelRuntimeState(channelId);
+                ChannelDetail detail = channelConfigService.getChannel(channelId);
+                if (detail != null) {
+                    detail = channelConfigService.resetChannelRuntimeState(channelId);
+                }
                 if (detail == null) {
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                            .body(errorBody(e.getMessage() != null ? e.getMessage() : "Failed to clear WhatsApp login state"));
+                            .body(errorBody(e.getMessage() != null ? e.getMessage() : "Failed to clear channel login state"));
                 }
+                String disconnectedMessage = "wechat".equals(detail.type())
+                        ? "WeChat login required"
+                        : "WhatsApp Web login required";
                 ChannelLoginState fallbackState = new ChannelLoginState(
                         detail.id(),
                         "disconnected",
-                        "WhatsApp Web login required",
+                        disconnectedMessage,
                         detail.config().authStateDir(),
-                        detail.config().sessionLabel(),
-                        "",
+                        "wechat".equals(detail.type()) ? detail.config().wechatId() : "",
                         detail.config().lastConnectedAt(),
                         detail.config().lastDisconnectedAt(),
                         "",
@@ -305,6 +328,9 @@ public class ChannelAdminController {
                 ChannelDetail detail = channelConfigService.getChannel(channelId);
                 if (detail == null) {
                     return ResponseEntity.badRequest().body(errorBody("Channel '" + channelId + "' not found"));
+                }
+                if ("wechat".equals(detail.type())) {
+                    return ResponseEntity.badRequest().body(errorBody("wechat self-test is not implemented yet"));
                 }
                 if (!"whatsapp".equals(detail.type())) {
                     return ResponseEntity.badRequest().body(errorBody(detail.type() + " self-test is not implemented yet"));

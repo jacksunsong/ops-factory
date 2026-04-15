@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { ScheduledJob, ScheduleSessionInfo } from '@goosed/sdk'
+import { buildChatSessionState } from '../../../platform/chat/chatRouteState'
 import { useGoosed } from '../../../platform/providers/GoosedContext'
 import { useToast } from '../../../platform/providers/ToastContext'
 import { useInbox } from '../../../platform/providers/InboxContext'
@@ -387,7 +388,9 @@ export default function ScheduledActions() {
 
     const handleOpenRunSession = (job: ScheduledJobRecord, sessionId: string) => {
         markSessionRead(job.agentId, sessionId)
-        navigate(`/chat?sessionId=${sessionId}&agent=${job.agentId}`)
+        navigate('/chat', {
+            state: buildChatSessionState(sessionId, job.agentId),
+        })
     }
 
     return (

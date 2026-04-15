@@ -5,6 +5,7 @@ import PageBackLink from '../../../platform/ui/primitives/PageBackLink'
 import Button from '../../../platform/ui/primitives/Button'
 import ActionMenu, { type ActionMenuItem } from '../../../platform/ui/primitives/ActionMenu'
 import DetailDialog from '../../../platform/ui/primitives/DetailDialog'
+import { buildChatSessionState } from '../../../platform/chat/chatRouteState'
 import { useChannels } from '../hooks/useChannels'
 import { useToast } from '../../../platform/providers/ToastContext'
 import { useGoosed } from '../../../platform/providers/GoosedContext'
@@ -23,7 +24,6 @@ type ChannelFormState = {
 
 const EMPTY_CONFIG: ChannelConnectionConfig = {
     loginStatus: 'disconnected',
-    sessionLabel: '',
     authStateDir: 'auth',
     lastConnectedAt: '',
     lastDisconnectedAt: '',
@@ -284,7 +284,7 @@ export default function ChannelConfigurePage() {
         )
     }
 
-    if (error || !channelId || !channel) {
+    if (!channelId || (!channel && !isLoading)) {
         return (
             <div className="page-container sidebar-top-page channel-configure-page">
                 <div className="channel-configure-error">
@@ -297,6 +297,7 @@ export default function ChannelConfigurePage() {
         )
     }
 
+    const currentChannel = channel!
     const bindings = channel?.bindings ?? []
     const events = channel?.events ?? []
     const loginStatus = loginState?.status || form.config.loginStatus || 'disconnected'
@@ -369,7 +370,7 @@ export default function ChannelConfigurePage() {
                         <div>
                             <div className="channel-configure-title-line">
                                 <h1 className="channel-configure-title">
-                                    {form.name || channel.id}
+                                    {form.name || currentChannel.id}
                                 </h1>
                                 <span className={`channel-status-badge ${getStatusTone(channelStatus)}`}>
                                     {statusLabel}
@@ -446,7 +447,7 @@ export default function ChannelConfigurePage() {
                                     </label>
                                     <label className="channel-form-field">
                                         <span>{t('channels.ownerUser')}</span>
-                                        <input value={channel.ownerUserId} readOnly />
+                                        <input value={currentChannel.ownerUserId} readOnly />
                                     </label>
                                 </div>
                                 <p className="channel-overview-note">{t('channels.ownershipNote')}</p>
@@ -464,13 +465,6 @@ export default function ChannelConfigurePage() {
                                     </div>
                                 </div>
                                 <div className="channel-form-grid">
-                                    <label className="channel-form-field">
-                                        <span>{t('channels.sessionLabel')}</span>
-                                        <input
-                                            value={form.config.sessionLabel}
-                                            onChange={(event) => updateConfigField('sessionLabel', event.target.value)}
-                                        />
-                                    </label>
                                     {isWhatsApp && (
                                         <label className="channel-form-field">
                                             <span>{t('channels.selfPhone')}</span>
@@ -569,7 +563,9 @@ export default function ChannelConfigurePage() {
                                             {selfTestResult && (
                                                 <Button
                                                     variant="ghost"
-                                                    onClick={() => navigate(`/chat?sessionId=${selfTestResult.sessionId}&agent=${selfTestResult.agentId}`)}
+                                                    onClick={() => navigate('/chat', {
+                                                        state: buildChatSessionState(selfTestResult.sessionId, selfTestResult.agentId),
+                                                    })}
                                                 >
                                                     {t('channels.openSession')}
                                                 </Button>
@@ -661,9 +657,11 @@ export default function ChannelConfigurePage() {
                                 <img
                                     className="channel-qr-image"
                                     src={loginState?.qrCodeDataUrl || ''}
-                                    alt={t('channels.qrAlt')}
+                                    alt={isWeChat ? t('channels.qrAlt_wechat') : t('channels.qrAlt')}
                                 />
-                                <p className="channel-webhook-hint">{t('channels.qrHint')}</p>
+                                <p className="channel-webhook-hint">
+                                    {isWeChat ? t('channels.qrHint_wechat') : t('channels.qrHint')}
+                                </p>
                             </div>
                         )}
 

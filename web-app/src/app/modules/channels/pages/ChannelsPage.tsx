@@ -61,6 +61,16 @@ function getStatusLabel(status: string, t: (key: string) => string): string {
     }
 }
 
+function getTypeLabel(type: string, t: (key: string) => string): string {
+    switch (type) {
+    case 'wechat':
+        return t('channels.type_wechat')
+    case 'whatsapp':
+    default:
+        return t('channels.type_whatsapp')
+    }
+}
+
 export default function ChannelsPage() {
     const { t } = useTranslation()
     const navigate = useNavigate()
@@ -80,12 +90,12 @@ export default function ChannelsPage() {
             return [
                 channel.name,
                 channel.id,
-                channel.type,
+                getTypeLabel(channel.type, t),
                 channel.defaultAgentId,
                 channel.status,
             ].some(value => value.toLowerCase().includes(term))
         })
-    }, [channels, searchTerm])
+    }, [channels, searchTerm, t])
 
     const handleDelete = async (channelId: string, name: string) => {
         const confirmed = window.confirm(t('channels.confirmDelete', { name }))
@@ -145,7 +155,7 @@ export default function ChannelsPage() {
                                 statusTone={getStatusTone(channel.status)}
                                 summary={(
                                     <div className="channel-card-summary">
-                                        <span className="resource-card-tag">WhatsApp Web</span>
+                                        <span className="resource-card-tag">{getTypeLabel(channel.type, t)}</span>
                                     </div>
                                 )}
                                 metrics={[

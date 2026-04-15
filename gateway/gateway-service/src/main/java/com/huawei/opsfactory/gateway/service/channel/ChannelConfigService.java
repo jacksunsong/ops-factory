@@ -275,7 +275,6 @@ public class ChannelConfigService {
                 Instant.now().toString(),
                 new ChannelConnectionConfig(
                         "disconnected",
-                        existing.config().sessionLabel(),
                         existing.config().authStateDir(),
                         "",
                         "",
@@ -351,10 +350,8 @@ public class ChannelConfigService {
             if (!isConfiguredValue(config.authStateDir())) issues.add("authStateDir is required");
             if ("error".equals(config.loginStatus()) && isConfiguredValue(config.lastError())) {
                 issues.add(config.lastError());
-            } else if ("wechat".equals(channel.type()) && channel.enabled()) {
-                issues.add("WeChat channel runtime is not implemented yet");
             } else if (channel.enabled() && !"connected".equals(config.loginStatus())) {
-                issues.add("WhatsApp Web login required");
+                issues.add("wechat".equals(channel.type()) ? "WeChat login required" : "WhatsApp Web login required");
             }
         }
 
@@ -423,7 +420,6 @@ public class ChannelConfigService {
         }
         return new ChannelConnectionConfig(
                 normalizeLoginStatus(config.loginStatus()),
-                emptyIfNull(config.sessionLabel()),
                 emptyIfNull(config.authStateDir()).isBlank() ? "auth" : config.authStateDir().trim(),
                 emptyIfNull(config.lastConnectedAt()),
                 emptyIfNull(config.lastDisconnectedAt()),
@@ -441,7 +437,6 @@ public class ChannelConfigService {
         }
         return new ChannelConnectionConfig(
                 normalizeLoginStatus(choose(updates.loginStatus(), current.loginStatus())),
-                choose(updates.sessionLabel(), current.sessionLabel()),
                 choose(updates.authStateDir(), current.authStateDir()),
                 choose(updates.lastConnectedAt(), current.lastConnectedAt()),
                 choose(updates.lastDisconnectedAt(), current.lastDisconnectedAt()),
@@ -459,7 +454,6 @@ public class ChannelConfigService {
     private ChannelConnectionConfig defaultConfig(String type) {
         return new ChannelConnectionConfig(
                 "disconnected",
-                "wechat".equals(type) ? "Personal WeChat" : "Personal WhatsApp",
                 "auth",
                 "",
                 "",
@@ -608,7 +602,6 @@ public class ChannelConfigService {
     private ChannelConnectionConfig deserializeChannelConfig(String type, Map<String, Object> rawConfig) {
         String normalizedType = normalizeType(type);
         if (rawConfig.containsKey("loginStatus")
-                || rawConfig.containsKey("sessionLabel")
                 || rawConfig.containsKey("authStateDir")
                 || rawConfig.containsKey("selfPhone")
                 || rawConfig.containsKey("wechatId")
@@ -619,7 +612,6 @@ public class ChannelConfigService {
         if ("whatsapp".equals(normalizedType) && !rawConfig.isEmpty()) {
             return new ChannelConnectionConfig(
                     "disconnected",
-                    "Personal WhatsApp",
                     "auth",
                     "",
                     "",
@@ -797,7 +789,6 @@ public class ChannelConfigService {
 
             ChannelConnectionConfig merged = new ChannelConnectionConfig(
                     runtimeStatus != null ? normalizeLoginStatus(runtimeStatus) : current.loginStatus(),
-                    current.sessionLabel(),
                     current.authStateDir(),
                     runtimeConnectedAt != null ? runtimeConnectedAt : current.lastConnectedAt(),
                     runtimeDisconnectedAt != null ? runtimeDisconnectedAt : current.lastDisconnectedAt(),

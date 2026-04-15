@@ -37,13 +37,11 @@ export default function CreateChannelModal({
 
     const [name, setName] = useState('')
     const [type, setType] = useState<ChannelType>('whatsapp')
-    const [sessionLabel, setSessionLabel] = useState('Personal WhatsApp')
     const [agentId, setAgentId] = useState(defaultAgentId)
     const [fallbackSuffix] = useState(() => Math.random().toString(36).slice(2, 8))
 
     const handleTypeChange = (nextType: ChannelType) => {
         setType(nextType)
-        setSessionLabel(nextType === 'wechat' ? 'Personal WeChat' : 'Personal WhatsApp')
     }
 
     const handleCreate = async () => {
@@ -64,7 +62,6 @@ export default function CreateChannelModal({
             defaultAgentId: agentId,
             config: {
                 loginStatus: 'disconnected',
-                sessionLabel: sessionLabel.trim() || (type === 'wechat' ? 'Personal WeChat' : 'Personal WhatsApp'),
                 authStateDir: 'auth',
                 lastConnectedAt: '',
                 lastDisconnectedAt: '',
@@ -139,15 +136,6 @@ export default function CreateChannelModal({
                         </select>
                     </div>
 
-                    <div className="form-group">
-                        <label className="form-label">{t('channels.sessionLabel')}</label>
-                        <input
-                            className="form-input"
-                            type="text"
-                            value={sessionLabel}
-                            onChange={(event) => setSessionLabel(event.target.value)}
-                        />
-                    </div>
                 </div>
 
                 <div className="modal-footer">

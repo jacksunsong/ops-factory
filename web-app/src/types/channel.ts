@@ -2,7 +2,6 @@ export type ChannelType = 'whatsapp' | 'wechat'
 
 export interface ChannelConnectionConfig {
     loginStatus: string
-    sessionLabel: string
     authStateDir: string
     lastConnectedAt: string
     lastDisconnectedAt: string
@@ -89,7 +88,6 @@ export interface ChannelLoginState {
     status: string
     message: string
     authStateDir: string
-    sessionLabel: string
     selfPhone: string
     lastConnectedAt: string
     lastDisconnectedAt: string

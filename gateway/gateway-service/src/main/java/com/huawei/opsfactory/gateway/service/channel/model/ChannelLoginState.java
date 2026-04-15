@@ -5,7 +5,6 @@ public record ChannelLoginState(
         String status,
         String message,
         String authStateDir,
-        String sessionLabel,
         String selfPhone,
         String lastConnectedAt,
         String lastDisconnectedAt,

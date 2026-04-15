@@ -87,7 +87,6 @@ async function runLogin(args) {
   const outboxSentDir = args["outbox-sent-dir"];
   const outboxErrorDir = args["outbox-error-dir"];
   const debugLogFile = path.join(path.dirname(stateFile), "whatsapp-debug.log");
-  const sessionLabel = args["session-label"] ?? "";
   const selfPhone = args["self-phone"] ?? "";
 
   if (!stateFile || !pidFile || !authDir || !inboxDir || !outboxPendingDir || !outboxSentDir || !outboxErrorDir) {
@@ -108,7 +107,6 @@ async function runLogin(args) {
     status: "pending",
     message: "Initializing WhatsApp Web login...",
     authStateDir: authDir,
-    sessionLabel,
     selfPhone,
     lastConnectedAt: "",
     lastDisconnectedAt: "",

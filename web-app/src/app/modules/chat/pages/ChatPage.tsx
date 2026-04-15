@@ -1,9 +1,15 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useGoosed } from '../../../platform/providers/GoosedContext'
 import { useInbox } from '../../../platform/providers/InboxContext'
 import { useToast } from '../../../platform/providers/ToastContext'
+import {
+    buildChatSessionState,
+    clearPersistedChatSessionLocator,
+    persistChatSessionLocator,
+    resolveChatRouteState,
+} from '../../../platform/chat/chatRouteState'
 import { useChat, convertBackendMessage } from '../../../platform/chat/useChat'
 import MessageList from '../../../platform/chat/MessageList'
 import ChatInput from '../../../platform/chat/ChatInput'
@@ -13,15 +19,10 @@ import type { AttachedFile } from '../../../../types/message'
 import { isScheduledSession } from '../../../../config/runtime'
 import {
     createSessionLocator,
-    parseSessionLocatorFromSearchParams,
     SessionLocatorError,
     type SessionLocatorState,
 } from '../../../../utils/sessionLocator'
 import '../styles/chat.css'
-
-interface LocationState {
-    initialMessage?: string
-}
 
 interface ModelInfo {
     provider: string
@@ -55,9 +56,11 @@ export default function Chat() {
     const { markSessionRead } = useInbox()
     const { showToast } = useToast()
 
-    const sessionId = searchParams.get('sessionId')
-    const agentParam = searchParams.get('agent')
-    const routeLocatorState = parseSessionLocatorFromSearchParams(searchParams)
+    const routeResolution = useMemo(
+        () => resolveChatRouteState(searchParams, location.state),
+        [searchParams, location.state],
+    )
+    const routeLocatorState = routeResolution.locatorState
 
     const [locatorState, setLocatorState] = useState<SessionLocatorState>(routeLocatorState)
     const [session, setSession] = useState<Session | null>(null)
@@ -124,8 +127,8 @@ export default function Chat() {
         }
     }, [error, showToast, t])
 
-    const locationState = location.state as LocationState | null
-    const initialMessage = locationState?.initialMessage
+    const initialMessage = routeResolution.initialMessage
+    const preferredAgentId = routeResolution.preferredAgentId
 
     useEffect(() => {
         const fetchModelInfo = async () => {
@@ -142,15 +145,20 @@ export default function Chat() {
         fetchModelInfo()
     }, [client, isConnected])
 
-    const createSessionWithAgent = useCallback(async (agentId: string) => {
+    const createSessionWithAgent = useCallback(async (agentId: string, options: { initialMessage?: string } = {}) => {
         setIsCreatingSession(true)
         try {
             const agentClient = getClient(agentId)
             const newSession = await agentClient.startSession()
+            const nextLocator = createSessionLocator(newSession.id, agentId)
             setSession(newSession)
-            setLocatorState({ kind: 'ready', locator: createSessionLocator(newSession.id, agentId) })
+            setLocatorState({ kind: 'ready', locator: nextLocator })
+            persistChatSessionLocator(nextLocator)
             clearMessages()
-            navigate(`/chat?sessionId=${newSession.id}&agent=${agentId}`, { replace: true })
+            navigate('/chat', {
+                replace: true,
+                state: buildChatSessionState(newSession.id, agentId, { initialMessage: options.initialMessage }),
+            })
             return newSession
         } catch (err) {
             console.error('Failed to create session:', err)
@@ -165,6 +173,12 @@ export default function Chat() {
         if (agentId === activeAgentId) return
         await createSessionWithAgent(agentId)
     }, [activeAgentId, createSessionWithAgent])
+
+    useEffect(() => {
+        if (locatorState.kind === 'ready') {
+            persistChatSessionLocator(locatorState.locator)
+        }
+    }, [locatorState])
 
     useEffect(() => {
         let cancelled = false
@@ -201,11 +215,24 @@ export default function Chat() {
             if (!isConnected || agents.length === 0) return
 
             if (locatorState.kind === 'idle') {
-                clearMessages()
-                setSession(null)
-                setInitError(null)
-                setIsInitializing(false)
-                navigate('/', { replace: true })
+                const fallbackAgentId = (
+                    preferredAgentId && agents.some(agent => agent.id === preferredAgentId)
+                        ? preferredAgentId
+                        : agents.find(agent => agent.id === 'universal-agent')?.id || agents[0]?.id || ''
+                )
+
+                if (!fallbackAgentId) {
+                    clearMessages()
+                    setSession(null)
+                    setInitError('No agent available to start a chat session')
+                    setIsInitializing(false)
+                    return
+                }
+
+                const createdSession = await createSessionWithAgent(fallbackAgentId, { initialMessage })
+                if (!createdSession && !cancelled) {
+                    setIsInitializing(false)
+                }
                 return
             }
 
@@ -242,8 +269,17 @@ export default function Chat() {
 
                     return { kind: 'ready', locator: nextLocator }
                 })
-                if (agentParam !== ownerAgentId) {
-                    navigate(`/chat?sessionId=${activeSessionId}&agent=${ownerAgentId}`, { replace: true })
+                persistChatSessionLocator(nextLocator)
+                if (
+                    routeResolution.source !== 'state' ||
+                    routeLocatorState.kind !== 'ready' ||
+                    routeLocatorState.locator.sessionId !== nextLocator.sessionId ||
+                    routeLocatorState.locator.agentId !== nextLocator.agentId
+                ) {
+                    navigate('/chat', {
+                        replace: true,
+                        state: buildChatSessionState(activeSessionId, ownerAgentId),
+                    })
                 }
                 setSession(resumedSession)
 
@@ -261,6 +297,13 @@ export default function Chat() {
             } catch (err) {
                 console.error('Failed to initialize session:', err)
                 if (!cancelled) {
+                    if (isNotFoundError(err) && routeResolution.source === 'storage') {
+                        clearPersistedChatSessionLocator()
+                        setLocatorState({ kind: 'idle' })
+                        setSession(null)
+                        setInitError(null)
+                        return
+                    }
                     const message = err instanceof Error ? err.message : 'Failed to load session'
                     if (err instanceof SessionLocatorError) {
                         setLocatorState({ kind: 'corrupted', reason: message, rawValue: locatorState })
@@ -278,7 +321,23 @@ export default function Chat() {
         return () => {
             cancelled = true
         }
-    }, [getClient, isConnected, activeSessionId, readyLocator, locatorState, agentParam, agents, setInitialMessages, clearMessages, navigate, markSessionRead])
+    }, [
+        getClient,
+        isConnected,
+        activeSessionId,
+        readyLocator,
+        locatorState,
+        agents,
+        setInitialMessages,
+        clearMessages,
+        navigate,
+        markSessionRead,
+        routeResolution,
+        routeLocatorState,
+        preferredAgentId,
+        initialMessage,
+        createSessionWithAgent,
+    ])
 
     useEffect(() => {
         if (initialMessage && locatorState.kind === 'ready' && activeSessionId && !isInitializing && messages.length === 0) {
@@ -286,9 +345,12 @@ export default function Chat() {
             if (messageId) {
                 setPendingUserMessageAnchorId(messageId)
             }
-            window.history.replaceState({}, document.title)
+            navigate('/chat', {
+                replace: true,
+                state: buildChatSessionState(activeSessionId, activeAgentId),
+            })
         }
-    }, [initialMessage, locatorState, activeSessionId, isInitializing, messages.length, sendMessage])
+    }, [initialMessage, locatorState, activeSessionId, activeAgentId, isInitializing, messages.length, sendMessage, navigate])
 
     useEffect(() => {
         return () => {
@@ -627,7 +689,7 @@ export default function Chat() {
                             isLoading={isLoading}
                             chatState={chatState}
                             agentId={activeAgentId}
-                            sessionId={activeSessionId || sessionId}
+                            sessionId={activeSessionId || undefined}
                             outputFilesEvent={outputFilesEvent}
                             onRetry={handleRetry}
                             scrollContainerRef={messageScrollContainerRef}

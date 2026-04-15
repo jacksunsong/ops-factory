@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useGoosed } from '../../../platform/providers/GoosedContext'
 import { useUser } from '../../../platform/providers/UserContext'
 import { useToast } from '../../../platform/providers/ToastContext'
+import { buildNewChatState } from '../../../platform/chat/chatRouteState'
 import ChatInput from '../../../platform/chat/ChatInput'
 import GooseAvatarIcon from '../../../platform/chat/GooseAvatarIcon'
 import { gatewayHeaders } from '../../../../config/runtime'
@@ -101,11 +102,8 @@ export default function HomePage() {
 
         setIsCreatingSession(true)
         try {
-            const client = getClient(selectedAgent)
-            const session = await client.startSession()
-
-            navigate(`/chat?sessionId=${session.id}&agent=${selectedAgent}`, {
-                state: { initialMessage: message },
+            navigate('/chat', {
+                state: buildNewChatState(selectedAgent, message),
             })
         } catch (err) {
             console.error('Failed to create session:', err)
