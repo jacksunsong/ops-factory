@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useTranslation } from 'react-i18next'
 import './Message.css'
 import './ToolCallDisplay.css'
 import ToolCallDisplay from './ToolCallDisplay'
@@ -176,6 +177,7 @@ function MessageInner({
     outputFiles = [],
     showFileCapsules = true,
 }: MessageProps) {
+    const { t } = useTranslation()
     const isUser = message.role === 'user'
 
     const fullText = getFullTextContent(message)
@@ -217,7 +219,7 @@ function MessageInner({
             pushProcessTextEntry({
                 key: `${message.id || 'message'}-${textBufferKind}-${items.length}`,
                 kind: textBufferKind,
-                label: textBufferKind === 'reasoning' ? '推理过程' : '思考过程',
+                label: textBufferKind === 'reasoning' ? t('chat.reasoning') : t('chat.thinkingLabel'),
                 content: textBuffer,
             })
 
@@ -278,7 +280,7 @@ function MessageInner({
                 pushProcessTextEntry({
                     key: `${message.id || 'message'}-reasoning-fallback`,
                     kind: 'reasoning',
-                    label: '推理过程',
+                    label: t('chat.reasoning'),
                     content: reasoningText,
                 })
             }
@@ -290,7 +292,7 @@ function MessageInner({
                 pushProcessTextEntry({
                     key: `${message.id || 'message'}-thinking-fallback`,
                     kind: 'thinking',
-                    label: '思考过程',
+                    label: t('chat.thinkingLabel'),
                     content: thinkingText,
                 })
             }

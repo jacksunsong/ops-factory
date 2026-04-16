@@ -44,8 +44,19 @@ export async function gw<T>(path: string, params?: Record<string, string>, metho
 export const tools = [
   // --- Query tools (7) ---
   {
+    name: 'list_system_resources',
+    description: '查询系统资源候选（系统名称 + 环境编码 Code）。当用户未明确系统或系统不唯一时，用于列出候选供用户选择。仅返回顶层系统资源（parentId 为空），支持 keyword 按系统名称或 Code 模糊匹配。',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        keyword: { type: 'string', description: '关键词（可选），按系统名称或环境编码 Code 模糊匹配' },
+        limit: { type: 'number', description: '返回条数（可选），默认 50，最大 200' },
+      },
+    },
+  },
+  {
     name: 'query_business_service_nodes',
-    description: '根据业务名称关键词查询业务服务并广度优先遍历完整拓扑链路（最多5跳）。唯一匹配时返回完整拓扑（业务→入口主机→下游主机），多个匹配时返回候选列表供消歧，无匹配返回空结果。',
+    description: '根据业务名称关键词查询业务服务候选及其业务上下文摘要，用于辅助理解业务归属和影响范围。该工具默认不返回主机列表和完整拓扑，不能直接作为主机级诊断入口。',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -56,14 +67,17 @@ export const tools = [
   },
   {
     name: 'query_hosts_by_scope',
-    description: '按资源范围查询主机列表，支持三种可选过滤维度（可组合）：groupName（分组名称模糊匹配）、clusterName（集群名称模糊匹配）、clusterType（集群类型精确匹配）。无参数时返回全部主机。',
+    description: '按明确资源范围查询主机列表，仅用于主机级诊断阶段。支持 groupName（分组名称模糊匹配）、clusterName（集群名称模糊匹配）、clusterType（集群类型精确匹配）。必须提供调用原因 reason，且禁止无范围参数时枚举全部主机。',
     inputSchema: {
       type: 'object' as const,
       properties: {
         groupName: { type: 'string', description: '分组名称（可选，模糊匹配）' },
         clusterName: { type: 'string', description: '集群名称（可选，模糊匹配）' },
         clusterType: { type: 'string', description: '集群类型（可选，精确匹配，如RCPA、HAPROXY、NSLB）' },
+        reason: { type: 'string', description: '调用原因（必填）：explicit_scope 或 health_root_alarm' },
+        evidence: { type: 'string', description: '辅助说明调用依据，例如 rootAlarm、alarmName、clusterName、用户明确输入的范围' },
       },
+      required: ['reason'],
     },
   },
   {
@@ -119,6 +133,18 @@ export const tools = [
     inputSchema: {
       type: 'object' as const,
       properties: {},
+    },
+  },
+  {
+    name: 'save_markdown_report',
+    description: '将最终诊断报告保存为本地 Markdown 文件到输出目录。用于将模型生成的最终报告落盘，避免仅在对话中输出。',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        fileName: { type: 'string', description: '输出文件名（可选）。默认 system-health-analysis-{yyyyMMddHHmmss}.md' },
+        content: { type: 'string', description: 'Markdown 内容（必填）' },
+      },
+      required: ['content'],
     },
   },
   // --- Execution tools (3) ---
@@ -275,14 +301,80 @@ function pickEach(arr: Record<string, unknown>[], keys: string[]): Record<string
 }
 
 const HOST_LIST_KEYS     = ['id', 'name', 'ip', 'clusterId', 'tags', 'purpose']
-const HOST_SUMMARY_KEYS  = ['id', 'name', 'ip', 'clusterId']
 const HOST_NODE_KEYS     = ['id', 'name', 'ip', 'clusterType', 'clusterName']
 const SOP_LIST_KEYS      = ['id', 'name', 'tags', 'mode', 'enabled']
 const CT_LIST_KEYS       = ['id', 'name', 'code', 'description', 'knowledge']
+const SYSTEM_LIST_KEYS   = ['id', 'name', 'code']
+const VALID_SCOPE_REASONS = new Set(['explicit_scope', 'health_root_alarm'])
+
+function formatTimestampForFile(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds()),
+  ].join('')
+}
+
+function sanitizeFileName(fileName: string): string {
+  const trimmed = fileName.trim()
+  if (!trimmed) return ''
+  const normalized = trimmed.replace(/[\\/]/g, '_')
+  return normalized.replace(/[^a-zA-Z0-9._\-\u4e00-\u9fff]/g, '_')
+}
 
 // ---------------------------------------------------------------------------
 // Tool handlers
 // ---------------------------------------------------------------------------
+
+export async function handleListSystemResources(params?: { keyword?: string; limit?: number }): Promise<string> {
+  const keyword = String(params?.keyword ?? '').trim()
+  const rawLimit = params?.limit
+  const limit = typeof rawLimit === 'number' && Number.isFinite(rawLimit)
+    ? Math.max(1, Math.min(200, Math.floor(rawLimit)))
+    : 50
+
+  const data = await gw<{ groups: Record<string, unknown>[] }>(`${API_PREFIX}/host-groups`)
+  const allGroups = data.groups ?? []
+  const systems = allGroups.filter(g => g.parentId == null)
+
+  const filtered = keyword
+    ? systems.filter(s => {
+      const name = String(s.name ?? '')
+      const code = String(s.code ?? '')
+      const lower = keyword.toLowerCase()
+      return name.toLowerCase().includes(lower) || code.toLowerCase().includes(lower)
+    })
+    : systems
+
+  const candidates = pickEach(filtered, SYSTEM_LIST_KEYS).slice(0, limit)
+
+  if (systems.length === 0) {
+    return JSON.stringify({
+      matchCount: 0,
+      message: '当前未配置任何系统资源（顶层分组）。请先在“系统资源”页签中创建系统，并填写 Code（环境编码 envCode）。',
+    }, null, 2)
+  }
+
+  if (keyword && filtered.length === 0) {
+    return JSON.stringify({
+      matchCount: 0,
+      message: `未找到匹配「${keyword}」的系统资源（按系统名称或 Code 模糊匹配）`,
+      totalSystems: systems.length,
+    }, null, 2)
+  }
+
+  return JSON.stringify({
+    matchCount: filtered.length,
+    returned: candidates.length,
+    totalSystems: systems.length,
+    message: keyword ? '已按关键词筛选系统资源候选' : '已列出系统资源候选（Code 为环境编码 envCode）',
+    candidates,
+  }, null, 2)
+}
 
 export async function handleQueryBusinessServiceNodes(keyword: string): Promise<string> {
   // Step 1: Search business services by keyword
@@ -309,33 +401,23 @@ export async function handleQueryBusinessServiceNodes(keyword: string): Promise<
     }, null, 2)
   }
 
-  // Unique match — fetch full detail concurrently
+  // Unique match — return business context summary instead of host topology.
   const bs = services[0]
   const bsId = String(bs.id)
-  const [resolved, hosts, topology] = await Promise.all([
-    gw<Record<string, unknown>>(`${API_PREFIX}/business-services/${encodeURIComponent(bsId)}/resolved`),
-    gw<Record<string, unknown>>(`${API_PREFIX}/business-services/${encodeURIComponent(bsId)}/hosts`),
-    gw<Record<string, unknown>>(`${API_PREFIX}/business-services/${encodeURIComponent(bsId)}/topology`),
-  ])
+  const resolved = await gw<Record<string, unknown>>(`${API_PREFIX}/business-services/${encodeURIComponent(bsId)}/resolved`)
 
   const businessService = pick(bs, ['id', 'name', 'code', 'groupId', 'tags'])
-  const trimmedHosts = pickEach(
-    ((hosts as Record<string, unknown>).hosts ?? []) as Record<string, unknown>[],
-    HOST_SUMMARY_KEYS,
+  const resolvedSummary = pick(
+    (resolved.resolved as Record<string, unknown> | undefined) ?? resolved,
+    ['id', 'name', 'code', 'groupId', 'groupName', 'envCode', 'systemName', 'tags']
   )
-  // Trim topology nodes
-  const topoNodes = ((topology as Record<string, unknown>).nodes ?? []) as Record<string, unknown>[]
-  const nodes = topoNodes.map((n: Record<string, unknown>) => {
-    if (n.nodeType === 'business-service') return pick(n, ['id', 'name', 'nodeType'])
-    return pick(n, ['id', 'name', 'ip', 'clusterType', 'isEntry'])
-  })
-  const edges = (topology as Record<string, unknown>).edges
 
   return JSON.stringify({
     matchCount: 1,
+    message: '已匹配到业务服务。请先结合系统健康分析、异常指标和告警根因收敛异常集群或根因告警，再决定是否进入主机级诊断。',
     businessService,
-    hosts: trimmedHosts,
-    topology: { nodes, edges },
+    resolvedSummary,
+    nextStep: 'health_analysis_first',
   }, null, 2)
 }
 
@@ -363,13 +445,26 @@ export async function handleQueryHostsByScope(params?: {
   groupName?: string
   clusterName?: string
   clusterType?: string
+  reason?: string
+  evidence?: string
 }): Promise<string> {
-  const { groupName, clusterName, clusterType } = params ?? {}
+  const { groupName, clusterName, clusterType, reason, evidence } = params ?? {}
 
-  // If no params at all, return all hosts
+  if (!reason || !VALID_SCOPE_REASONS.has(reason)) {
+    return JSON.stringify({
+      success: false,
+      reason: 'missing_or_invalid_reason',
+      message: 'query_hosts_by_scope 必须提供合法的调用原因 reason，可选值为 explicit_scope 或 health_root_alarm',
+    }, null, 2)
+  }
+
   if (!groupName && !clusterName && !clusterType) {
-    const data = await gw<{ hosts: Record<string, unknown>[] }>(`${API_PREFIX}/hosts`)
-    return JSON.stringify({ hosts: pickEach(data.hosts ?? [], HOST_LIST_KEYS) }, null, 2)
+    return JSON.stringify({
+      success: false,
+      reason: 'scope_required',
+      message: 'query_hosts_by_scope 仅支持在明确范围后查询主机，禁止无范围参数枚举全部主机',
+      allowedReasons: Array.from(VALID_SCOPE_REASONS),
+    }, null, 2)
   }
 
   // Resolve groupId from groupName
@@ -436,19 +531,65 @@ export async function handleQueryHostsByScope(params?: {
       return tags.some(t => t.toLowerCase() === clusterType.toLowerCase())
     })
     return JSON.stringify({
+      success: true,
+      reason,
+      evidence: evidence ?? '',
       filter: { clusterType },
       hosts: pickEach(filtered, HOST_LIST_KEYS),
     }, null, 2)
   }
 
   if (Object.keys(hostParams).length === 0) {
-    // No filters resolved — return all hosts
-    const data = await gw<{ hosts: Record<string, unknown>[] }>(`${API_PREFIX}/hosts`)
-    return JSON.stringify({ hosts: pickEach(data.hosts ?? [], HOST_LIST_KEYS) }, null, 2)
+    return JSON.stringify({
+      success: false,
+      reason: 'scope_not_resolved',
+      message: '未能根据当前范围解析出可查询的主机范围，请先收敛到明确集群、分组或资源类型',
+      inputScope: { groupName: groupName ?? '', clusterName: clusterName ?? '', clusterType: clusterType ?? '' },
+      evidence: evidence ?? '',
+    }, null, 2)
   }
 
   const data = await gw<{ hosts: Record<string, unknown>[] }>(`${API_PREFIX}/hosts`, hostParams)
-  return JSON.stringify({ hosts: pickEach(data.hosts ?? [], HOST_LIST_KEYS) }, null, 2)
+  return JSON.stringify({
+    success: true,
+    reason,
+    evidence: evidence ?? '',
+    hosts: pickEach(data.hosts ?? [], HOST_LIST_KEYS),
+  }, null, 2)
+}
+
+export async function handleSaveMarkdownReport(params?: { fileName?: string; content?: string }): Promise<string> {
+  const content = String(params?.content ?? '')
+  if (!content.trim()) {
+    return JSON.stringify({
+      success: false,
+      reason: 'empty_content',
+      message: 'content 不能为空',
+    }, null, 2)
+  }
+
+  const ts = formatTimestampForFile(new Date())
+  const rawName = params?.fileName ?? `system-health-analysis-${ts}.md`
+  const safeName = sanitizeFileName(rawName) || `system-health-analysis-${ts}.md`
+
+  mkdirSync(OUTPUT_DIR, { recursive: true })
+  const filePath = join(OUTPUT_DIR, safeName)
+
+  let finalContent = content
+  let truncated = false
+  if (finalContent.length > MAX_OUTPUT_SIZE) {
+    truncated = true
+    finalContent = finalContent.slice(0, MAX_OUTPUT_SIZE) + '\n\n... [内容超过 1MB，已截断] ...\n'
+  }
+
+  writeFileSync(filePath, finalContent, 'utf-8')
+
+  return JSON.stringify({
+    success: true,
+    fileName: safeName,
+    path: filePath,
+    truncated,
+  }, null, 2)
 }
 
 export async function handleListSops(tags?: string[]): Promise<string> {
@@ -497,10 +638,11 @@ export async function handleGetSopDetail(sopId: string): Promise<ContentItem[]> 
     parts.push('')
     parts.push('执行指引:')
     parts.push('1. 根据上述步骤描述，逐步推导出具体的 shell 诊断命令（只读命令，符合白名单）')
-    parts.push('2. 根据 SOP 的 tags 调用 query_hosts_by_scope，仅保留 IP 匹配告警的主机')
-    parts.push('3. 对每台目标主机调用 execute_remote_command 执行诊断命令')
-    parts.push('4. 分析输出，判断是否异常')
-    parts.push('5. 不需要生成 mermaid 流程图')
+    parts.push('2. 只有当目标主机范围已由用户明确指定，或已由健康分析收敛到明确根因对象时，才允许调用 query_hosts_by_scope')
+    parts.push('3. 调用 query_hosts_by_scope 时必须提供 reason（explicit_scope 或 health_root_alarm）以及对应 evidence')
+    parts.push('4. 对每台目标主机调用 execute_remote_command 执行诊断命令')
+    parts.push('5. 分析输出，判断是否异常')
+    parts.push('6. 不需要生成 mermaid 流程图')
 
     return [{ type: 'text', text: parts.join('\n') }]
   }
@@ -762,6 +904,11 @@ export async function handleGetClusterTypes(): Promise<string> {
 
 export async function dispatch(name: string, args: Record<string, unknown>): Promise<string | ContentItem[]> {
   switch (name) {
+    case 'list_system_resources':
+      return handleListSystemResources({
+        keyword: (args as { keyword?: string }).keyword,
+        limit: (args as { limit?: number }).limit,
+      })
     case 'query_business_service_nodes':
       return handleQueryBusinessServiceNodes((args as { keyword?: string }).keyword ?? '')
     case 'query_hosts_by_scope':
@@ -769,6 +916,8 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
         groupName: (args as { groupName?: string }).groupName,
         clusterName: (args as { clusterName?: string }).clusterName,
         clusterType: (args as { clusterType?: string }).clusterType,
+        reason: (args as { reason?: string }).reason,
+        evidence: (args as { evidence?: string }).evidence,
       })
     case 'get_host_neighbors':
       return handleGetHostNeighbors((args as { hostId?: string }).hostId ?? '')
@@ -782,6 +931,11 @@ export async function dispatch(name: string, args: Record<string, unknown>): Pro
       return handleGetSopDetail((args as { sopId?: string }).sopId ?? '')
     case 'get_cluster_types':
       return handleGetClusterTypes()
+    case 'save_markdown_report':
+      return handleSaveMarkdownReport({
+        fileName: (args as { fileName?: string }).fileName,
+        content: (args as { content?: string }).content,
+      })
     case 'execute_remote_command':
       return handleExecuteRemote(
         (args as { hostId?: string }).hostId ?? '',

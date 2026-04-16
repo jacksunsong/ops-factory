@@ -47,6 +47,7 @@ public class RemoteExecutionService {
             host = hostService.getHostWithCredential(hostId);
         } catch (IllegalArgumentException e) {
             Map<String, Object> result = new LinkedHashMap<>();
+            result.put("hostId", hostId);
             result.put("hostIp", "");
             result.put("username", "");
             result.put("hostName", "");
@@ -68,6 +69,7 @@ public class RemoteExecutionService {
         List<String> rejected = commandWhitelistService.validateCommand(command);
         if (!rejected.isEmpty()) {
             Map<String, Object> result = new LinkedHashMap<>();
+            result.put("hostId", hostId);
             result.put("hostIp", hostname);
             result.put("username", username);
             result.put("hostName", hostName);
@@ -160,6 +162,7 @@ public class RemoteExecutionService {
             String errorOutput = errorBuffer.toString(StandardCharsets.UTF_8);
 
             Map<String, Object> result = new LinkedHashMap<>();
+            result.put("hostId", hostId);
             result.put("hostIp", hostname);
             result.put("username", username);
             result.put("hostName", hostName);
@@ -174,6 +177,7 @@ public class RemoteExecutionService {
             log.error("SSH execution failed for host {}: {}", hostId, e.getMessage());
 
             Map<String, Object> result = new LinkedHashMap<>();
+            result.put("hostId", hostId);
             result.put("hostIp", hostname);
             result.put("username", username);
             result.put("hostName", hostName);
