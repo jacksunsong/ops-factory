@@ -5,11 +5,14 @@ This repository is a multi-service agent platform. The main development boundary
 
 ## Service Responsibilities
 - `web-app/`: React/Vite frontend for chat, files, history, settings, agent configuration, and admin control-center entry points.
-- `gateway/`: single backend entry for auth, routing, process management, config CRUD, file access, and session orchestration.
+- `gateway/`: single backend entry for auth, routing, process management, config CRUD, file access, session orchestration, and external channel bridging for WhatsApp/WeChat.
 - `control-center/`: platform control plane for service health, runtime observation, config/log access, and service actions.
 - `gateway/agents/*`: per-agent config, skills, memory, and provider definitions.
 - `typescript-sdk/`: typed client library for programmatic gateway access.
 - `test/`: cross-service integration and E2E coverage.
+
+## Detailed Architecture Docs
+- Channel bridging design for `whatsapp` and `wechat`: [channel-module.md](./channel-module.md)
 
 ## Non-Negotiable Boundaries
 - Frontend traffic must go through the gateway; do not add direct calls from UI to providers or local agent runtimes.
