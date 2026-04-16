@@ -22,6 +22,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class BusinessServiceService {
@@ -189,6 +190,11 @@ public class BusinessServiceService {
     }
 
     public boolean deleteBusinessService(String id) {
+        // Cascade delete related HostRelation records
+        if (hostRelationService != null) {
+            hostRelationService.deleteRelationsByBusinessService(id);
+        }
+
         Path file = businessServicesDir.resolve(id + ".json");
         try {
             if (Files.exists(file)) {
@@ -333,13 +339,17 @@ public class BusinessServiceService {
         bsNode.put("nodeType", "business-service");
         nodes.add(0, bsNode);
 
-        for (String entryHostId : entryHostIds.keySet()) {
-            Map<String, Object> bsEdge = new LinkedHashMap<>();
-            bsEdge.put("source", bs.get("id"));
-            bsEdge.put("target", entryHostId);
-            bsEdge.put("description", "initiateCall");
-            bsEdge.put("type", "business-entry");
-            edges.add(0, bsEdge);
+        List<Map<String, Object>> bsRelations = hostRelationService.listRelations(null, null, null, "business-service", id);
+        for (Map<String, Object> rel : bsRelations) {
+            String targetId = (String) rel.get("targetHostId");
+            if (targetId != null && hostMap.containsKey(targetId)) {
+                Map<String, Object> bsEdge = new LinkedHashMap<>();
+                bsEdge.put("source", bs.get("id"));
+                bsEdge.put("target", targetId);
+                bsEdge.put("description", rel.getOrDefault("description", ""));
+                bsEdge.put("type", "business-entry");
+                edges.add(0, bsEdge);
+            }
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -427,6 +437,39 @@ public class BusinessServiceService {
         result.put("businessServices", created);
         log.info("Migration complete: created {} business services", created.size());
         return result;
+    }
+
+    // ── Keyword search ───────────────────────────────────────────────
+
+    /**
+     * Sync hostIds on a business service from its HostRelation records.
+     */
+    @SuppressWarnings("unchecked")
+    public void syncHostIdsFromRelations(String bsId) {
+        Map<String, Object> bs = getBusinessService(bsId);
+        List<Map<String, Object>> rels = hostRelationService.listRelations(null, null, null, "business-service", bsId);
+        List<String> newHostIds = rels.stream()
+            .map(r -> (String) r.get("targetHostId"))
+            .collect(Collectors.toList());
+        bs.put("hostIds", newHostIds);
+        bs.put("updatedAt", Instant.now().toString());
+        writeEntityFile(bsId, bs);
+    }
+
+    /**
+     * Remove a host from all business services' hostIds (called when a host is deleted).
+     */
+    @SuppressWarnings("unchecked")
+    public void removeHostFromAllBusinessServices(String hostId) {
+        List<Map<String, Object>> allBs = listBusinessServices(null, null);
+        for (Map<String, Object> bs : allBs) {
+            List<String> hostIds = (List<String>) bs.getOrDefault("hostIds", new ArrayList<>());
+            if (hostIds.remove(hostId)) {
+                bs.put("hostIds", hostIds);
+                bs.put("updatedAt", Instant.now().toString());
+                writeEntityFile((String) bs.get("id"), bs);
+            }
+        }
     }
 
     // ── Keyword search ───────────────────────────────────────────────

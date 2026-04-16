@@ -51,6 +51,7 @@ export interface HostTestResult {
 export interface HostGroup {
     id: string
     name: string
+    code?: string
     parentId?: string | null
     description: string
     createdAt: string
@@ -107,6 +108,7 @@ export interface BusinessType {
 
 export interface HostRelation {
     id: string
+    sourceType?: 'host' | 'business-service'   // defaults to 'host'
     sourceHostId: string
     targetHostId: string
     description: string

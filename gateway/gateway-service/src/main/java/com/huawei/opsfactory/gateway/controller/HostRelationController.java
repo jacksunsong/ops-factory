@@ -33,10 +33,12 @@ public class HostRelationController {
             @RequestParam(value = "hostId", required = false) String hostId,
             @RequestParam(value = "groupId", required = false) String groupId,
             @RequestParam(value = "clusterId", required = false) String clusterId,
+            @RequestParam(value = "sourceType", required = false) String sourceType,
+            @RequestParam(value = "sourceId", required = false) String sourceId,
             ServerWebExchange exchange) {
         UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
-            List<Map<String, Object>> relations = hostRelationService.listRelations(hostId, groupId, clusterId);
+            List<Map<String, Object>> relations = hostRelationService.listRelations(hostId, groupId, clusterId, sourceType, sourceId);
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("relations", relations);
             return result;
@@ -178,14 +180,15 @@ public class HostRelationController {
             bsNode.put("nodeType", "business-service");
             nodes.add(bsNode);
 
-            // Add edges from BS to each entry host that exists in the graph
-            List<String> entryHostIds = (List<String>) bs.getOrDefault("hostIds", Collections.emptyList());
-            for (String hostId : entryHostIds) {
-                if (hostNodeIds.contains(hostId)) {
+            // Add edges from BS to each entry host that exists in the graph, using actual relation descriptions
+            List<Map<String, Object>> bsRelations = hostRelationService.listRelations(null, null, null, "business-service", bsId);
+            for (Map<String, Object> rel : bsRelations) {
+                String targetId = (String) rel.get("targetHostId");
+                if (targetId != null && hostNodeIds.contains(targetId)) {
                     Map<String, Object> edge = new LinkedHashMap<>();
                     edge.put("source", bsId);
-                    edge.put("target", hostId);
-                    edge.put("description", "initiateCall");
+                    edge.put("target", targetId);
+                    edge.put("description", rel.getOrDefault("description", ""));
                     edge.put("type", "business-entry");
                     edges.add(edge);
                 }
