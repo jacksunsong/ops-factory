@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useTranslation } from 'react-i18next'
@@ -299,7 +300,7 @@ function MessageInner({
         }
 
         return items
-    }, [isUser, message.content, message.id, toolResponses])
+    }, [isUser, message.content, message.id, toolResponses, t])
 
     const [openState, setOpenState] = useState<Record<string, boolean>>({})
     const [fadeState, setFadeState] = useState<Record<string, ScrollFadeState>>({})

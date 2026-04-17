@@ -1,7 +1,7 @@
 {
   "name": "home",
   "private": true,
-  "version": "1.0.20",
+  "version": "1.0.23",
   "type": "module",
   "description": "home",
   "scripts": {

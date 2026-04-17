@@ -80,7 +80,7 @@ export class GoosedClient {
         const env = typeof process !== 'undefined' ? process.env : {} as Record<string, string | undefined>;
         const defaultBaseUrl = env.GOOSED_BASE_URL || 'https://127.0.0.1:3000/ops-gateway';
         const defaultSecretKey = env.GOOSED_SECRET_KEY || 'test';
-
+        
         this.baseUrl = (options.baseUrl ?? defaultBaseUrl).replace(/\/$/, '');
         this.secretKey = options.secretKey ?? defaultSecretKey;
         this.timeout = options.timeout ?? 30000;
@@ -132,15 +132,19 @@ export class GoosedClient {
     }
 
     private async get<T>(path: string, params?: Record<string, string>): Promise<T> {
-        const url = new URL(`${this.baseUrl}${path}`);
+        let fullUrl = this.baseUrl+ path;
         if (params) {
-            Object.entries(params).forEach(([key, value]) => {
-                url.searchParams.append(key, value);
+           const paramStrings= Object.entries(params).map(([key, value]) => {
+               return encodeURIComponent(key) + '=' + encodeURIComponent(value);
             });
+            const paramString = paramStrings.join('&');
+            if (paramString) {
+                fullUrl += (fullUrl.includes('?') ? '&' : '?') + paramString;
+            }
         }
 
         try {
-            const response = await fetch(url.toString(), {
+            const response = await fetch(fullUrl, {
                 method: 'GET',
                 headers: this.headers(),
                 signal: AbortSignal.timeout(this.timeout),
