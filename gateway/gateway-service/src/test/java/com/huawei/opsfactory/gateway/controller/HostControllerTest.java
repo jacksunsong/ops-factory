@@ -121,7 +121,7 @@ public class HostControllerTest {
                 .header("x-secret-key", "test")
                 .header("x-user-id", "admin")
                 .exchange()
-                .expectStatus().is5xxServerError();
+                .expectStatus().isNotFound();
     }
 
     // ── createHost ───────────────────────────────────────────────

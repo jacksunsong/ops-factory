@@ -5,6 +5,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.springframework.core.io.Resource;
+import com.huawei.opsfactory.gateway.config.GatewayProperties;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -36,7 +37,7 @@ public class FileServiceExtendedTest {
 
     @Before
     public void setUp() {
-        fileService = new FileService();
+        fileService = new FileService(new GatewayProperties());
     }
 
     // ====================== isAllowedExtension ======================

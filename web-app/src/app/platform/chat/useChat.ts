@@ -138,6 +138,56 @@ function coerceEpochSeconds(value: unknown): number | undefined {
     return value
 }
 
+function readWebFlag(key: string): string | null {
+    if (typeof window === 'undefined') return null
+    try {
+        return window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key)
+    } catch {
+        return null
+    }
+}
+
+function readWebQueryFlag(name: string): string | null {
+    if (typeof window === 'undefined') return null
+    try {
+        return new URLSearchParams(window.location.search).get(name)
+    } catch {
+        return null
+    }
+}
+
+export function isChatOrderDebugEnabled(): boolean {
+    return readWebFlag('opsfactory:debug:chat-order') === '1' ||
+        readWebQueryFlag('debugChatOrder') === '1'
+}
+
+export function buildChatMessageOrderDigest(messages: ChatMessage[], limit = 30): Record<string, unknown> {
+    const head = messages.slice(0, Math.max(0, limit)).map((m, i) => ({
+        i,
+        id: m.id,
+        role: m.role,
+        created: m.created,
+        contentTypes: (m.content ?? []).map(c => c.type),
+        userVisible: m.metadata?.userVisible,
+    }))
+
+    let inversionCount = 0
+    for (let i = 0; i < messages.length - 1; i++) {
+        if (messages[i].role === 'assistant' && messages[i + 1].role === 'user') {
+            inversionCount += 1
+        }
+    }
+
+    const createdCount = messages.filter(m => coerceEpochSeconds(m.created) !== undefined).length
+
+    return {
+        total: messages.length,
+        createdCount,
+        inversionCount,
+        head,
+    }
+}
+
 export function sortConversationMessages(messages: ChatMessage[]): ChatMessage[] {
     if (messages.length < 2) return messages
 

@@ -2,6 +2,7 @@ package com.huawei.opsfactory.gateway.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.huawei.opsfactory.gateway.common.util.PathSanitizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,12 @@ import static java.util.Map.entry;
 
 @Service
 public class FileService {
+
+    private final GatewayProperties gatewayProperties;
+
+    public FileService(GatewayProperties gatewayProperties) {
+        this.gatewayProperties = gatewayProperties;
+    }
 
     private static final Map<String, String> MIME_TYPES = Map.ofEntries(
             entry("json", "application/json"),
@@ -100,6 +108,22 @@ public class FileService {
                 }
             }
         }
+        return files;
+    }
+
+    /**
+     * List "user-facing" output files for chat file capsules:
+     * - Top-level files under the working directory
+     * - Any files under ./output (recursive)
+     */
+    public List<Map<String, Object>> listCapsuleRelevantFiles(Path dir) throws IOException {
+        List<Map<String, Object>> files = listTopLevelFiles(dir);
+
+        Path outputDir = dir.resolve("output");
+        if (Files.isDirectory(outputDir)) {
+            listFilesRecursive(dir, outputDir, files);
+        }
+
         return files;
     }
 
@@ -241,6 +265,23 @@ public class FileService {
      */
     public List<Map<String, String>> diffFiles(List<Map<String, Object>> before,
                                                 List<Map<String, Object>> after) {
+        Set<String> allowedExtensions = new HashSet<>();
+        List<String> configuredAllowed = gatewayProperties.getFileCapsules() != null
+                ? gatewayProperties.getFileCapsules().getAllowedExtensions()
+                : null;
+        if (configuredAllowed != null) {
+            for (String ext : configuredAllowed) {
+                if (ext == null) continue;
+                String normalized = ext.trim().toLowerCase();
+                if (!normalized.isEmpty()) {
+                    allowedExtensions.add(normalized);
+                }
+            }
+        }
+        if (allowedExtensions.isEmpty()) {
+            return List.of();
+        }
+
         Map<String, Map<String, Object>> beforeMap = new HashMap<>();
         for (Map<String, Object> f : before) {
             beforeMap.put((String) f.get("path"), f);
@@ -252,6 +293,11 @@ public class FileService {
             if (isInternalRuntimeArtifact(path)) {
                 continue;
             }
+            String ext = (String) f.get("type");
+            String normalizedExt = ext != null ? ext.toLowerCase() : "";
+            if (!allowedExtensions.contains(normalizedExt)) {
+                continue;
+            }
             Map<String, Object> prev = beforeMap.get(path);
             boolean isNew = prev == null;
             boolean isUpdated = prev != null && (
@@ -259,7 +305,6 @@ public class FileService {
                             || !prev.get("size").equals(f.get("size")));
             if (isNew || isUpdated) {
                 String name = (String) f.get("name");
-                String ext = (String) f.get("type");
                 changed.add(Map.of("path", path, "name", name, "ext", ext != null ? ext : ""));
             }
         }

@@ -1,7 +1,7 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import Message from './Message'
-import { ChatState, type OutputFilesEvent } from './useChat'
+import { ChatState, type OutputFilesEvent, isChatOrderDebugEnabled, buildChatMessageOrderDigest } from './useChat'
 import GooseAvatarIcon from './GooseAvatarIcon'
 import { extractFetchedDocuments, extractSourceDocuments, type Citation } from '../../../utils/citationParser'
 import { getReasoningContent, getThinkingContent, hasDisplayTextContent, hasTextContent, hasToolContent } from '../../../utils/messageContent'
@@ -176,6 +176,17 @@ export default function MessageList({
     }, [messages])
 
     const displayMessages = useMemo(() => buildDisplayMessages(visibleMessages), [visibleMessages])
+
+    useEffect(() => {
+        if (!isChatOrderDebugEnabled()) return
+        console.debug('[chat-order] message-list', {
+            sessionId,
+            agentId,
+            raw: buildChatMessageOrderDigest(messages),
+            visible: buildChatMessageOrderDigest(visibleMessages),
+            display: buildChatMessageOrderDigest(displayMessages),
+        })
+    }, [agentId, sessionId, messages, visibleMessages, displayMessages])
 
     const finalAssistantTextMessageId = useMemo(() => {
         for (let i = displayMessages.length - 1; i >= 0; i--) {
