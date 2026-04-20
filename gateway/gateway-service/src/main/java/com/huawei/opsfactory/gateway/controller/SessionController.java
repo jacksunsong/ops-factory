@@ -26,7 +26,6 @@ import reactor.core.scheduler.Schedulers;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -278,146 +277,11 @@ public class SessionController {
         try {
             java.util.Map<String, Object> map = MAPPER.readValue(json,
                     new TypeReference<java.util.Map<String, Object>>() {});
-            normalizeConversationOrder(map);
             map.put("agentId", agentId);
             return MAPPER.writeValueAsString(map);
         } catch (Exception e) {
             // If parsing fails, just return original
             return json;
-        }
-    }
-
-    private static Long coerceEpochSeconds(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Number) {
-            long raw = ((Number) value).longValue();
-            if (raw <= 0) {
-                return null;
-            }
-            if (raw > 1_000_000_000_000L) {
-                return raw / 1000;
-            }
-            if (raw > 1_000_000_000L) {
-                return raw;
-            }
-            return raw;
-        }
-        if (value instanceof String) {
-            String s = ((String) value).trim();
-            if (s.isEmpty()) {
-                return null;
-            }
-            try {
-                if (s.matches("^\\d+$")) {
-                    return coerceEpochSeconds(Long.parseLong(s));
-                }
-            } catch (Exception ignored) {
-            }
-            try {
-                return coerceEpochSeconds(Instant.parse(s).toEpochMilli());
-            } catch (Exception ignored) {
-                return null;
-            }
-        }
-        return null;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static void normalizeConversationOrder(java.util.Map<String, Object> sessionMap) {
-        Object convObj = sessionMap.get("conversation");
-        if (!(convObj instanceof List)) {
-            return;
-        }
-        List<?> conv = (List<?>) convObj;
-        if (conv.size() < 2) {
-            return;
-        }
-
-        List<java.util.Map<String, Object>> convMaps = new ArrayList<>(conv.size());
-        for (Object item : conv) {
-            if (!(item instanceof java.util.Map)) {
-                return;
-            }
-            convMaps.add((java.util.Map<String, Object>) item);
-        }
-
-        int createdCount = 0;
-        for (java.util.Map<String, Object> msg : convMaps) {
-            Long created = coerceEpochSeconds(msg.get("created"));
-            if (created != null) {
-                createdCount += 1;
-            }
-        }
-
-        if (createdCount >= Math.max(2, (int) Math.floor(convMaps.size() * 0.6))) {
-            class Item {
-                final int index;
-                final java.util.Map<String, Object> msg;
-                final Long created;
-                final String role;
-
-                Item(int index, java.util.Map<String, Object> msg) {
-                    this.index = index;
-                    this.msg = msg;
-                    this.created = coerceEpochSeconds(msg.get("created"));
-                    Object r = msg.get("role");
-                    this.role = r instanceof String ? (String) r : "";
-                }
-            }
-
-            List<Item> items = new ArrayList<>(convMaps.size());
-            for (int i = 0; i < convMaps.size(); i++) {
-                items.add(new Item(i, convMaps.get(i)));
-            }
-
-            items.sort((a, b) -> {
-                if (a.created != null && b.created != null) {
-                    int cmp = Long.compare(a.created, b.created);
-                    if (cmp != 0) {
-                        return cmp;
-                    }
-                    int roleA = "user".equals(a.role) ? 0 : 1;
-                    int roleB = "user".equals(b.role) ? 0 : 1;
-                    if (roleA != roleB) {
-                        return Integer.compare(roleA, roleB);
-                    }
-                }
-                return Integer.compare(a.index, b.index);
-            });
-
-            List<java.util.Map<String, Object>> sorted = new ArrayList<>(convMaps.size());
-            for (Item item : items) {
-                sorted.add(item.msg);
-            }
-            sessionMap.put("conversation", sorted);
-            return;
-        }
-
-        boolean hasUser = false;
-        boolean hasAssistant = false;
-        int inversionCount = 0;
-        for (int i = 0; i < convMaps.size(); i++) {
-            Object roleObj = convMaps.get(i).get("role");
-            String role = roleObj instanceof String ? (String) roleObj : "";
-            if ("user".equals(role)) {
-                hasUser = true;
-            } else if ("assistant".equals(role)) {
-                hasAssistant = true;
-            }
-            if (i + 1 < convMaps.size()) {
-                Object nextRoleObj = convMaps.get(i + 1).get("role");
-                String nextRole = nextRoleObj instanceof String ? (String) nextRoleObj : "";
-                if ("assistant".equals(role) && "user".equals(nextRole)) {
-                    inversionCount += 1;
-                }
-            }
-        }
-
-        if (hasUser && hasAssistant && inversionCount >= Math.floor((convMaps.size() - 1) / 2.0)) {
-            java.util.Collections.reverse(convMaps);
-            sessionMap.put("conversation", convMaps);
         }
     }
 
