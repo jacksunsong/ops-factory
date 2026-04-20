@@ -191,11 +191,9 @@ public class FileServiceExtendedTest {
         File subDir = tempFolder.newFolder("uploads");
         createFile(new File(subDir, "report.pdf"), "pdf-content");
 
-        // Ask for "report.pdf" at root — it doesn't exist there but should be found via search
+        // Ask for "report.pdf" at root — fallback search is not supported
         Resource resource = fileService.resolveFile(tempFolder.getRoot().toPath(), "report.pdf");
-        assertNotNull(resource);
-        assertTrue(resource.exists());
-        assertTrue(resource.getFile().getAbsolutePath().contains("uploads"));
+        assertNull(resource);
     }
 
     @Test

@@ -120,7 +120,7 @@ extensions:
     - config/mcp/sop-executor/dist/index.js
     envs:
       GATEWAY_URL: http://127.0.0.1:3000
-      OUTPUT_DIR: ./output
+      OUTPUT_DIR: .
       GATEWAY_SECRET_KEY: test
     env_keys: []
     timeout: 300
@@ -154,7 +154,7 @@ extensions:
       QOS_PASSWORD: mock_password
       GATEWAY_API_PASSWORD: mock_password
       QOS_VERIFY_TLS: 'false'
-      OUTPUT_DIR: ./output
+      OUTPUT_DIR: .
     env_keys:
     - QOS_BASE_URL
     - QOS_USERNAME

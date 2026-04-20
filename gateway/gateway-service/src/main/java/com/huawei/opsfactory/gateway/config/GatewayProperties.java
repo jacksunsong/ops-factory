@@ -353,6 +353,9 @@ public class GatewayProperties {
                 "doc", "docx",
                 "xls", "xlsx",
                 "ppt", "pptx",
+                "csv",
+                "txt",
+                "json",
                 "md", "markdown",
                 "html", "htm");
 

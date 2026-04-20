@@ -109,17 +109,9 @@ public class FileService {
     /**
      * List "user-facing" output files for chat file capsules:
      * - Top-level files under the working directory
-     * - Any files under ./output (recursive)
      */
     public List<Map<String, Object>> listCapsuleRelevantFiles(Path dir) throws IOException {
-        List<Map<String, Object>> files = listTopLevelFiles(dir);
-
-        Path outputDir = dir.resolve("output");
-        if (Files.isDirectory(outputDir)) {
-            listFilesRecursive(dir, outputDir, files);
-        }
-
-        return files;
+        return listTopLevelFiles(dir);
     }
 
     private void listFilesRecursive(Path base, Path current, List<Map<String, Object>> files) throws IOException {

@@ -248,6 +248,8 @@ GATEWAY_PID=""
 do_startup() {
     local mode="${1:-foreground}"
 
+    cd "${SERVICE_DIR}"
+
     if [ "${mode}" = "background" ] && daemon_is_running "${PID_FILE}"; then
         local existing_pid
         existing_pid="$(daemon_read_pid "${PID_FILE}")"

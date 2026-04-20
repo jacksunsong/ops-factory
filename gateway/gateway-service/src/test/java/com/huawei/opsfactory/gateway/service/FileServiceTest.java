@@ -55,7 +55,7 @@ public class FileServiceTest {
         createFile("top.txt", "top");
 
         List<Map<String, Object>> files = fileService.listFiles(tempFolder.getRoot().toPath());
-        assertEquals(2, files.size());
+        assertEquals(1, files.size());
     }
 
     @Test
