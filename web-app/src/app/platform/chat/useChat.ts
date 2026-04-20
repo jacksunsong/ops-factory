@@ -138,50 +138,6 @@ function coerceEpochSeconds(value: unknown): number | undefined {
     return value
 }
 
-export function sortConversationMessages(messages: ChatMessage[]): ChatMessage[] {
-    if (messages.length < 2) return messages
-
-    const createdValues = messages.map(m => coerceEpochSeconds(m.created))
-    const createdCount = createdValues.filter(v => v !== undefined).length
-
-    if (createdCount >= Math.max(2, Math.floor(messages.length * 0.6))) {
-        return messages
-            .map((message, index) => ({ message, index }))
-            .sort((a, b) => {
-                const createdA = coerceEpochSeconds(a.message.created)
-                const createdB = coerceEpochSeconds(b.message.created)
-
-                if (createdA !== undefined && createdB !== undefined) {
-                    if (createdA !== createdB) return createdA - createdB
-
-                    const roleA = a.message.role === 'user' ? 0 : 1
-                    const roleB = b.message.role === 'user' ? 0 : 1
-                    if (roleA !== roleB) return roleA - roleB
-                }
-
-                return a.index - b.index
-            })
-            .map(item => item.message)
-    }
-
-    const hasUser = messages.some(m => m.role === 'user')
-    const hasAssistant = messages.some(m => m.role === 'assistant')
-    if (!hasUser || !hasAssistant) return messages
-
-    let inversionCount = 0
-    for (let i = 0; i < messages.length - 1; i++) {
-        if (messages[i].role === 'assistant' && messages[i + 1].role === 'user') {
-            inversionCount += 1
-        }
-    }
-
-    if (inversionCount >= Math.floor((messages.length - 1) / 2)) {
-        return [...messages].reverse()
-    }
-
-    return messages
-}
-
 /**
  * Convert backend message format to ChatMessage format.
  */
@@ -306,9 +262,9 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
                         case 'UpdateConversation': {
                             // Context compaction: backend sends entire replacement conversation
                             if (event.conversation && Array.isArray(event.conversation)) {
-                                currentMessages = sortConversationMessages(event.conversation.map(msg =>
+                                currentMessages = event.conversation.map(msg =>
                                     convertBackendMessage(msg as Record<string, unknown>)
-                                ))
+                                )
                                 dispatch({ type: 'SET_MESSAGES', payload: currentMessages })
                             }
                             break
