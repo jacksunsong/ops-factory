@@ -10,7 +10,7 @@ import {
     persistChatSessionLocator,
     resolveChatRouteState,
 } from '../../../platform/chat/chatRouteState'
-import { useChat, convertBackendMessage, sortConversationMessages } from '../../../platform/chat/useChat'
+import { useChat, convertBackendMessage, isChatOrderDebugEnabled, buildChatMessageOrderDigest } from '../../../platform/chat/useChat'
 import MessageList from '../../../platform/chat/MessageList'
 import ChatInput from '../../../platform/chat/ChatInput'
 import ChatPanelShell from '../../../platform/chat/ChatPanelShell'
@@ -289,10 +289,17 @@ export default function Chat() {
                 }
 
                 if (resumedSession.conversation && Array.isArray(resumedSession.conversation)) {
-                    const historyMessages = sortConversationMessages(resumedSession.conversation.map(msg =>
+                    const historyMessages = resumedSession.conversation.map(msg =>
                         convertBackendMessage(msg as Record<string, unknown>)
-                    ))
+                    )
                     setInitialMessages(historyMessages)
+                    if (isChatOrderDebugEnabled()) {
+                        console.debug('[chat-order] resume.conversation', {
+                            agentId: ownerAgentId,
+                            sessionId: activeSessionId,
+                            digest: buildChatMessageOrderDigest(historyMessages),
+                        })
+                    }
                 }
             } catch (err) {
                 console.error('Failed to initialize session:', err)
@@ -338,6 +345,15 @@ export default function Chat() {
         initialMessage,
         createSessionWithAgent,
     ])
+
+    useEffect(() => {
+        if (!isChatOrderDebugEnabled()) return
+        console.debug('[chat-order] messages.state', {
+            agentId: activeAgentId,
+            sessionId: activeSessionId,
+            digest: buildChatMessageOrderDigest(messages),
+        })
+    }, [activeAgentId, activeSessionId, messages])
 
     useEffect(() => {
         if (initialMessage && locatorState.kind === 'ready' && activeSessionId && !isInitializing && messages.length === 0) {
