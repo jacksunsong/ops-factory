@@ -94,6 +94,8 @@ export interface AttachedFile {
     name: string
     path: string
     ext: string
+    rootId?: string
+    displayPath?: string
     serverPath?: string
 }
 
@@ -115,6 +117,8 @@ export interface DetectedFile {
     path: string
     name: string
     ext: string
+    rootId?: string
+    displayPath?: string
 }
 
 export type ToolResponseMap = Map<string, { result?: unknown; isError: boolean }>

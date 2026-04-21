@@ -126,12 +126,13 @@ function MermaidBlock({ code }: { code: string }) {
     )
 }
 
-function FileCapsule({ filePath, fileName, fileExt, agentId, userId }: {
-    filePath: string; fileName: string; fileExt: string; agentId?: string; userId?: string | null
+function FileCapsule({ filePath, fileName, fileExt, rootId, displayPath, agentId, userId }: {
+    filePath: string; fileName: string; fileExt: string; rootId?: string; displayPath?: string; agentId?: string; userId?: string | null
 }) {
-    const downloadUrl = `${GATEWAY_URL}/agents/${agentId}/files/${encodeURIComponent(filePath)}?key=${GATEWAY_SECRET_KEY}${userId ? `&uid=${encodeURIComponent(userId)}` : ''}`
+    const downloadUrl = `${GATEWAY_URL}/agents/${agentId}/files/${encodeURIComponent(filePath)}?key=${GATEWAY_SECRET_KEY}${rootId ? `&rootId=${encodeURIComponent(rootId)}` : ''}${userId ? `&uid=${encodeURIComponent(userId)}` : ''}`
     const { openPreview, isPreviewable } = usePreview()
     const canPreview = isPreviewable(fileExt, fileName, filePath)
+    const visibleName = displayPath || fileName
 
     const handlePreview = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -139,6 +140,8 @@ function FileCapsule({ filePath, fileName, fileExt, agentId, userId }: {
             name: fileName,
             path: filePath,
             type: fileExt,
+            rootId,
+            displayPath,
             agentId: agentId || '',
         })
     }
@@ -154,7 +157,7 @@ function FileCapsule({ filePath, fileName, fileExt, agentId, userId }: {
                     <polyline points="10 9 9 9 8 9" />
                 </svg>
             </span>
-            <span className="file-capsule-name">{fileName}</span>
+            <span className="file-capsule-name">{visibleName}</span>
             <div className="file-capsule-actions">
                 {canPreview && (
                     <button className="file-capsule-btn" onClick={handlePreview} title="Preview">
@@ -694,6 +697,8 @@ function MessageInner({
                                     filePath={file.path}
                                     fileName={file.name}
                                     fileExt={file.ext}
+                                    rootId={file.rootId}
+                                    displayPath={file.displayPath}
                                     agentId={agentId}
                                     userId={userId}
                                 />
@@ -705,10 +710,12 @@ function MessageInner({
                         <div className="file-capsules-container">
                             {outputFiles.map((file, idx) => (
                                 <FileCapsule
-                                    key={`${file.path}-${idx}`}
+                                    key={`${file.rootId || 'workingDir'}-${file.path}-${idx}`}
                                     filePath={file.path}
                                     fileName={file.name}
                                     fileExt={file.ext}
+                                    rootId={file.rootId}
+                                    displayPath={file.displayPath}
                                     agentId={agentId}
                                     userId={userId}
                                 />

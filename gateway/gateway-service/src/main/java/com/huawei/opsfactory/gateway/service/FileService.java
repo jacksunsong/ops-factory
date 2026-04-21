@@ -139,10 +139,10 @@ public class FileService {
 
     /**
      * List "user-facing" output files for chat file capsules:
-     * - Top-level files under the working directory
+     * - Same scan roots as the Files module
      */
     public List<Map<String, Object>> listCapsuleRelevantFiles(Path dir) throws IOException {
-        return listTopLevelFiles(dir);
+        return listFiles(dir);
     }
 
     private void listFilesRecursive(FileScanRoot root, Path current, List<Map<String, Object>> files) throws IOException {
@@ -365,7 +365,7 @@ public class FileService {
 
         Map<String, Map<String, Object>> beforeMap = new HashMap<>();
         for (Map<String, Object> f : before) {
-            beforeMap.put((String) f.get("path"), f);
+            beforeMap.put(fileIdentity(f), f);
         }
 
         List<Map<String, String>> changed = new ArrayList<>();
@@ -379,17 +379,27 @@ public class FileService {
             if (!allowedExtensions.contains(normalizedExt)) {
                 continue;
             }
-            Map<String, Object> prev = beforeMap.get(path);
+            Map<String, Object> prev = beforeMap.get(fileIdentity(f));
             boolean isNew = prev == null;
             boolean isUpdated = prev != null && (
                     !prev.get("modifiedAt").equals(f.get("modifiedAt"))
                             || !prev.get("size").equals(f.get("size")));
             if (isNew || isUpdated) {
                 String name = (String) f.get("name");
-                changed.add(Map.of("path", path, "name", name, "ext", ext != null ? ext : ""));
+                Map<String, String> entry = new LinkedHashMap<>();
+                entry.put("path", path);
+                entry.put("name", name);
+                entry.put("ext", ext != null ? ext : "");
+                entry.put("rootId", String.valueOf(f.getOrDefault("rootId", "workingDir")));
+                entry.put("displayPath", String.valueOf(f.getOrDefault("displayPath", path)));
+                changed.add(entry);
             }
         }
         return changed;
+    }
+
+    private String fileIdentity(Map<String, Object> file) {
+        return String.valueOf(file.getOrDefault("rootId", "workingDir")) + ":" + file.get("path");
     }
 
     private boolean isInternalRuntimeArtifact(String path) {

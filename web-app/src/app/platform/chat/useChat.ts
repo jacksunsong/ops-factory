@@ -71,7 +71,7 @@ interface UseChatOptions {
 
 export interface OutputFilesEvent {
     sessionId: string
-    files: OutputFile[]
+    files: Array<OutputFile & { rootId?: string; displayPath?: string }>
 }
 
 export interface UseChatReturn {

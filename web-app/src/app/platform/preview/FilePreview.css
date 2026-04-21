@@ -222,8 +222,11 @@
 
 .file-preview-lined-text {
     position: relative;
+    box-sizing: border-box;
     margin: 0;
     padding: var(--spacing-4) 0;
+    min-height: 100%;
+    height: 100%;
     font-family: var(--font-family-mono);
     font-size: 13px;
     line-height: 1.65;
@@ -233,8 +236,31 @@
         linear-gradient(90deg, transparent 63px, rgba(226, 232, 240, 0.88) 63px 64px, transparent 64px),
         #fbfcfe;
     overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
     border-top: 1px solid rgba(226, 232, 240, 0.72);
     border-bottom: 1px solid rgba(226, 232, 240, 0.72);
+}
+
+.file-preview-lined-text::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.file-preview-lined-text::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.file-preview-lined-text::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.5);
+    border: 2px solid transparent;
+    border-radius: var(--radius-full);
+    background-clip: content-box;
+}
+
+.file-preview-lined-text::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.62);
+    background-clip: content-box;
 }
 
 .file-preview-lined-row {
@@ -252,17 +278,23 @@
 .file-preview-line-number {
     position: sticky;
     left: 0;
+    z-index: 1;
+    box-sizing: border-box;
+    width: 64px;
+    min-height: 24px;
     padding: 0 var(--spacing-4) 0 var(--spacing-5);
     text-align: right;
     color: #94a3b8;
-    background: transparent;
+    background: rgba(245, 247, 250, 0.98);
+    box-shadow: 1px 0 0 rgba(226, 232, 240, 0.88);
     user-select: none;
     font-variant-numeric: tabular-nums;
-    transition: color var(--transition-fast);
+    transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .file-preview-lined-row:hover .file-preview-line-number {
     color: #64748b;
+    background: #edf4ff;
 }
 
 .file-preview-line-content {
@@ -297,6 +329,14 @@
 
 .file-preview-lined-text.is-log-view .file-preview-lined-row:hover {
     background: rgba(59, 130, 246, 0.07);
+}
+
+.file-preview-lined-text.is-log-view .file-preview-line-number {
+    background: rgba(244, 247, 251, 0.98);
+}
+
+.file-preview-lined-text.is-log-view .file-preview-lined-row:hover .file-preview-line-number {
+    background: #edf4ff;
 }
 
 .file-preview-markdown {

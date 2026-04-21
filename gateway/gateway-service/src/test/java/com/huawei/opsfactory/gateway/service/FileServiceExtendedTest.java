@@ -245,6 +245,22 @@ public class FileServiceExtendedTest {
     }
 
     @Test
+    public void testDiffFiles_keepsSameRelativePathFromDifferentRoots() {
+        List<Map<String, Object>> before = new ArrayList<>();
+        List<Map<String, Object>> after = List.of(
+                snapshotWithRoot("workingDir", "example-file.md", "example-file.md", "example-file.md", "md", 128L, "2026-04-21T14:20:00Z"),
+                snapshotWithRoot("output", "example-file.md", "output/example-file.md", "example-file.md", "md", 128L, "2026-04-21T14:20:00Z"));
+
+        List<Map<String, String>> changed = fileService.diffFiles(before, after);
+
+        assertEquals(2, changed.size());
+        assertEquals("workingDir", changed.get(0).get("rootId"));
+        assertEquals("example-file.md", changed.get(0).get("displayPath"));
+        assertEquals("output", changed.get(1).get("rootId"));
+        assertEquals("output/example-file.md", changed.get(1).get("displayPath"));
+    }
+
+    @Test
     public void testListTopLevelFiles_skipsFilesInSubdirectories() throws IOException {
         createFile(new File(tempFolder.getRoot(), "summary.md"), "# Summary");
         createFile(new File(tempFolder.newFolder("reports"), "platform-status.md"), "# Report");
@@ -278,6 +294,23 @@ public class FileServiceExtendedTest {
     }
 
     @Test
+    public void testListCapsuleRelevantFiles_usesFilesScanRoots() throws IOException {
+        createFile(new File(tempFolder.getRoot(), "example-file.md"), "# Root");
+        File outputDir = tempFolder.newFolder("output");
+        createFile(new File(outputDir, "example-file.md"), "# Output");
+
+        List<Map<String, Object>> files = fileService.listCapsuleRelevantFiles(tempFolder.getRoot().toPath());
+
+        assertEquals(2, files.size());
+        assertEquals("workingDir", files.get(0).get("rootId"));
+        assertEquals("example-file.md", files.get(0).get("path"));
+        assertEquals("output", files.get(1).get("rootId"));
+        assertEquals("example-file.md", files.get(1).get("path"));
+        assertEquals("output/example-file.md", files.get(1).get("displayPath"));
+    }
+
+
+    @Test
     public void testListFiles_recursiveScanRootIncludesNestedFiles() throws IOException {
         GatewayProperties properties = new GatewayProperties();
         GatewayProperties.FileBrowser filesConfig = new GatewayProperties.FileBrowser();
@@ -305,6 +338,17 @@ public class FileServiceExtendedTest {
     private Map<String, Object> snapshot(String path, String name, String type, long size, String modifiedAt) {
         return Map.of(
                 "path", path,
+                "name", name,
+                "type", type,
+                "size", size,
+                "modifiedAt", modifiedAt);
+    }
+
+    private Map<String, Object> snapshotWithRoot(String rootId, String path, String displayPath, String name, String type, long size, String modifiedAt) {
+        return Map.of(
+                "rootId", rootId,
+                "path", path,
+                "displayPath", displayPath,
                 "name", name,
                 "type", type,
                 "size", size,

@@ -265,6 +265,8 @@ export default function MessageList({
             path: f.path,
             name: f.name,
             ext: f.ext,
+            rootId: f.rootId,
+            displayPath: f.displayPath,
         }))
 
         // Update local state
