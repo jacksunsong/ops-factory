@@ -22,4 +22,5 @@ This `docs/` tree serves both product-facing and engineering-facing documentatio
 - `development/testing-guidelines.md`: what tests to add for which changes.
 - `development/change-scope-rules.md`: scope control and collaboration guardrails.
 - `development/review-checklist.md`: pull request review checklist for cross-team changes.
+- `operations/control-center-deployment-guide.md`: Chinese deployment, configuration, startup, validation, and troubleshooting guide for Control Center.
 - `operations/goosed-pipe-deadlock-postmortem.md`: incident postmortem and debugging best practices.
