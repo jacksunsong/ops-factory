@@ -2,7 +2,6 @@ package com.huawei.opsfactory.gateway.controller;
 
 import com.huawei.opsfactory.gateway.service.BusinessServiceService;
 import com.huawei.opsfactory.gateway.service.ClusterService;
-import com.huawei.opsfactory.gateway.service.HostDiscoveryService;
 import com.huawei.opsfactory.gateway.service.HostService;
 import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import org.slf4j.Logger;
@@ -28,14 +27,12 @@ public class HostController {
 
     private final HostService hostService;
     private final ClusterService clusterService;
-    private final HostDiscoveryService hostDiscoveryService;
     private final BusinessServiceService businessServiceService;
 
     public HostController(HostService hostService, ClusterService clusterService,
-                          HostDiscoveryService hostDiscoveryService, BusinessServiceService businessServiceService) {
+                          BusinessServiceService businessServiceService) {
         this.hostService = hostService;
         this.clusterService = clusterService;
-        this.hostDiscoveryService = hostDiscoveryService;
         this.businessServiceService = businessServiceService;
     }
 
@@ -194,55 +191,6 @@ public class HostController {
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("tags", tags);
             return result;
-        }).subscribeOn(Schedulers.boundedElastic());
-    }
-
-    @PostMapping("/{id}/discover-plan")
-    public Mono<ResponseEntity<Map<String, Object>>> discoverPlan(
-            @PathVariable("id") String id,
-            ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
-        return Mono.fromCallable(() -> {
-            try {
-                Map<String, Object> planResult = hostDiscoveryService.plan(id);
-                return ResponseEntity.ok(planResult);
-            } catch (Exception e) {
-                log.error("Discovery plan failed for host {}", id, e);
-                Map<String, Object> errorResult = new LinkedHashMap<>();
-                errorResult.put("success", false);
-                errorResult.put("hostId", id);
-                errorResult.put("error", e.getMessage());
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResult);
-            }
-        }).subscribeOn(Schedulers.boundedElastic());
-    }
-
-    @PostMapping("/{id}/discover-execute")
-    public Mono<ResponseEntity<Map<String, Object>>> discoverExecute(
-            @PathVariable("id") String id,
-            @RequestBody Map<String, Object> body,
-            ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
-        return Mono.fromCallable(() -> {
-            try {
-                @SuppressWarnings("unchecked")
-                List<Map<String, String>> commands = (List<Map<String, String>>) body.get("commands");
-                if (commands == null || commands.isEmpty()) {
-                    Map<String, Object> errorResult = new LinkedHashMap<>();
-                    errorResult.put("success", false);
-                    errorResult.put("error", "No commands provided");
-                    return ResponseEntity.badRequest().body(errorResult);
-                }
-                Map<String, Object> execResult = hostDiscoveryService.execute(id, commands);
-                return ResponseEntity.ok(execResult);
-            } catch (Exception e) {
-                log.error("Discovery execute failed for host {}", id, e);
-                Map<String, Object> errorResult = new LinkedHashMap<>();
-                errorResult.put("success", false);
-                errorResult.put("hostId", id);
-                errorResult.put("error", e.getMessage());
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResult);
-            }
         }).subscribeOn(Schedulers.boundedElastic());
     }
 

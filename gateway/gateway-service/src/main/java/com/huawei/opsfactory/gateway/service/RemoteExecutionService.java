@@ -101,7 +101,7 @@ public class RemoteExecutionService {
             session.connect(5000);
 
             channel = (ChannelExec) session.openChannel("exec");
-            channel.setCommand(command);
+            channel.setCommand("bash -l -c " + singleQuote(command));
 
             InputStream in = channel.getInputStream();
             InputStream err = channel.getExtInputStream();
@@ -200,5 +200,13 @@ public class RemoteExecutionService {
                 }
             }
         }
+    }
+
+    /**
+     * Wrap a string in single quotes, escaping any embedded single quotes
+     * using the standard POSIX technique: replace ' with '\''.
+     */
+    private String singleQuote(String s) {
+        return "'" + s.replace("'", "'\\''") + "'";
     }
 }

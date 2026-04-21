@@ -54,7 +54,7 @@ export default function HostResourcePage() {
     // Data hooks
     const { groups, fetchGroups, createGroup, updateGroup, deleteGroup } = useHostGroups()
     const { clusters, fetchAllClusters, createCluster, updateCluster, deleteCluster } = useClusters()
-    const { hosts, allHosts, fetchHosts, fetchAllHosts, createHost, updateHost, deleteHost, testConnection, discoverPlan, discoverExecute } = useHostResource()
+    const { hosts, allHosts, fetchHosts, fetchAllHosts, createHost, updateHost, deleteHost, testConnection } = useHostResource()
     const { graphData, relations: hostRelations, fetchGraph, fetchRelations: fetchHostRelations, createRelation, updateRelation, deleteRelation } = useHostRelations()
     const { businessServices, fetchBusinessServices, createBusinessService, updateBusinessService, deleteBusinessService } = useBusinessServices()
     const clusterTypesHook = useClusterTypes()
@@ -716,8 +716,6 @@ export default function HostResourcePage() {
                     onSaveRelation={createRelation}
                     onUpdateRelation={updateRelation}
                     onDeleteRelation={deleteRelation}
-                    discoverPlan={discoverPlan}
-                    discoverExecute={discoverExecute}
                 />
             )}
         </div>

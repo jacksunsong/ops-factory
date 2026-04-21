@@ -2,13 +2,13 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSops } from '../hooks/useSops'
 import { useCommandWhitelist } from '../hooks/useCommandWhitelist'
-import { useClusters } from '../hooks/useClusters'
+import { useClusterTypes } from '../hooks/useClusterTypes'
 import { useToast } from '../../../platform/providers/ToastContext'
 import { useUser } from '../../../platform/providers/UserContext'
 import { GATEWAY_URL, gatewayHeaders } from '../../../../config/runtime'
 import DetailDialog from '../../../platform/ui/primitives/DetailDialog'
 import type { Sop, SopNode, SopCreateRequest } from '../../../../types/sop'
-import type { Cluster } from '../../../../types/host'
+import type { ClusterType } from '../../../../types/host'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -271,12 +271,12 @@ function TransitionEditor({
 
 function SopFormModal({
     sop,
-    clusters,
+    clusterTypes,
     onClose,
     onSave,
 }: {
     sop: Sop | null
-    clusters: Cluster[]
+    clusterTypes: ClusterType[]
     onClose: () => void
     onSave: (data: SopCreateRequest) => Promise<void>
 }) {
@@ -295,7 +295,15 @@ function SopFormModal({
     )
     const [enabled, setEnabled] = useState(sop?.enabled ?? true)
     const [stepsDescription, setStepsDescription] = useState(sop?.stepsDescription ?? '')
-    const [sopTags, setSopTags] = useState<string[]>(sop?.tags ?? [])
+    const [sopTags, setSopTags] = useState<string[]>(() => {
+        if (!sop?.tags?.length) return []
+        const lower = clusterTypes.map(ct => ({ name: ct.name, lower: ct.name.toLowerCase(), code: ct.code?.toLowerCase() ?? '' }))
+        return sop.tags.map(tag => {
+            const t = tag.toLowerCase()
+            const match = lower.find(ct => ct.lower === t || ct.code === t)
+            return match ? match.name : tag
+        })
+    })
 
     const nodeNames = useMemo(() => nodes.map(n => n.name).filter(Boolean), [nodes])
 
@@ -520,8 +528,8 @@ function SopFormModal({
                             }}
                         >
                             <option value="">{t('hostResource.selectClusterType')}</option>
-                            {clusters.map(c => (
-                                <option key={c.id} value={c.name}>{c.name}</option>
+                            {clusterTypes.map(ct => (
+                                <option key={ct.id} value={ct.name}>{ct.name}</option>
                             ))}
                         </select>
                     </div>
@@ -930,7 +938,7 @@ function SopExpandableRow({ sop, onEdit, onDelete, onToggleEnabled }: {
 export function SopsTab() {
     const { t } = useTranslation()
     const { sops, isLoading, error, fetchSops, createSop, updateSop, deleteSop } = useSops()
-    const { clusters, fetchAllClusters } = useClusters()
+    const { clusterTypes } = useClusterTypes()
     const { showToast } = useToast()
     const { userId } = useUser()
 
@@ -942,10 +950,6 @@ export function SopsTab() {
     useEffect(() => {
         fetchSops()
     }, [fetchSops])
-
-    useEffect(() => {
-        fetchAllClusters()
-    }, [fetchAllClusters])
 
     const handleSaveSop = useCallback(
         async (data: SopCreateRequest) => {
@@ -1123,7 +1127,7 @@ export function SopsTab() {
             {(showAddModal || editingSop) && (
                 <SopFormModal
                     sop={editingSop}
-                    clusters={clusters}
+                    clusterTypes={clusterTypes}
                     onClose={() => {
                         setShowAddModal(false)
                         setEditingSop(null)

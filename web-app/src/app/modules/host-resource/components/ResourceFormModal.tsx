@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { HostGroup, Cluster, Host, HostRelation, CustomAttribute, HostCreateRequest, DiscoveryCommand, DiscoveryPlan, HostDiscoveryResult, BusinessService, ClusterType, BusinessType } from '../../../../types/host'
+import type { HostGroup, Cluster, Host, HostRelation, CustomAttribute, HostCreateRequest, BusinessService, ClusterType, BusinessType } from '../../../../types/host'
 import { isValidIp } from '../../../../utils/ip-validation'
 import CustomAttributeEditor from './CustomAttributeEditor'
 
@@ -33,8 +33,6 @@ type Props = {
     onSaveRelation: (data: Partial<HostRelation>) => Promise<void>
     onUpdateRelation: (id: string, data: Partial<HostRelation>) => Promise<void>
     onDeleteRelation: (id: string) => Promise<unknown>
-    discoverPlan?: (id: string) => Promise<DiscoveryPlan>
-    discoverExecute?: (id: string, commands: DiscoveryCommand[]) => Promise<HostDiscoveryResult>
 }
 
 export default function ResourceFormModal({
@@ -45,7 +43,6 @@ export default function ResourceFormModal({
     clusterTypes, businessTypes, businessServices,
     onClose,
     onSaveGroup, onSaveCluster, onSaveBusinessService, onSaveHost, onSaveRelation, onUpdateRelation, onDeleteRelation,
-    discoverPlan, discoverExecute,
 }: Props) {
     const { t } = useTranslation()
     const [selectedType, setSelectedType] = useState<ResourceType | null>(
@@ -115,13 +112,6 @@ export default function ResourceFormModal({
     const [editRelTargetId, setEditRelTargetId] = useState('')
     const [editRelDesc, setEditRelDesc] = useState('')
 
-    // ── Auto Discovery state ──
-    const [discoveryPhase, setDiscoveryPhase] = useState<'idle' | 'planning' | 'confirming' | 'executing' | 'results'>('idle')
-    const [discoveryCommands, setDiscoveryCommands] = useState<DiscoveryCommand[]>([])
-    const [selectedCommands, setSelectedCommands] = useState<Set<string>>(new Set())
-    const [discoveryResult, setDiscoveryResult] = useState<HostDiscoveryResult | null>(null)
-    const [selectedAttributes, setSelectedAttributes] = useState<Set<string>>(new Set())
-
     // Fetch relations for the host being edited
     useEffect(() => {
         if (editingItem?.type === 'host') {
@@ -173,78 +163,6 @@ export default function ResourceFormModal({
         const h = hosts.find(h => h.id === hostId)
         return h ? `${h.name} (${h.ip})` : hostId.substring(0, 8)
     }
-
-    const handleStartDiscovery = useCallback(async () => {
-        if (!editingItem || editingItem.type !== 'host' || !discoverPlan) return
-        setDiscoveryPhase('planning')
-        setError(null)
-        try {
-            const plan = await discoverPlan(editingItem.data.id)
-            if (plan.success && plan.commands.length > 0) {
-                setDiscoveryCommands(plan.commands)
-                setSelectedCommands(new Set(plan.commands.map(c => c.label)))
-                setDiscoveryPhase('confirming')
-            } else {
-                setError(plan.error || t('hostResource.discoveryPlanFailed', { defaultValue: 'Failed to generate discovery commands' }))
-                setDiscoveryPhase('idle')
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Discovery failed')
-            setDiscoveryPhase('idle')
-        }
-    }, [editingItem, discoverPlan, t])
-
-    const handleRunSelected = useCallback(async () => {
-        if (!editingItem || editingItem.type !== 'host' || !discoverExecute) return
-        const cmds = discoveryCommands.filter(c => selectedCommands.has(c.label))
-        if (cmds.length === 0) return
-        setDiscoveryPhase('executing')
-        setError(null)
-        try {
-            const result = await discoverExecute(editingItem.data.id, cmds)
-            if (result.success) {
-                setDiscoveryResult(result)
-                // Pre-select all attributes
-                const keys = new Set<string>()
-                if (result.formMappings?.hostname) keys.add('hostname')
-                if (result.formMappings?.os) keys.add('os')
-                result.customAttributes?.forEach(a => keys.add(a.key))
-                setSelectedAttributes(keys)
-                setDiscoveryPhase('results')
-            } else {
-                setError(result.error || t('hostResource.discoveryExecFailed', { defaultValue: 'Discovery execution failed' }))
-                setDiscoveryPhase('confirming')
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Execution failed')
-            setDiscoveryPhase('confirming')
-        }
-    }, [editingItem, discoverExecute, discoveryCommands, selectedCommands, t])
-
-    const handleApplyDiscovery = useCallback(() => {
-        if (!discoveryResult) return
-        if (selectedAttributes.has('hostname') && discoveryResult.formMappings?.hostname) {
-            setHostname(discoveryResult.formMappings.hostname)
-        }
-        if (selectedAttributes.has('os') && discoveryResult.formMappings?.os) {
-            setHostOs(discoveryResult.formMappings.os)
-        }
-        const newAttrs = discoveryResult.customAttributes?.filter(a => selectedAttributes.has(a.key)) ?? []
-        if (newAttrs.length > 0) {
-            const merged = [...hostCustomAttributes]
-            for (const attr of newAttrs) {
-                const idx = merged.findIndex(a => a.key === attr.key)
-                if (idx >= 0) {
-                    merged[idx] = attr
-                } else {
-                    merged.push(attr)
-                }
-            }
-            setHostCustomAttributes(merged)
-        }
-        setDiscoveryPhase('idle')
-        setDiscoveryResult(null)
-    }, [discoveryResult, selectedAttributes, hostCustomAttributes])
 
     const handleAddRelation = useCallback(async () => {
         if (!editingItem) return
@@ -374,6 +292,10 @@ export default function ResourceFormModal({
                 if (!hostName.trim() || !hostIp.trim()) { setError(t('hostResource.nameAndIpRequired')); setSaving(false); return }
                 if (!isValidIp(hostIp)) { setError(t('hostResource.ipInvalid')); setSaving(false); return }
                 if (hostBusinessIp.trim() && !isValidIp(hostBusinessIp)) { setError(t('hostResource.businessIpInvalid')); setSaving(false); return }
+                const editingHostId = editingItem?.type === 'host' ? editingItem.data.id : null
+                const trimmedHostName = hostName.trim()
+                const duplicate = hosts.some(h => h.name?.toLowerCase() === trimmedHostName.toLowerCase() && h.id !== editingHostId)
+                if (duplicate) { setError(t('hostResource.duplicateName', { name: trimmedHostName })); setSaving(false); return }
                 const payload: Record<string, unknown> = {
                     name: hostName.trim(), hostname: hostname.trim() || null, ip: hostIp.trim(), port: hostPort,
                     os: hostOs.trim() || null, location: hostLocation.trim() || null, username: hostUsername.trim(),
@@ -400,7 +322,7 @@ export default function ResourceFormModal({
         hostDescription, hostCustomAttributes, sourceHostId, targetHostId, relationDescription, sourceType,
         bsName, bsCode, bsGroupId, bsSelectedBusinessTypeId, bsTags, bsPriority, bsDescription,
         hostRelations,
-        onSaveGroup, onSaveCluster, onSaveBusinessService, onSaveHost, onSaveRelation, onClose, t, editingItem])
+        onSaveGroup, onSaveCluster, onSaveBusinessService, onSaveHost, onSaveRelation, onClose, t, editingItem, hosts])
 
     const canSave = () => {
         if (selectedType === 'group') return groupName.trim().length > 0
@@ -745,175 +667,6 @@ export default function ResourceFormModal({
                                         <input className="form-input" type="password" value={hostCredential} onChange={e => setHostCredential(e.target.value)} />
                                     </div>
 
-                                    {/* ── Auto Discovery ── */}
-                                    {editingItem?.type === 'host' && discoverPlan && (
-                                        <div style={{ marginTop: 8 }}>
-                                            {discoveryPhase === 'idle' && (
-                                                <button
-                                                    className="btn btn-secondary btn-sm"
-                                                    onClick={handleStartDiscovery}
-                                                    style={{ width: '100%' }}
-                                                >
-                                                    {t('hostResource.autoDiscover', { defaultValue: 'Auto Discover' })}
-                                                </button>
-                                            )}
-                                            {discoveryPhase === 'planning' && (
-                                                <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-secondary, #64748b)', fontSize: '0.8125rem' }}>
-                                                    {t('hostResource.discoveryPlanning', { defaultValue: 'Generating discovery commands...' })}
-                                                </div>
-                                            )}
-                                            {discoveryPhase === 'confirming' && (
-                                                <div style={{
-                                                    border: '1px solid var(--border-color, #e2e8f0)',
-                                                    borderRadius: 6, padding: 12,
-                                                }}>
-                                                    <div style={{ fontWeight: 600, fontSize: '0.8125rem', marginBottom: 8 }}>
-                                                        {t('hostResource.discoveryCommands', { defaultValue: 'Discovery Commands (LLM Generated)' })}
-                                                    </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 240, overflowY: 'auto' }}>
-                                                        {discoveryCommands.map(cmd => (
-                                                            <label key={cmd.label} style={{
-                                                                display: 'flex', alignItems: 'flex-start', gap: 6,
-                                                                padding: '4px 6px', borderRadius: 4,
-                                                                background: selectedCommands.has(cmd.label) ? 'var(--surface-background, #f0f5ff)' : 'transparent',
-                                                                fontSize: '0.8125rem', cursor: 'pointer',
-                                                            }}>
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={selectedCommands.has(cmd.label)}
-                                                                    onChange={() => {
-                                                                        setSelectedCommands(prev => {
-                                                                            const next = new Set(prev)
-                                                                            next.has(cmd.label) ? next.delete(cmd.label) : next.add(cmd.label)
-                                                                            return next
-                                                                        })
-                                                                    }}
-                                                                    style={{ marginTop: 2 }}
-                                                                />
-                                                                <div style={{ flex: 1 }}>
-                                                                    <div style={{ fontWeight: 500 }}>{cmd.label}</div>
-                                                                    <input
-                                                                        className="form-input"
-                                                                        style={{ fontSize: '0.75rem', padding: '2px 4px', marginTop: 2 }}
-                                                                        value={cmd.command}
-                                                                        onChange={e => {
-                                                                            setDiscoveryCommands(prev => prev.map(c =>
-                                                                                c.label === cmd.label ? { ...c, command: e.target.value } : c
-                                                                            ))
-                                                                        }}
-                                                                    />
-                                                                    <div style={{ color: 'var(--text-secondary, #64748b)', fontSize: '0.7rem', marginTop: 1 }}>
-                                                                        {cmd.purpose}
-                                                                    </div>
-                                                                </div>
-                                                            </label>
-                                                        ))}
-                                                    </div>
-                                                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                                                        <button
-                                                            className="btn btn-primary btn-sm"
-                                                            onClick={handleRunSelected}
-                                                            disabled={selectedCommands.size === 0}
-                                                        >
-                                                            {t('hostResource.runSelected', { defaultValue: 'Run Selected' })}
-                                                        </button>
-                                                        <button
-                                                            className="btn btn-secondary btn-sm"
-                                                            onClick={() => setDiscoveryPhase('idle')}
-                                                        >
-                                                            {t('common.cancel')}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {discoveryPhase === 'executing' && (
-                                                <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-secondary, #64748b)', fontSize: '0.8125rem' }}>
-                                                    {t('hostResource.discoveryExecuting', { defaultValue: 'Executing commands and analyzing...' })}
-                                                </div>
-                                            )}
-                                            {discoveryPhase === 'results' && discoveryResult && (
-                                                <div style={{
-                                                    border: '1px solid var(--border-color, #e2e8f0)',
-                                                    borderRadius: 6, padding: 12,
-                                                }}>
-                                                    <div style={{ fontWeight: 600, fontSize: '0.8125rem', marginBottom: 8 }}>
-                                                        {t('hostResource.discoveryResults', { defaultValue: 'Discovery Results' })}
-                                                    </div>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 200, overflowY: 'auto' }}>
-                                                        {discoveryResult.formMappings?.hostname && (
-                                                            <label style={{
-                                                                display: 'flex', alignItems: 'center', gap: 6,
-                                                                padding: '3px 6px', borderRadius: 4,
-                                                                background: selectedAttributes.has('hostname') ? 'var(--surface-background, #f0f5ff)' : 'transparent',
-                                                                fontSize: '0.8125rem', cursor: 'pointer',
-                                                            }}>
-                                                                <input type="checkbox" checked={selectedAttributes.has('hostname')}
-                                                                    onChange={() => {
-                                                                        setSelectedAttributes(prev => {
-                                                                            const next = new Set(prev)
-                                                                            next.has('hostname') ? next.delete('hostname') : next.add('hostname')
-                                                                            return next
-                                                                        })
-                                                                    }}
-                                                                />
-                                                                <span style={{ fontWeight: 500 }}>Hostname:</span>
-                                                                <span>{discoveryResult.formMappings.hostname}</span>
-                                                            </label>
-                                                        )}
-                                                        {discoveryResult.formMappings?.os && (
-                                                            <label style={{
-                                                                display: 'flex', alignItems: 'center', gap: 6,
-                                                                padding: '3px 6px', borderRadius: 4,
-                                                                background: selectedAttributes.has('os') ? 'var(--surface-background, #f0f5ff)' : 'transparent',
-                                                                fontSize: '0.8125rem', cursor: 'pointer',
-                                                            }}>
-                                                                <input type="checkbox" checked={selectedAttributes.has('os')}
-                                                                    onChange={() => {
-                                                                        setSelectedAttributes(prev => {
-                                                                            const next = new Set(prev)
-                                                                            next.has('os') ? next.delete('os') : next.add('os')
-                                                                            return next
-                                                                        })
-                                                                    }}
-                                                                />
-                                                                <span style={{ fontWeight: 500 }}>OS:</span>
-                                                                <span>{discoveryResult.formMappings.os}</span>
-                                                            </label>
-                                                        )}
-                                                        {discoveryResult.customAttributes?.map(attr => (
-                                                            <label key={attr.key} style={{
-                                                                display: 'flex', alignItems: 'center', gap: 6,
-                                                                padding: '3px 6px', borderRadius: 4,
-                                                                background: selectedAttributes.has(attr.key) ? 'var(--surface-background, #f0f5ff)' : 'transparent',
-                                                                fontSize: '0.8125rem', cursor: 'pointer',
-                                                            }}>
-                                                                <input type="checkbox" checked={selectedAttributes.has(attr.key)}
-                                                                    onChange={() => {
-                                                                        setSelectedAttributes(prev => {
-                                                                            const next = new Set(prev)
-                                                                            next.has(attr.key) ? next.delete(attr.key) : next.add(attr.key)
-                                                                            return next
-                                                                        })
-                                                                    }}
-                                                                />
-                                                                <span style={{ fontWeight: 500 }}>{attr.key}:</span>
-                                                                <span>{attr.value}</span>
-                                                            </label>
-                                                        ))}
-                                                    </div>
-                                                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                                                        <button className="btn btn-primary btn-sm" onClick={handleApplyDiscovery}>
-                                                            {t('hostResource.applySelected', { defaultValue: 'Apply Selected' })}
-                                                        </button>
-                                                        <button className="btn btn-secondary btn-sm" onClick={() => setDiscoveryPhase('idle')}>
-                                                            {t('common.cancel')}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
                                     <h4 className="hr-section-label">{t('hostResource.businessInfo')}</h4>
                                     <div className="hr-form-row">
                                         <div className="form-group">
@@ -946,13 +699,16 @@ export default function ResourceFormModal({
 
                                     {/* ── Relations section (edit mode only) ── */}
                                     <h4 className="hr-section-label">{t('hostResource.topology')}</h4>
+                                    {(() => {
+                                        const downstreamRelations = hostRelations.filter(rel => rel.sourceHostId === editingItem?.data?.id)
+                                        return (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                        {hostRelations.length === 0 && (
+                                        {downstreamRelations.length === 0 && (
                                             <div style={{ color: 'var(--text-secondary, #64748b)', fontSize: '0.8125rem' }}>
                                                 {t('hostResource.noSourceRelations', { defaultValue: '暂无出向关系' })}
                                             </div>
                                         )}
-                                        {hostRelations.map(rel => (
+                                        {downstreamRelations.map(rel => (
                                             <div key={rel.id} style={{
                                                 display: 'flex', alignItems: 'center', gap: 6,
                                                 padding: '4px 8px', border: '1px solid var(--border-color, #e2e8f0)',
@@ -1013,6 +769,8 @@ export default function ResourceFormModal({
                                                 disabled={!newRelTargetId} onClick={handleAddRelation}>+</button>
                                         </div>
                                     </div>
+                                    )
+                                    })()}
                                 </>
                             )}
 

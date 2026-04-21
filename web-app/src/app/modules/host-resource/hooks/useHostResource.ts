@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { GATEWAY_URL, gatewayHeaders } from '../../../../config/runtime'
 import { useUser } from '../../../platform/providers/UserContext'
-import type { Host, HostCreateRequest, DiscoveryPlan, DiscoveryCommand, HostDiscoveryResult } from '../../../../types/host'
+import type { Host, HostCreateRequest } from '../../../../types/host'
 
 function apiBase() { return `${GATEWAY_URL}/hosts` }
 
@@ -88,22 +88,5 @@ export function useHostResource() {
         return res.json()
     }, [userId])
 
-    const discoverPlan = useCallback(async (id: string): Promise<DiscoveryPlan> => {
-        const res = await fetch(`${apiBase()}/${id}/discover-plan`, {
-            method: 'POST',
-            headers: gatewayHeaders(userId),
-        })
-        return res.json()
-    }, [userId])
-
-    const discoverExecute = useCallback(async (id: string, commands: DiscoveryCommand[]): Promise<HostDiscoveryResult> => {
-        const res = await fetch(`${apiBase()}/${id}/discover-execute`, {
-            method: 'POST',
-            headers: gatewayHeaders(userId),
-            body: JSON.stringify({ commands }),
-        })
-        return res.json()
-    }, [userId])
-
-    return { hosts, allHosts, loading, fetchHosts, fetchAllHosts, createHost, updateHost, deleteHost, testConnection, discoverPlan, discoverExecute }
+    return { hosts, allHosts, loading, fetchHosts, fetchAllHosts, createHost, updateHost, deleteHost, testConnection }
 }

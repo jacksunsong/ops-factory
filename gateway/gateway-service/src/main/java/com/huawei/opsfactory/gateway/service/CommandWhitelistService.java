@@ -167,6 +167,13 @@ public class CommandWhitelistService {
             }
 
             Boolean enabled = enabledPatterns.get(cmdName);
+            if (enabled == null) {
+                // 也尝试 basename 匹配，以支持 /home/nslb/nslbctl 等绝对路径形式
+                String baseName = cmdName.contains("/") ? cmdName.substring(cmdName.lastIndexOf('/') + 1) : null;
+                if (baseName != null) {
+                    enabled = enabledPatterns.get(baseName);
+                }
+            }
             if (enabled == null || !enabled) {
                 rejected.add(cmdName);
             }
@@ -196,7 +203,12 @@ public class CommandWhitelistService {
             String[] parts = trimmed.split("\\s+", 2);
             String name = parts[0].trim();
             if (name.isEmpty()) continue;
-            String risk = riskMap.getOrDefault(name, "high");
+            String risk = riskMap.get(name);
+            if (risk == null && name.contains("/")) {
+                String baseName = name.substring(name.lastIndexOf('/') + 1);
+                risk = riskMap.get(baseName);
+            }
+            if (risk == null) risk = "high";
             if ("high".equals(risk)) return "high";
             if ("medium".equals(risk) && "low".equals(highestRisk)) highestRisk = "medium";
         }
