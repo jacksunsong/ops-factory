@@ -381,10 +381,9 @@ export default function MessageList({
                     displayMessages[index + 1]?.role !== 'assistant'
                 const prevCreated = displayMessages[index - 1]?.created
                 const showDateInTimestamp =
-                    index === 0 ||
-                    (prevCreated != null &&
-                     message.created != null &&
-                     !isSameDay(prevCreated, message.created))
+                    prevCreated != null &&
+                    message.created != null &&
+                    !isSameDay(prevCreated, message.created)
                 return (
                     <div
                         key={message.id || index}
