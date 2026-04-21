@@ -219,13 +219,13 @@ export function buildChatMessageOrderDigest(messages: ChatMessage[], limit = 30)
 /**
  * Convert backend message format to ChatMessage format.
  */
-function convertBackendMessage(msg: Record<string, unknown>): ChatMessage {
+function convertBackendMessage(msg: Record<string, unknown>, useLocalTime = false): ChatMessage {
     const metadata = msg.metadata as { userVisible?: boolean; agentVisible?: boolean } | undefined
     const createdCandidate = msg.created ?? msg.created_at ?? msg.createdAt
     const id = (msg.id as string) || `msg-${Date.now()}-${Math.random()}`
     const created = coerceEpochSeconds(createdCandidate)
-    const fallbackCreated = (() => {
-        if (created !== undefined) return created
+    const resolvedCreated = (() => {
+        if (!useLocalTime && created !== undefined) return created
         const existing = createdFallbackByMessageId.get(id)
         if (existing !== undefined) return existing
         const next = Math.floor(Date.now() / 1000)
@@ -236,7 +236,7 @@ function convertBackendMessage(msg: Record<string, unknown>): ChatMessage {
         id,
         role: (msg.role as 'user' | 'assistant') || 'assistant',
         content: (msg.content as MessageContent[]) || [],
-        created: fallbackCreated,
+        created: resolvedCreated,
         metadata: metadata,
     }
 }
@@ -327,7 +327,7 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
                     switch (event.type) {
                         case 'Message': {
                             if (!event.message) break
-                            const incomingMessage = convertBackendMessage(event.message as Record<string, unknown>)
+                            const incomingMessage = convertBackendMessage(event.message as Record<string, unknown>, true)
                             currentMessages = pushMessage(currentMessages, incomingMessage)
                             dispatch({ type: 'SET_MESSAGES', payload: currentMessages })
 
@@ -351,7 +351,7 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
                             // Context compaction: backend sends entire replacement conversation
                             if (event.conversation && Array.isArray(event.conversation)) {
                                 currentMessages = event.conversation.map(msg =>
-                                    convertBackendMessage(msg as Record<string, unknown>)
+                                    convertBackendMessage(msg as Record<string, unknown>, true)
                                 )
                                 dispatch({ type: 'SET_MESSAGES', payload: currentMessages })
                             }

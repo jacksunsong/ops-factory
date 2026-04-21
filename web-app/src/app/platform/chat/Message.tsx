@@ -30,6 +30,9 @@ interface MessageProps {
     fetchedDocuments?: Citation[]
     outputFiles?: DetectedFile[]
     showFileCapsules?: boolean
+    showDateInTimestamp?: boolean
+    isContinuation?: boolean
+    isLastInGroup?: boolean
 }
 
 interface ToolCallPair {
@@ -85,10 +88,12 @@ function normalizeProcessText(text: string | undefined): string {
     return (text || '').replace(/\s+/g, ' ').trim()
 }
 
-function formatMessageTime(epochSeconds: number): string {
+function formatMessageTime(epochSeconds: number, showDate = false): string {
     const date = new Date(epochSeconds * 1000)
     const pad = (value: number) => String(value).padStart(2, '0')
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+    const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`
+    if (!showDate) return time
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${time}`
 }
 
 function MermaidBlock({ code }: { code: string }) {
@@ -171,6 +176,23 @@ function FileCapsule({ filePath, fileName, fileExt, agentId, userId }: {
     )
 }
 
+function CopyIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+    )
+}
+
+function CheckIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+            <polyline points="20 6 9 17 4 12" />
+        </svg>
+    )
+}
+
 function MessageInner({
     message,
     toolResponses = new Map(),
@@ -182,10 +204,12 @@ function MessageInner({
     fetchedDocuments,
     outputFiles = [],
     showFileCapsules = true,
+    showDateInTimestamp = false,
+    isContinuation = false,
+    isLastInGroup = true,
 }: MessageProps) {
     const { t } = useTranslation()
     const isUser = message.role === 'user'
-    const timeLabel = typeof message.created === 'number' ? formatMessageTime(message.created) : null
 
     const fullText = getFullTextContent(message)
     const displayTextFromContent = getDisplayTextContent(message)
@@ -329,8 +353,17 @@ function MessageInner({
 
     const [openState, setOpenState] = useState<Record<string, boolean>>({})
     const [fadeState, setFadeState] = useState<Record<string, ScrollFadeState>>({})
+    const [copied, setCopied] = useState(false)
+    const lastTimeRef = useRef<number | null>(null)
     const contentRefs = useRef<Record<string, HTMLDivElement | null>>({})
     const wasStreamingRef = useRef(isStreaming)
+
+    if (typeof message.created === 'number') {
+        lastTimeRef.current = message.created
+    }
+    const displayTimeLabel = lastTimeRef.current != null
+        ? formatMessageTime(lastTimeRef.current, showDateInTimestamp)
+        : null
 
     useEffect(() => {
         setOpenState(current => {
@@ -402,6 +435,15 @@ function MessageInner({
         if (isStreaming) return
         setOpenState(current => ({ ...current, [key]: !current[key] }))
     }
+
+    const handleCopyMessage = useCallback(() => {
+        const text = getFullTextContent(message)
+        if (!text) return
+        navigator.clipboard.writeText(text).then(() => {
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+        }).catch((err) => { console.warn('Failed to copy message:', err) })
+    }, [message])
 
     const handleScroll = (key: string) => {
         const element = contentRefs.current[key]
@@ -514,15 +556,13 @@ function MessageInner({
     const shouldShowRetrievedReferences = !isUser && !isStreaming && retrievedDocuments.length > 0
 
     return (
-        <div className={`message ${isUser ? 'user' : 'assistant'} animate-slide-in`}>
-            <div className="message-avatar">
-                {isUser ? <UserAvatarIcon className="message-avatar-icon" /> : <GooseAvatarIcon className="message-avatar-icon" />}
-            </div>
+        <div className={`message ${isUser ? 'user' : 'assistant'}${isContinuation ? ' continuation' : ''} animate-slide-in`}>
+            {!isContinuation && (
+                <div className="message-avatar">
+                    {isUser ? <UserAvatarIcon className="message-avatar-icon" /> : <GooseAvatarIcon className="message-avatar-icon" />}
+                </div>
+            )}
             <div className="message-body">
-                {timeLabel && (
-                    <div className="message-timestamp message-timestamp-outside">{timeLabel}</div>
-                )}
-
                 <div className="message-content">
                     {isEmptyAssistantResponse && (
                         <div className="message-error-banner">
@@ -698,6 +738,23 @@ function MessageInner({
                         </div>
                     )}
                 </div>
+
+                {displayTimeLabel && isLastInGroup && (
+                    <div className="message-meta">
+                        {!isUser && (
+                            <button
+                                type="button"
+                                className="message-copy-btn"
+                                onClick={handleCopyMessage}
+                                title={t('chat.copyMessage')}
+                                aria-label={t('chat.copyMessage')}
+                            >
+                                {copied ? <CheckIcon /> : <CopyIcon />}
+                            </button>
+                        )}
+                        <span className="message-timestamp">{displayTimeLabel}</span>
+                    </div>
+                )}
             </div>
         </div>
     )

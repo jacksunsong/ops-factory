@@ -11,6 +11,14 @@ import type { ChatMessage, DetectedFile, ToolResponseMap } from '../../../types/
 
 const BOTTOM_THRESHOLD_PX = 24
 
+function isSameDay(a: number, b: number): boolean {
+    const da = new Date(a * 1000)
+    const db = new Date(b * 1000)
+    return da.getFullYear() === db.getFullYear() &&
+           da.getMonth() === db.getMonth() &&
+           da.getDate() === db.getDate()
+}
+
 type ScrollContainerRef = {
     current: HTMLDivElement | null
 }
@@ -363,6 +371,20 @@ export default function MessageList({
                     !!message.id &&
                     message.id === finalAssistantTextMessageId
                 const hasOutputFiles = !!message.id && messageOutputFiles.has(message.id)
+                const isContinuation =
+                    message.role === 'assistant' &&
+                    index > 0 &&
+                    displayMessages[index - 1].role === 'assistant'
+                const isLastInGroup =
+                    message.role !== 'assistant' ||
+                    index === displayMessages.length - 1 ||
+                    displayMessages[index + 1]?.role !== 'assistant'
+                const prevCreated = displayMessages[index - 1]?.created
+                const showDateInTimestamp =
+                    index === 0 ||
+                    (prevCreated != null &&
+                     message.created != null &&
+                     !isSameDay(prevCreated, message.created))
                 return (
                     <div
                         key={message.id || index}
@@ -379,6 +401,9 @@ export default function MessageList({
                             fetchedDocuments={isFinalAssistantResponse ? fetchedDocuments : undefined}
                             outputFiles={message.id ? messageOutputFiles.get(message.id) : undefined}
                             showFileCapsules={hasOutputFiles}
+                            showDateInTimestamp={showDateInTimestamp}
+                            isContinuation={isContinuation}
+                            isLastInGroup={isLastInGroup}
                         />
                     </div>
                 )

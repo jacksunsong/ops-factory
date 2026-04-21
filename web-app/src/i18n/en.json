@@ -212,6 +212,7 @@
     "reasoning": "Reasoning",
     "reasoningInProgress": "Reasoning...",
     "compactingContext": "Compacting context...",
+    "copyMessage": "Copy message",
     "voiceInput": "Voice input",
     "stopRecording": "Stop recording",
     "agentNoResponse": "Agent did not respond, please try again",

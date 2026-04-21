@@ -212,6 +212,7 @@
     "reasoning": "推理过程",
     "reasoningInProgress": "正在思考...",
     "compactingContext": "正在压缩上下文...",
+    "copyMessage": "复制消息",
     "voiceInput": "语音输入",
     "stopRecording": "停止录音",
     "agentNoResponse": "智能体未响应，请重试",
