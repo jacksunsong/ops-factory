@@ -219,6 +219,13 @@ public class HostService {
     }
 
     public Map<String, Object> createHost(Map<String, Object> body) {
+        String name = body.getOrDefault("name", "").toString();
+        for (Map<String, Object> existing : listHosts(null)) {
+            if (name.equalsIgnoreCase(String.valueOf(existing.get("name")))) {
+                throw new IllegalArgumentException("Host name already exists: " + name);
+            }
+        }
+
         String id = UUID.randomUUID().toString();
         String now = Instant.now().toString();
 
@@ -267,6 +274,16 @@ public class HostService {
         Map<String, Object> host = readHostFile(file);
         if (host == null) {
             throw new IllegalArgumentException("Host not found: " + id);
+        }
+
+        // Check name uniqueness if name is being updated
+        if (body.containsKey("name")) {
+            String newName = String.valueOf(body.get("name"));
+            for (Map<String, Object> existing : listHosts(null)) {
+                if (!id.equals(existing.get("id")) && newName.equalsIgnoreCase(String.valueOf(existing.get("name")))) {
+                    throw new IllegalArgumentException("Host name already exists: " + newName);
+                }
+            }
         }
 
         // Update mutable fields

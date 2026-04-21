@@ -141,25 +141,3 @@ export interface GraphData {
     nodes: GraphNode[]
     edges: GraphEdge[]
 }
-
-export interface DiscoveryCommand {
-    label: string
-    command: string
-    purpose: string
-}
-
-export interface DiscoveryPlan {
-    success: boolean
-    hostId: string
-    commands: DiscoveryCommand[]
-    error?: string
-}
-
-export interface HostDiscoveryResult {
-    success: boolean
-    hostId: string
-    formMappings?: { hostname?: string; os?: string }
-    customAttributes?: CustomAttribute[]
-    rawOutputs?: Record<string, string>
-    error?: string
-}
