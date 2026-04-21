@@ -86,6 +86,9 @@
       "custom": "Custom"
     },
     "dateRangeSeparator": "to",
+    "year": "Year",
+    "month": "Month",
+    "day": "Day",
     "tabsLabel": "Business intelligence analysis tabs",
     "tabs": {
       "executiveSummary": "Overview",
@@ -95,7 +98,18 @@
       "requestAnalysis": "Requests",
       "problemAnalysis": "Problems",
       "crossProcessCorrelation": "Correlation",
-      "personnelEfficiency": "Workforce"
+      "personnelEfficiency": "Workforce",
+      "workforce": "Workforce"
+    },
+    "tabDescriptions": {
+      "executiveSummary": "Core scale and risk summary across four ITIL data categories.",
+      "slaAnalysis": "Multi-dimensional SLA compliance analysis with breach investigation.",
+      "eventAnalysis": "Incident management KPIs, trend changes, and type distribution based on incident ticket data.",
+      "changeAnalysis": "Change success rate trends, type distribution, risk levels, and plan compliance.",
+      "requestAnalysis": "Request trends, SLA compliance, satisfaction scores, and top request categories.",
+      "problemAnalysis": "Problem trends, root cause analysis, resolution health, and root cause distribution.",
+      "crossProcessCorrelation": "Deep correlation and risk propagation paths across changes, incidents, requests, and problems.",
+      "workforce": "Team efficiency analysis: volume, speed, and quality across three dimensions."
     },
     "loadingDescription": "The first load computes and caches the analysis result. Please wait.",
     "emptyTitle": "No business intelligence data",
@@ -121,6 +135,80 @@
       "risksDescription": "Reserved for the highest-priority risks and governance direction.",
       "governanceTitle": "Governance priorities",
       "governanceDescription": "Reserved for governance actions, ownership, and current focus items."
+    },
+    "executiveSummary": {
+      "healthScore": "Health Score",
+      "grade": "Grade",
+      "processHealth": "Process Health",
+      "monthlyTrend": "Monthly Trend",
+      "riskSummary": "Risk Summary",
+      "critical": "Critical",
+      "warning": "Warning",
+      "attention": "Attention",
+      "priority": "Priority",
+      "impact": "Impact",
+      "process": "Process",
+      "currentValue": "Current Value",
+      "trendScore": "Health Score",
+      "trendSignal": "High-Priority Events",
+      "period": "Reporting Period",
+      "coreKpi": "Core KPIs",
+      "grades": {
+        "Stable": "Stable",
+        "Watch": "Watch",
+        "Risk": "Risk"
+      },
+      "processes": {
+        "incident": "Incident",
+        "change": "Change",
+        "request": "Request",
+        "problem": "Problem"
+      },
+      "cards": {
+        "incident-sla-rate": "Incident SLA Rate",
+        "incident-mttr": "Avg MTTR",
+        "change-success-rate": "Change Success Rate",
+        "change-incident-rate": "Change-Induced Incident Rate",
+        "request-csat": "Request Satisfaction",
+        "problem-closure-rate": "Problem Closure Rate"
+      },
+      "processSummary": {
+        "incident": "SLA {{sla}}, MTTR {{mttr}}",
+        "change": "Success {{successRate}}, Incident Rate {{incidentRate}}",
+        "request": "SLA {{sla}}, Satisfaction {{csat}}",
+        "problem": "Closure {{closureRate}}, Backlog {{backlog}}"
+      },
+      "heroSummary": {
+        "Stable": "Operations are stable, but continue monitoring fluctuations in key processes.",
+        "Watch": "Operations are controlled, but some processes need attention. Prioritize top risks.",
+        "Risk": "Overall health is at risk. Focus on resolving critical issues immediately."
+      },
+      "changeDirection": {
+        "up": "Up {{delta}} pts from last period.",
+        "down": "Down {{delta}} pts from last period.",
+        "stable": "Unchanged from last period.",
+        "noData": "Trend data is being prepared."
+      },
+      "risks": {
+        "change-failure": "High change failure rate",
+        "problem-closure": "Low problem closure rate",
+        "request-open": "Open request backlog",
+        "change-incident": "Changes causing too many incidents",
+        "request-csat": "Declining request satisfaction"
+      },
+      "riskImpact": {
+        "change-failure": "Release stability has declined. Prioritize reviewing high-risk changes.",
+        "problem-closure": "Root cause and permanent fix backlog is growing, risk will compound.",
+        "request-open": "Fulfillment experience is under pressure, wait times will increase.",
+        "change-incident": "Release quality and change validation have weak points.",
+        "request-csat": "Service experience is fluctuating, consider reviewing frequent requests."
+      },
+      "tableTitle": "Key Concerns",
+      "tableColumns": {
+        "metric": "Metric",
+        "currentValue": "Current Value",
+        "description": "Description"
+      }
     },
     "incidents": {
       "cards": {
@@ -171,7 +259,8 @@
         "unlabeled": "Unlabeled"
       },
       "units": {
-        "daysShort": "d"
+        "daysShort": "d",
+        "openProblems": "open"
       }
     },
     "slaStatus": {
@@ -181,7 +270,258 @@
       "unknown": "SLA unknown"
     },
     "noChartData": "No chart data yet",
-    "noTableData": "No table data yet"
+    "noTableData": "No table data yet",
+    "workforce": {
+      "cards": {
+        "avgThroughput": "Avg Throughput",
+        "backlog": "Backlog Orders",
+        "avgDeliveryTime": "Avg Delivery Time",
+        "slaRate": "SLA Compliance",
+        "changeSpeed": "Change Speed",
+        "firstTimeSuccess": "First-time Success",
+        "avgSatisfaction": "Satisfaction Score",
+        "problemFixRate": "Problem Fix Rate"
+      },
+      "charts": {
+        "workloadDistribution": "Workload Distribution",
+        "efficiencyHeatmap": "Efficiency Heatmap",
+        "performanceMatrix": "SLA vs Satisfaction",
+        "personRadar": "Person Radar",
+        "seriesIncidents": "Incidents",
+        "seriesChanges": "Changes",
+        "seriesRequests": "Requests",
+        "seriesProblems": "Problems"
+      },
+      "tables": {
+        "firefighter": "Firefighters Top 10",
+        "techDebt": "Tech Debt Top 10",
+        "highRiskChange": "High-risk Changes Top 10"
+      },
+      "columns": {
+        "person": "Person",
+        "p1p2Count": "P1/P2 Count",
+        "avgResolutionTime": "Avg Resolution Time",
+        "ciCount": "CI Count",
+        "slaRate": "SLA Rate",
+        "fixCount": "Fixes",
+        "fixRate": "Fix Rate",
+        "relatedIncidents": "Related Incidents",
+        "rootCause": "Root Cause",
+        "changeCount": "High-risk Count",
+        "successRate": "Success Rate",
+        "backoutRate": "Backout Rate",
+        "causedRate": "Caused Rate"
+      },
+      "dimensions": {
+        "speed": "Speed",
+        "volume": "Volume",
+        "quality": "Quality",
+        "satisfaction": "Satisfaction",
+        "difficulty": "Difficulty"
+      },
+      "fallbacks": {
+        "unlabeled": "Unlabeled"
+      },
+      "quadrantLabels": {
+        "highSlaHighSat": "High SLA / High Sat.",
+        "lowSlaLowSat": "Low SLA / Low Sat."
+      },
+      "units": {
+        "tickets": "{{count}} tickets"
+      }
+    },
+    "changes": {
+      "cards": {
+        "total": "Total Changes",
+        "success": "Success Rate",
+        "emergency": "Emergency Changes",
+        "incident": "Change-Induced Incidents"
+      },
+      "charts": {
+        "successTrend": "Change Success Rate Trend",
+        "typeDistribution": "Change Level Distribution",
+        "categoryStacked": "Change Category Distribution",
+        "riskDistribution": "Change-Induced Failure Distribution",
+        "planDeviation": "Change Plan Compliance",
+        "seriesVolume": "Changes",
+        "seriesSuccessRate": "Success Rate",
+        "seriesIncidentChange": "Incident-Causing Changes",
+        "seriesSuccess": "Success",
+        "seriesFailed": "Failed",
+        "seriesEarly": "Early Completion",
+        "seriesOnTime": "On Time",
+        "seriesDelayed": "Delayed",
+        "axisTime": "Time",
+        "axisCount": "Count",
+        "axisCategory": "Change Category",
+        "axisType": "Change Type"
+      },
+      "tables": {
+        "failedSamples": "Failed or Rolled-back Samples"
+      },
+      "columns": {
+        "id": "ID",
+        "title": "Title",
+        "status": "Status",
+        "success": "Successful",
+        "backout": "Rolled Back"
+      }
+    },
+    "requests": {
+      "cards": {
+        "total": "Total Requests",
+        "fulfilled": "Fulfilled Requests",
+        "sla": "SLA Compliance",
+        "csat": "Avg Satisfaction"
+      },
+      "charts": {
+        "volumeTrend": "Request Volume Trend",
+        "slaTime": "SLA Compliance vs Avg Duration",
+        "typeDistribution": "Request Type Distribution",
+        "deptRanking": "Requests by Department",
+        "satisfactionDistribution": "Satisfaction Distribution",
+        "categoryTop": "Top Request Categories",
+        "seriesVolume": "Requests",
+        "seriesCsat": "Avg Satisfaction",
+        "seriesAvgTime": "Avg Duration (h)",
+        "seriesSlaRate": "SLA Compliance",
+        "axisTime": "Time",
+        "axisCount": "Count",
+        "axisDept": "Department",
+        "axisRequests": "Requests",
+        "axisCategory": "Category"
+      },
+      "tables": {
+        "lowCsatSamples": "Low Satisfaction Samples"
+      },
+      "columns": {
+        "id": "ID",
+        "title": "Title",
+        "category": "Category",
+        "fulfillTime": "Fulfillment Time",
+        "satisfaction": "Satisfaction",
+        "feedback": "Feedback"
+      }
+    },
+    "problems": {
+      "cards": {
+        "total": "Total Problems",
+        "closed": "Closed Problems",
+        "rca": "RCA Completed",
+        "knownError": "Known Errors"
+      },
+      "charts": {
+        "volumeTrend": "Problem Volume Trend",
+        "rootCauseDistribution": "Root Cause Distribution",
+        "incidentRanking": "Problems by Incident Count",
+        "statusDistribution": "Problem Status Distribution",
+        "resolutionHealth": "Resolution Health of Closed Problems",
+        "techDebt": "System Module Weakness Analysis",
+        "seriesVolume": "Problems",
+        "seriesAccumulated": "Accumulated Open",
+        "seriesPermanent": "Permanently Fixed",
+        "seriesTemporary": "Temporary Fix",
+        "seriesUnresolved": "Unresolved",
+        "axisTime": "Time",
+        "axisCount": "Count",
+        "axisCategory": "Root Cause",
+        "axisFailures": "Failures"
+      },
+      "tables": {
+        "openProblems": "Open Problems"
+      },
+      "columns": {
+        "id": "ID",
+        "title": "Title",
+        "status": "Status",
+        "relatedIncidents": "Related Incidents"
+      }
+    },
+    "sla": {
+      "cards": {
+        "overall": "Overall Compliance",
+        "response": "Response Compliance",
+        "resolution": "Resolution Compliance",
+        "highPriority": "P1/P2 Compliance",
+        "responseBreached": "Response Breaches",
+        "resolutionBreached": "Resolution Breaches"
+      },
+      "charts": {
+        "trend": "SLA Compliance Trend",
+        "priorityComparison": "SLA by Priority",
+        "violationByPriority": "Breaches by Priority",
+        "violationByCategory": "Breaches by Category",
+        "seriesResponse": "Response Compliance",
+        "seriesResolution": "Resolution Compliance",
+        "seriesP1p2": "P1/P2 Compliance",
+        "axisTime": "Time",
+        "axisPriority": "Priority",
+        "axisRate": "Compliance (%)"
+      },
+      "tables": {
+        "violationSamples": "Breach Samples"
+      },
+      "columns": {
+        "id": "ID",
+        "title": "Title",
+        "priority": "Priority",
+        "category": "Category",
+        "resolver": "Resolver",
+        "responseTime": "Response Time",
+        "resolutionTime": "Resolution Time",
+        "violationType": "Breach Type"
+      }
+    },
+    "correlation": {
+      "cards": {
+        "changeIncidentRate": "Change-Induced Incident Rate",
+        "48hP1p2": "48h Window P1/P2 Events",
+        "requestIncidentRatio": "Request-to-Incident Ratio",
+        "fragilityScore": "System Fragility Score"
+      },
+      "charts": {
+        "changeIncidentTrend": "Change-Induced Incident Trend",
+        "changeHeatmap": "Change Risk Heatmap",
+        "techDebtBubble": "System Fragility Bubble",
+        "requestIncidentOverlap": "Request-Incident Time Overlap",
+        "seriesChangeVolume": "Changes",
+        "seriesP1p2Count": "P1/P2 Incidents",
+        "seriesChangeDensity": "Change Density",
+        "seriesIncidentHotspots": "Incident Hotspots",
+        "seriesRequests": "Requests",
+        "seriesIncidents": "Incidents",
+        "axisTime": "Time",
+        "axisCount": "Count",
+        "axisHour": "Hour",
+        "axisWeekday": "Weekday",
+        "axisIncidents": "Related Incidents",
+        "axisAging": "Avg Aging Days"
+      },
+      "tables": {
+        "changeIncidentDetail": "Change-Incident Correlation Details",
+        "agingProblems": "Aging Problems",
+        "requestSurge": "Request Surge Alerts"
+      },
+      "columns": {
+        "changeId": "Change ID",
+        "changeTitle": "Change Title",
+        "completedAt": "Completed At",
+        "48hP1p2": "48h P1/P2 Events",
+        "riskLevel": "Risk Level",
+        "problemId": "Problem ID",
+        "rootCause": "Root Cause",
+        "agingDays": "Aging Days",
+        "relatedIncidents": "Related Incidents",
+        "priority": "Priority",
+        "status": "Status",
+        "requestCategory": "Request Category",
+        "thisWeek": "This Week",
+        "lastWeek": "Last Week",
+        "wowGrowth": "WoW Growth",
+        "同期事件数": "Concurrent Incidents",
+        "concurrentIncidents": "Concurrent Incidents"
+      }
+    }
   },
   "chat": {
     "loadingSession": "Loading conversation...",

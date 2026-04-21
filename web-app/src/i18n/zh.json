@@ -86,6 +86,9 @@
       "custom": "自定义"
     },
     "dateRangeSeparator": "至",
+    "year": "年",
+    "month": "月",
+    "day": "日",
     "tabsLabel": "业务智能分析标签",
     "tabs": {
       "executiveSummary": "执行摘要",
@@ -95,7 +98,18 @@
       "requestAnalysis": "请求分析",
       "problemAnalysis": "问题分析",
       "crossProcessCorrelation": "跨流程关联",
-      "personnelEfficiency": "人员与效率"
+      "personnelEfficiency": "人员与效率",
+      "workforce": "人员与效率"
+    },
+    "tabDescriptions": {
+      "executiveSummary": "聚合四类 ITIL 数据的核心规模与风险摘要。",
+      "slaAnalysis": "多维度观察事件SLA履约情况，并进行违约情况分析。",
+      "eventAnalysis": "基于事件工单数据，分析事件管理的关键KPI、趋势变化以及类型分布。",
+      "changeAnalysis": "展示变更成功率趋势、类型分布、风险等级和计划满足度。",
+      "requestAnalysis": "展示请求趋势、SLA达标率、满意度和高频请求分布。",
+      "problemAnalysis": "展示问题趋势、根因分析、解决方案健康度和根因类别分布。",
+      "crossProcessCorrelation": "展示变更、事件、请求和问题之间的深度关联与风险传导路径。",
+      "workforce": "团队人员效能分析：产量、效率与质量三维评估。"
     },
     "loadingDescription": "首次进入时会计算并缓存分析结果，请稍候。",
     "emptyTitle": "暂无业务智能数据",
@@ -121,6 +135,80 @@
       "risksDescription": "用于收敛优先关注的风险与治理方向。",
       "governanceTitle": "治理优先级",
       "governanceDescription": "用于布局治理动作、责任分工和当前关注事项。"
+    },
+    "executiveSummary": {
+      "healthScore": "综合健康评分",
+      "grade": "等级",
+      "processHealth": "流程健康度",
+      "monthlyTrend": "月度健康趋势",
+      "riskSummary": "风险关注项",
+      "critical": "严重",
+      "warning": "预警",
+      "attention": "关注",
+      "priority": "优先级",
+      "impact": "影响",
+      "process": "所属流程",
+      "currentValue": "当前值",
+      "trendScore": "健康评分",
+      "trendSignal": "高优事件数",
+      "period": "报表周期",
+      "coreKpi": "核心 KPI",
+      "grades": {
+        "Stable": "稳定",
+        "Watch": "关注",
+        "Risk": "风险"
+      },
+      "processes": {
+        "incident": "事件",
+        "change": "变更",
+        "request": "请求",
+        "problem": "问题"
+      },
+      "cards": {
+        "incident-sla-rate": "事件 SLA 达成率",
+        "incident-mttr": "平均 MTTR",
+        "change-success-rate": "变更成功率",
+        "change-incident-rate": "变更致事件率",
+        "request-csat": "请求满意度",
+        "problem-closure-rate": "问题关闭率"
+      },
+      "processSummary": {
+        "incident": "SLA {{sla}}，MTTR {{mttr}}",
+        "change": "成功率 {{successRate}}，致事件率 {{incidentRate}}",
+        "request": "SLA {{sla}}，满意度 {{csat}}",
+        "problem": "关闭率 {{closureRate}}，积压 {{backlog}}"
+      },
+      "heroSummary": {
+        "Stable": "整体运行稳定，但仍需持续关注重点流程的波动。",
+        "Watch": "整体运行可控，但部分流程已进入重点关注区，建议优先处理前列风险。",
+        "Risk": "整体健康存在风险，当前需优先收敛关键问题。"
+      },
+      "changeDirection": {
+        "up": "较上期上升 {{delta}} 分。",
+        "down": "较上期下降 {{delta}} 分。",
+        "stable": "与上期持平。",
+        "noData": "趋势数据正在准备中。"
+      },
+      "risks": {
+        "change-failure": "变更失败率偏高",
+        "problem-closure": "问题关闭率不足",
+        "request-open": "未完成请求积压",
+        "change-incident": "变更引发事件偏多",
+        "request-csat": "请求满意度下滑"
+      },
+      "riskImpact": {
+        "change-failure": "发布稳定性下降，需优先排查高风险变更。",
+        "problem-closure": "根因与永久修复积压，风险会持续放大。",
+        "request-open": "履约体验承压，用户等待时间会拉长。",
+        "change-incident": "上线质量与变更验证存在薄弱点。",
+        "request-csat": "服务体验有波动，建议复盘高频诉求。"
+      },
+      "tableTitle": "关键关注项",
+      "tableColumns": {
+        "metric": "指标",
+        "currentValue": "当前值",
+        "description": "说明"
+      }
     },
     "incidents": {
       "cards": {
@@ -171,7 +259,8 @@
         "unlabeled": "未标注"
       },
       "units": {
-        "daysShort": "天"
+        "daysShort": "天",
+        "openProblems": "未关闭"
       }
     },
     "slaStatus": {
@@ -181,7 +270,258 @@
       "unknown": "SLA 未知"
     },
     "noChartData": "暂无图表数据",
-    "noTableData": "暂无表格数据"
+    "noTableData": "暂无表格数据",
+    "workforce": {
+      "cards": {
+        "avgThroughput": "人均处理量",
+        "backlog": "积压工单数",
+        "avgDeliveryTime": "平均交付耗时",
+        "slaRate": "SLA达标率",
+        "changeSpeed": "变更实施速度",
+        "firstTimeSuccess": "一次性成功率",
+        "avgSatisfaction": "用户满意度",
+        "problemFixRate": "问题根治率"
+      },
+      "charts": {
+        "workloadDistribution": "团队工作负载分布",
+        "efficiencyHeatmap": "工单流转效率热力图",
+        "performanceMatrix": "SLA达标率 vs 满意度",
+        "personRadar": "个人综合素质雷达图",
+        "seriesIncidents": "事件",
+        "seriesChanges": "变更",
+        "seriesRequests": "请求",
+        "seriesProblems": "问题"
+      },
+      "tables": {
+        "firefighter": "救火先锋 TOP10",
+        "techDebt": "技术债务解决 TOP10",
+        "highRiskChange": "高风险变更执行 TOP10"
+      },
+      "columns": {
+        "person": "处理人",
+        "p1p2Count": "P1/P2事件数",
+        "avgResolutionTime": "平均解决时长",
+        "ciCount": "涉及CI数",
+        "slaRate": "SLA达标率",
+        "fixCount": "根治问题数",
+        "fixRate": "根治率",
+        "relatedIncidents": "关联事件数",
+        "rootCause": "根因类别",
+        "changeCount": "高风险变更数",
+        "successRate": "成功率",
+        "backoutRate": "回退率",
+        "causedRate": "致事件率"
+      },
+      "dimensions": {
+        "speed": "速度",
+        "volume": "产量",
+        "quality": "质量",
+        "satisfaction": "满意度",
+        "difficulty": "难度"
+      },
+      "fallbacks": {
+        "unlabeled": "未标注"
+      },
+      "quadrantLabels": {
+        "highSlaHighSat": "高 SLA / 高满意度",
+        "lowSlaLowSat": "低 SLA / 低满意度"
+      },
+      "units": {
+        "tickets": "{{count}}单"
+      }
+    },
+    "changes": {
+      "cards": {
+        "total": "变更总数",
+        "success": "成功率",
+        "emergency": "紧急变更",
+        "incident": "引发事件的变更"
+      },
+      "charts": {
+        "successTrend": "变更成功率趋势",
+        "typeDistribution": "变更等级分布",
+        "categoryStacked": "变更类别分布",
+        "riskDistribution": "变更引发故障分布",
+        "planDeviation": "变更计划满足分布",
+        "seriesVolume": "变更数量",
+        "seriesSuccessRate": "成功率",
+        "seriesIncidentChange": "引发事件变更",
+        "seriesSuccess": "成功",
+        "seriesFailed": "失败",
+        "seriesEarly": "提前完成",
+        "seriesOnTime": "按时完成",
+        "seriesDelayed": "延期完成",
+        "axisTime": "时间",
+        "axisCount": "数量",
+        "axisCategory": "变更类别",
+        "axisType": "变更类型"
+      },
+      "tables": {
+        "failedSamples": "失败或回退样本"
+      },
+      "columns": {
+        "id": "编号",
+        "title": "标题",
+        "status": "状态",
+        "success": "是否成功",
+        "backout": "是否回退"
+      }
+    },
+    "requests": {
+      "cards": {
+        "total": "请求总数",
+        "fulfilled": "已完成请求",
+        "sla": "SLA 达成率",
+        "csat": "平均满意度"
+      },
+      "charts": {
+        "volumeTrend": "请求单量趋势",
+        "slaTime": "SLA达成率与平均耗时",
+        "typeDistribution": "请求类型分布",
+        "deptRanking": "部门请求单数排名",
+        "satisfactionDistribution": "满意度分布",
+        "categoryTop": "高频请求目录",
+        "seriesVolume": "请求单量",
+        "seriesCsat": "平均满意度",
+        "seriesAvgTime": "平均耗时(h)",
+        "seriesSlaRate": "SLA达成率",
+        "axisTime": "时间",
+        "axisCount": "数量",
+        "axisDept": "部门",
+        "axisRequests": "请求数",
+        "axisCategory": "类别"
+      },
+      "tables": {
+        "lowCsatSamples": "低满意度样本"
+      },
+      "columns": {
+        "id": "编号",
+        "title": "标题",
+        "category": "类别",
+        "fulfillTime": "满足时间",
+        "satisfaction": "满意度",
+        "feedback": "反馈"
+      }
+    },
+    "problems": {
+      "cards": {
+        "total": "问题总数",
+        "closed": "已关闭问题",
+        "rca": "已完成 RCA",
+        "knownError": "未知错误"
+      },
+      "charts": {
+        "volumeTrend": "问题单量趋势",
+        "rootCauseDistribution": "问题根因类型分布",
+        "incidentRanking": "问题引发故障数排名",
+        "statusDistribution": "问题状态分布",
+        "resolutionHealth": "已关闭问题单的解决方案健康度分析",
+        "techDebt": "系统模块薄弱点分析",
+        "seriesVolume": "问题单量",
+        "seriesAccumulated": "累积未解决",
+        "seriesPermanent": "已永久修复",
+        "seriesTemporary": "有临时方案",
+        "seriesUnresolved": "未解决",
+        "axisTime": "时间",
+        "axisCount": "数量",
+        "axisCategory": "根因类别",
+        "axisFailures": "故障数"
+      },
+      "tables": {
+        "openProblems": "未关闭问题"
+      },
+      "columns": {
+        "id": "编号",
+        "title": "标题",
+        "status": "状态",
+        "relatedIncidents": "关联事件"
+      }
+    },
+    "sla": {
+      "cards": {
+        "overall": "综合达成率",
+        "response": "响应达成率",
+        "resolution": "解决达成率",
+        "highPriority": "P1/P2达成率",
+        "responseBreached": "响应违约数",
+        "resolutionBreached": "解决违约数"
+      },
+      "charts": {
+        "trend": "SLA达成率趋势",
+        "priorityComparison": "优先级SLA达成率对比",
+        "violationByPriority": "违约优先级分布",
+        "violationByCategory": "违约事件类型分布",
+        "seriesResponse": "响应达成率",
+        "seriesResolution": "解决达成率",
+        "seriesP1p2": "P1/P2达成率",
+        "axisTime": "时间",
+        "axisPriority": "优先级",
+        "axisRate": "达成率(%)"
+      },
+      "tables": {
+        "violationSamples": "违约样本"
+      },
+      "columns": {
+        "id": "编号",
+        "title": "标题",
+        "priority": "优先级",
+        "category": "类别",
+        "resolver": "处理人",
+        "responseTime": "响应时长",
+        "resolutionTime": "解决时长",
+        "violationType": "违约类型"
+      }
+    },
+    "correlation": {
+      "cards": {
+        "changeIncidentRate": "变更致事件率",
+        "48hP1p2": "48h窗口P1/P2事件",
+        "requestIncidentRatio": "请求-事件比",
+        "fragilityScore": "系统脆弱性评分"
+      },
+      "charts": {
+        "changeIncidentTrend": "变更致事件趋势",
+        "changeHeatmap": "变更风险热力图",
+        "techDebtBubble": "系统脆弱性气泡图",
+        "requestIncidentOverlap": "请求与事件时间重叠",
+        "seriesChangeVolume": "变更数量",
+        "seriesP1p2Count": "致事件P1/P2数",
+        "seriesChangeDensity": "变更密度",
+        "seriesIncidentHotspots": "事件热点",
+        "seriesRequests": "请求数",
+        "seriesIncidents": "事件数",
+        "axisTime": "时间",
+        "axisCount": "数量",
+        "axisHour": "时段",
+        "axisWeekday": "星期",
+        "axisIncidents": "累计关联事件数",
+        "axisAging": "平均积压天数"
+      },
+      "tables": {
+        "changeIncidentDetail": "变更致事件关联明细",
+        "agingProblems": "老化问题清单",
+        "requestSurge": "请求激增预警"
+      },
+      "columns": {
+        "changeId": "变更编号",
+        "changeTitle": "变更标题",
+        "completedAt": "完成时间",
+        "48hP1p2": "48h内P1/P2事件",
+        "riskLevel": "风险等级",
+        "problemId": "问题编号",
+        "rootCause": "根因类别",
+        "agingDays": "老化天数",
+        "relatedIncidents": "关联事件数",
+        "priority": "优先级",
+        "status": "状态",
+        "requestCategory": "请求类别",
+        "thisWeek": "本周请求数",
+        "lastWeek": "上周请求数",
+        "wowGrowth": "环比增长",
+        "同期事件数": "同期事件数",
+        "concurrentIncidents": "同期事件数"
+      }
+    }
   },
   "chat": {
     "loadingSession": "正在加载对话...",

@@ -19,7 +19,7 @@ class BusinessIntelligenceLoggingTest {
         BusinessIntelligenceService service = new BusinessIntelligenceService(new CountingProvider(loads), runtimeProperties(true));
 
         try (TestLogAppender appender = TestLogAppender.attachTo(BusinessIntelligenceService.class)) {
-            service.refresh();
+            service.refresh(null, null);
             service.exportCurrentWorkbook();
 
             assertThat(appender.formattedMessages())
