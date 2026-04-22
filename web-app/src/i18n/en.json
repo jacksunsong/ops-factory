@@ -531,6 +531,7 @@
     "switchingAgent": "Switching agent...",
     "waitingForResponse": "Waiting for response...",
     "typePlaceholder": "Type a message...",
+    "quickContinue": "Continue",
     "sendMessage": "Send message",
     "stopGeneration": "Stop generation",
     "jumpToBottom": "Jump to bottom",
