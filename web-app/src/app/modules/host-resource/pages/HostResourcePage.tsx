@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import PageHeader from '../../../platform/ui/primitives/PageHeader'
+import ListSearchInput from '../../../platform/ui/list/ListSearchInput'
+import ListResultsMeta from '../../../platform/ui/list/ListResultsMeta'
 import { useHostGroups } from '../hooks/useHostGroups'
 import { useClusters } from '../hooks/useClusters'
 import { useHostResource } from '../hooks/useHostResource'
@@ -46,6 +48,7 @@ export default function HostResourcePage() {
     const [showModal, setShowModal] = useState(false)
     const [editingItem, setEditingItem] = useState<EditingItem>(null)
     const [currentPage, setCurrentPage] = useState(1)
+    const [hostSearch, setHostSearch] = useState('')
     const [importing, setImporting] = useState(false)
     const [testingId, setTestingId] = useState<string | null>(null)
     const [testResults, setTestResults] = useState<Record<string, { ok: boolean; msg: string }>>({})
@@ -331,10 +334,17 @@ export default function HostResourcePage() {
     const defaultGroupIdForCreate = selected?.type === 'group' || selected?.type === 'subgroup' ? selected.id : undefined
     const defaultClusterIdForCreate = selected?.type === 'cluster' ? selected.id : undefined
 
+    // Client-side search filter
+    const filteredHosts = useMemo(() => {
+        if (!hostSearch.trim()) return hosts
+        const term = hostSearch.toLowerCase()
+        return hosts.filter(h => h.name.toLowerCase().includes(term))
+    }, [hosts, hostSearch])
+
     // Pagination
-    const totalPages = Math.max(1, Math.ceil(hosts.length / PAGE_SIZE))
+    const totalPages = Math.max(1, Math.ceil(filteredHosts.length / PAGE_SIZE))
     const safePage = Math.min(currentPage, totalPages)
-    const paginatedHosts = hosts.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+    const paginatedHosts = filteredHosts.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
     const handleExport = useCallback(() => {
         const data = {
@@ -575,6 +585,18 @@ export default function HostResourcePage() {
                                 <div className="hr-empty">{t('hostResource.noHosts')}</div>
                             ) : (
                                 <>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-3)' }}>
+                                        <ListSearchInput
+                                            value={hostSearch}
+                                            placeholder={t('hostResource.searchHosts')}
+                                            onChange={setHostSearch}
+                                        />
+                                        {hostSearch && (
+                                            <ListResultsMeta>
+                                                {t('common.resultsFound', { count: filteredHosts.length })}
+                                            </ListResultsMeta>
+                                        )}
+                                    </div>
                                     <div className="hr-host-grid">
                                         {paginatedHosts.map(host => (
                                             <HostCard
@@ -596,8 +618,8 @@ export default function HostResourcePage() {
                                             <span className="hr-pagination-info">
                                                 {t('common.showing', {
                                                     start: (safePage - 1) * PAGE_SIZE + 1,
-                                                    end: Math.min(safePage * PAGE_SIZE, hosts.length),
-                                                    total: hosts.length,
+                                                    end: Math.min(safePage * PAGE_SIZE, filteredHosts.length),
+                                                    total: filteredHosts.length,
                                                 })}
                                             </span>
                                             <div className="hr-pagination-controls">

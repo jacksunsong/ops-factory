@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCommandWhitelist } from '../hooks/useCommandWhitelist'
 import { useToast } from '../../../platform/providers/ToastContext'
+import ListSearchInput from '../../../platform/ui/list/ListSearchInput'
+import ListResultsMeta from '../../../platform/ui/list/ListResultsMeta'
 import type { WhitelistCommand } from '../../../../types/commandWhitelist'
 
 function TrashIcon() {
@@ -90,9 +92,16 @@ function WhitelistFormModal({
                             type="text"
                             value={pattern}
                             onChange={e => setPattern(e.target.value)}
-                            placeholder="ps aux"
+                            placeholder={t('remoteDiagnosis.whitelist.patternPlaceholder')}
                             autoFocus
                         />
+                        <p style={{
+                            fontSize: 'var(--font-size-xs)',
+                            color: 'var(--color-text-tertiary)',
+                            margin: 'var(--spacing-1) 0 0',
+                        }}>
+                            {t('remoteDiagnosis.whitelist.patternHint')}
+                        </p>
                     </div>
 
                     <div className="form-group">
@@ -227,6 +236,7 @@ export function WhitelistTab() {
     const [currentPage, setCurrentPage] = useState(1)
     const [editingCommand, setEditingCommand] = useState<WhitelistCommand | null>(null)
     const [showAddModal, setShowAddModal] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
 
     useEffect(() => {
         fetchCommands()
@@ -287,6 +297,12 @@ export function WhitelistTab() {
         [deleteCommand, fetchCommands, showToast, t],
     )
 
+    const filteredCommands = useMemo(() => {
+        if (!searchTerm.trim()) return commands
+        const term = searchTerm.toLowerCase()
+        return commands.filter(cmd => cmd.pattern.toLowerCase().includes(term))
+    }, [commands, searchTerm])
+
     return (
         <>
             <section className="knowledge-section-card sop-workflow-section-card">
@@ -336,10 +352,22 @@ export function WhitelistTab() {
                     </div>
                 ) : (
                     (() => {
-                        const totalPages = Math.max(1, Math.ceil(commands.length / PAGE_SIZE))
+                        const totalPages = Math.max(1, Math.ceil(filteredCommands.length / PAGE_SIZE))
                         const safePage = Math.min(currentPage, totalPages)
-                        const paginatedCommands = commands.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+                        const paginatedCommands = filteredCommands.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
                         return <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-3)' }}>
+                        <ListSearchInput
+                            value={searchTerm}
+                            placeholder={t('hostResource.searchWhitelist')}
+                            onChange={setSearchTerm}
+                        />
+                        {searchTerm && (
+                            <ListResultsMeta>
+                                {t('common.resultsFound', { count: filteredCommands.length })}
+                            </ListResultsMeta>
+                        )}
+                    </div>
                     <div className="sop-workflow-list-shell">
                         <div className="sop-workflow-table-wrap">
                             <table className="sop-workflow-table">
@@ -403,8 +431,8 @@ export function WhitelistTab() {
                             <span className="sop-workflow-pagination-info">
                                 {t('common.showing', {
                                     start: (safePage - 1) * PAGE_SIZE + 1,
-                                    end: Math.min(safePage * PAGE_SIZE, commands.length),
-                                    total: commands.length,
+                                    end: Math.min(safePage * PAGE_SIZE, filteredCommands.length),
+                                    total: filteredCommands.length,
                                 })}
                             </span>
                             <div className="sop-workflow-pagination-controls">

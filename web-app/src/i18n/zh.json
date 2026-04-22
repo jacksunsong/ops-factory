@@ -1902,7 +1902,9 @@
       "exportJson": "导出JSON",
       "importJson": "导入JSON",
       "importDuplicate": "成功导入 {{imported}} 条命令，{{duplicates}} 条重复已跳过",
-      "duplicatePattern": "命令已存在重复"
+      "duplicatePattern": "命令已存在重复",
+      "patternPlaceholder": "例如 ps、nslb list",
+      "patternHint": "单个命令（如 ps）匹配该命令的所有用法；带参数（如 nslb list）仅匹配以该前缀开头的命令。"
     }
   },
   "hostResource": {
@@ -2017,6 +2019,11 @@
     "sourceTypeHost": "主机",
     "sourceTypeBusinessService": "业务服务",
     "sourceBusinessService": "源业务服务",
-    "selectBusinessService": "选择业务服务"
+    "selectBusinessService": "选择业务服务",
+    "searchHosts": "按主机名称搜索...",
+    "searchClusterTypes": "搜索集群类型...",
+    "searchBusinessTypes": "搜索业务类型...",
+    "searchSops": "搜索SOP...",
+    "searchWhitelist": "搜索命令..."
   }
 }
