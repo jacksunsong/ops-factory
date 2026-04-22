@@ -84,6 +84,8 @@ public class InstanceManagerExtendedTest {
         assertTrue("Secret key should be a 64-char hex string", secretKey.matches("[0-9a-f]{64}"));
         assertEquals(runtimeRoot.toString(), env.get("GOOSE_PATH_ROOT"));
         assertEquals("1", env.get("GOOSE_DISABLE_KEYRING"));
+        assertEquals(runtimeRoot.resolve("home").toString(), env.get("HOME"));
+        assertEquals(runtimeRoot.resolve("home").toString(), env.get("USERPROFILE"));
         assertEquals(configRoot.toAbsolutePath().normalize().toString(), env.get("XDG_CONFIG_HOME"));
     }
 

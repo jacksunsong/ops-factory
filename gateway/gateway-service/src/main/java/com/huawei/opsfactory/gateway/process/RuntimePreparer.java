@@ -7,7 +7,11 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Stream;
 
 @Component
 public class RuntimePreparer {
@@ -33,6 +37,9 @@ public class RuntimePreparer {
 
         Path userAgentDir = usersDir.resolve(userId).resolve("agents").resolve(agentId);
         Files.createDirectories(userAgentDir);
+        Files.createDirectories(userAgentDir.resolve("home"));
+
+        cleanDisallowedSkillDirs(userAgentDir);
 
         // Symlink config -> shared agent config
         Path configLink = userAgentDir.resolve("config");
@@ -56,5 +63,36 @@ public class RuntimePreparer {
         Files.createDirectories(userAgentDir.resolve("uploads"));
 
         return userAgentDir;
+    }
+
+    private void cleanDisallowedSkillDirs(Path userAgentDir) throws IOException {
+        List<Path> skillDirs = List.of(
+                userAgentDir.resolve(".goose").resolve("skills"),
+                userAgentDir.resolve(".claude").resolve("skills"),
+                userAgentDir.resolve(".agents").resolve("skills"),
+                userAgentDir.resolve("home").resolve(".agents").resolve("skills"),
+                userAgentDir.resolve("home").resolve(".claude").resolve("skills"),
+                userAgentDir.resolve("home").resolve(".config").resolve("agents").resolve("skills"));
+
+        for (Path skillDir : skillDirs) {
+            deleteIfExists(skillDir);
+        }
+    }
+
+    private void deleteIfExists(Path path) throws IOException {
+        if (Files.notExists(path, LinkOption.NOFOLLOW_LINKS)) {
+            return;
+        }
+        if (Files.isSymbolicLink(path) || !Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+            Files.deleteIfExists(path);
+            return;
+        }
+
+        try (Stream<Path> stream = Files.walk(path)) {
+            List<Path> paths = stream.sorted(Comparator.reverseOrder()).toList();
+            for (Path entry : paths) {
+                Files.deleteIfExists(entry);
+            }
+        }
     }
 }

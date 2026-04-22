@@ -479,6 +479,8 @@ public class InstanceManager {
         env.put("GOOSE_SERVER__SECRET_KEY", hexSecret.toString());
         env.put("GOOSE_PATH_ROOT", runtimeRoot.toString());
         env.put("GOOSE_DISABLE_KEYRING", "1");
+        env.put("HOME", runtimeRoot.resolve("home").toString());
+        env.put("USERPROFILE", runtimeRoot.resolve("home").toString());
         env.put("XDG_CONFIG_HOME",
                 agentConfigService.getAgentConfigDir(agentId).toAbsolutePath().normalize().toString());
         boolean gooseTlsValue = properties.isGooseTls();

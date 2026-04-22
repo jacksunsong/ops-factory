@@ -45,6 +45,7 @@ public class RuntimePreparerTest {
         assertTrue(Files.isDirectory(result));
         assertTrue(Files.isDirectory(result.resolve("data")));
         assertTrue(Files.isDirectory(result.resolve("uploads")));
+        assertTrue(Files.isDirectory(result.resolve("home")));
     }
 
     @Test
@@ -72,6 +73,29 @@ public class RuntimePreparerTest {
 
         assertEquals(result1, result2);
         assertTrue(Files.isSymbolicLink(result2.resolve("config")));
+    }
+
+    @Test
+    public void testPrepare_removesDisallowedSkillDirectories() throws IOException {
+        Path runtimeRoot = gatewayRoot.resolve("users").resolve("user1").resolve("agents").resolve("test-agent");
+        Files.createDirectories(runtimeRoot.resolve(".goose").resolve("skills").resolve("local-skill"));
+        Files.createDirectories(runtimeRoot.resolve(".claude").resolve("skills").resolve("local-skill"));
+        Files.createDirectories(runtimeRoot.resolve(".agents").resolve("skills").resolve("local-skill"));
+        Files.createDirectories(runtimeRoot.resolve("home").resolve(".agents").resolve("skills").resolve("global-skill"));
+        Files.createDirectories(runtimeRoot.resolve("home").resolve(".claude").resolve("skills").resolve("global-skill"));
+        Files.createDirectories(runtimeRoot.resolve("home").resolve(".config").resolve("agents").resolve("skills").resolve("global-skill"));
+        Files.createDirectories(runtimeRoot.resolve(".goose").resolve("memory"));
+        Files.writeString(runtimeRoot.resolve(".goose").resolve("memory").resolve("notes.txt"), "keep");
+
+        Path result = preparer.prepare("test-agent", "user1");
+
+        org.junit.Assert.assertFalse(Files.exists(result.resolve(".goose").resolve("skills")));
+        org.junit.Assert.assertFalse(Files.exists(result.resolve(".claude").resolve("skills")));
+        org.junit.Assert.assertFalse(Files.exists(result.resolve(".agents").resolve("skills")));
+        org.junit.Assert.assertFalse(Files.exists(result.resolve("home").resolve(".agents").resolve("skills")));
+        org.junit.Assert.assertFalse(Files.exists(result.resolve("home").resolve(".claude").resolve("skills")));
+        org.junit.Assert.assertFalse(Files.exists(result.resolve("home").resolve(".config").resolve("agents").resolve("skills")));
+        assertTrue(Files.exists(result.resolve(".goose").resolve("memory").resolve("notes.txt")));
     }
 
     private void assertEquals(Path expected, Path actual) {
