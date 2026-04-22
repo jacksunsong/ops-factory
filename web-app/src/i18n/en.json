@@ -1902,7 +1902,9 @@
       "exportJson": "Export JSON",
       "importJson": "Import JSON",
       "importDuplicate": "Imported {{imported}} commands, {{duplicates}} duplicates skipped",
-      "duplicatePattern": "Command pattern already exists"
+      "duplicatePattern": "Command pattern already exists",
+      "patternPlaceholder": "e.g. ps, nslb list",
+      "patternHint": "Single word (e.g. ps) matches any usage; with arguments (e.g. nslb list) matches only commands starting with that prefix."
     }
   },
   "hostResource": {
@@ -2017,6 +2019,11 @@
     "sourceTypeHost": "Host",
     "sourceTypeBusinessService": "Business Service",
     "sourceBusinessService": "Source Business Service",
-    "selectBusinessService": "Select Business Service"
+    "selectBusinessService": "Select Business Service",
+    "searchHosts": "Search hosts by name...",
+    "searchClusterTypes": "Search cluster types...",
+    "searchBusinessTypes": "Search business types...",
+    "searchSops": "Search SOPs...",
+    "searchWhitelist": "Search commands..."
   }
 }

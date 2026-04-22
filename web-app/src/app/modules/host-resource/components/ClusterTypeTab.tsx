@@ -1,6 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import TypeCard from './TypeCard'
+import ListSearchInput from '../../../platform/ui/list/ListSearchInput'
+import ListResultsMeta from '../../../platform/ui/list/ListResultsMeta'
 import type { ClusterType } from '../../../../types/host'
 
 type Props = {
@@ -27,6 +29,13 @@ export default function ClusterTypeTab({ clusterTypes, loading, onCreate, onUpda
     const [editing, setEditing] = useState<ClusterType | null>(null)
     const [form, setForm] = useState<FormData>(emptyForm)
     const [saving, setSaving] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
+
+    const filteredTypes = useMemo(() => {
+        if (!searchTerm.trim()) return clusterTypes
+        const term = searchTerm.toLowerCase()
+        return clusterTypes.filter(ct => ct.name.toLowerCase().includes(term))
+    }, [clusterTypes, searchTerm])
 
     const openCreate = useCallback(() => {
         setEditing(null)
@@ -91,16 +100,30 @@ export default function ClusterTypeTab({ clusterTypes, loading, onCreate, onUpda
                     <div className="hr-type-tab-empty-text">{t('hostResource.noClusterTypes')}</div>
                 </div>
             ) : (
-                <div className="hr-type-def-grid">
-                    {clusterTypes.map(ct => (
-                        <TypeCard
-                            key={ct.id}
-                            item={ct}
-                            onEdit={openEdit}
-                            onDelete={handleDelete}
+                <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-3)' }}>
+                        <ListSearchInput
+                            value={searchTerm}
+                            placeholder={t('hostResource.searchClusterTypes')}
+                            onChange={setSearchTerm}
                         />
-                    ))}
-                </div>
+                        {searchTerm && (
+                            <ListResultsMeta>
+                                {t('common.resultsFound', { count: filteredTypes.length })}
+                            </ListResultsMeta>
+                        )}
+                    </div>
+                    <div className="hr-type-def-grid">
+                        {filteredTypes.map(ct => (
+                            <TypeCard
+                                key={ct.id}
+                                item={ct}
+                                onEdit={openEdit}
+                                onDelete={handleDelete}
+                            />
+                        ))}
+                    </div>
+                </>
             )}
 
             {/* Modal */}

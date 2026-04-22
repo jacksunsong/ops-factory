@@ -7,6 +7,8 @@ import { useToast } from '../../../platform/providers/ToastContext'
 import { useUser } from '../../../platform/providers/UserContext'
 import { GATEWAY_URL, gatewayHeaders } from '../../../../config/runtime'
 import DetailDialog from '../../../platform/ui/primitives/DetailDialog'
+import ListSearchInput from '../../../platform/ui/list/ListSearchInput'
+import ListResultsMeta from '../../../platform/ui/list/ListResultsMeta'
 import type { Sop, SopNode, SopCreateRequest } from '../../../../types/sop'
 import type { ClusterType } from '../../../../types/host'
 
@@ -946,6 +948,7 @@ export function SopsTab() {
     const [currentPage, setCurrentPage] = useState(1)
     const [editingSop, setEditingSop] = useState<Sop | null>(null)
     const [showAddModal, setShowAddModal] = useState(false)
+    const [searchTerm, setSearchTerm] = useState('')
 
     useEffect(() => {
         fetchSops()
@@ -1012,6 +1015,12 @@ export function SopsTab() {
         [userId, fetchSops, showToast, t],
     )
 
+    const filteredSops = useMemo(() => {
+        if (!searchTerm.trim()) return sops
+        const term = searchTerm.toLowerCase()
+        return sops.filter(s => s.name.toLowerCase().includes(term))
+    }, [sops, searchTerm])
+
     return (
         <>
             <section className="knowledge-section-card sop-workflow-section-card">
@@ -1057,10 +1066,22 @@ export function SopsTab() {
                     </div>
                 ) : (
                     (() => {
-                        const totalPages = Math.max(1, Math.ceil(sops.length / PAGE_SIZE))
+                        const totalPages = Math.max(1, Math.ceil(filteredSops.length / PAGE_SIZE))
                         const safePage = Math.min(currentPage, totalPages)
-                        const paginatedSops = sops.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+                        const paginatedSops = filteredSops.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
                         return <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-3)' }}>
+                        <ListSearchInput
+                            value={searchTerm}
+                            placeholder={t('hostResource.searchSops')}
+                            onChange={setSearchTerm}
+                        />
+                        {searchTerm && (
+                            <ListResultsMeta>
+                                {t('common.resultsFound', { count: filteredSops.length })}
+                            </ListResultsMeta>
+                        )}
+                    </div>
                     <div className="sop-workflow-list-shell">
                         <div className="sop-workflow-table-wrap">
                             <table className="sop-workflow-table">
@@ -1100,8 +1121,8 @@ export function SopsTab() {
                             <span className="sop-workflow-pagination-info">
                                 {t('common.showing', {
                                     start: (safePage - 1) * PAGE_SIZE + 1,
-                                    end: Math.min(safePage * PAGE_SIZE, sops.length),
-                                    total: sops.length,
+                                    end: Math.min(safePage * PAGE_SIZE, filteredSops.length),
+                                    total: filteredSops.length,
                                 })}
                             </span>
                             <div className="sop-workflow-pagination-controls">
