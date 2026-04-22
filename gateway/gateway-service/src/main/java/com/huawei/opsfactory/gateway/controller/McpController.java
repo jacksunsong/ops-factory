@@ -107,7 +107,9 @@ public class McpController {
                 Map<String, Object> settings = agentConfigService.readMcpSettings(agentId, name);
                 if ("knowledge-service".equals(name)) {
                     if (settings == null) {
-                        return ResponseEntity.ok(Map.<String, Object>of("sourceId", null));
+                        Map<String, Object> fallback = new java.util.HashMap<>();
+                        fallback.put("sourceId", null);
+                        return ResponseEntity.ok(fallback);
                     }
                     if (!settings.containsKey("sourceId")) {
                         settings.put("sourceId", null);
@@ -120,7 +122,9 @@ public class McpController {
                 return ResponseEntity.ok(settings);
             } catch (IOException e) {
                 if ("knowledge-service".equals(name)) {
-                    return ResponseEntity.ok(Map.<String, Object>of("sourceId", null));
+                    Map<String, Object> fallback = new java.util.HashMap<>();
+                    fallback.put("sourceId", null);
+                    return ResponseEntity.ok(fallback);
                 }
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.<String, Object>of(
                     "code", "SETTINGS_READ_FAILED",

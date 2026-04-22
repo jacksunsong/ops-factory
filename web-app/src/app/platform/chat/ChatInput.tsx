@@ -371,6 +371,12 @@ export default function ChatInput({
     const maxTotalFiles = MAX_IMAGES_PER_MESSAGE + MAX_FILES_PER_MESSAGE
     const isAnyFileLoading = uploadedFiles.some(f => f.isLoading)
 
+    const handleQuickContinue = useCallback(() => {
+        if (disabled || isGenerating || isListening || isAnyFileLoading) return
+        onSubmit('继续')
+        textareaRef.current?.focus()
+    }, [disabled, isGenerating, isListening, isAnyFileLoading, onSubmit])
+
     return (
         <div
             className={`chat-input-container ${isDragging ? 'dragging' : ''} ${isTemplateAppliedFlash ? 'template-applied' : ''}`}
@@ -517,56 +523,70 @@ export default function ChatInput({
 
                 {(() => {
                     const showMic = !hasContent && !isGenerating && !isListening && voiceSupported
+                    const canQuickContinue = !(disabled || isGenerating || isListening || isAnyFileLoading)
                     return (
-                        <button
-                            className={`chat-send-btn-new ${isGenerating ? 'is-stop' : ''} ${isListening ? 'is-recording' : ''}`}
-                            onClick={
-                                isGenerating ? handleStopGeneration :
-                                isListening ? stopListening :
-                                showMic ? startListening :
-                                handleSubmit
-                            }
-                            disabled={
-                                isGenerating ? !onStopGeneration :
-                                isListening ? false :
-                                showMic ? disabled :
-                                (disabled || !hasContent || isAnyFileLoading)
-                            }
-                            aria-label={
-                                isListening ? t('chat.stopRecording') :
-                                showMic ? t('chat.voiceInput') :
-                                isGenerating ? t('chat.stopGeneration') :
-                                t('chat.sendMessage')
-                            }
-                            title={
-                                isListening ? t('chat.stopRecording') :
-                                showMic ? t('chat.voiceInput') :
-                                isGenerating ? t('chat.stopGeneration') :
-                                t('chat.sendMessage')
-                            }
-                        >
-                            {isGenerating ? (
-                                <svg className="chat-send-btn-icon is-stop" viewBox="0 0 24 24" fill="currentColor">
-                                    <rect x="5.5" y="5.5" width="13" height="13" rx="2.1" />
-                                </svg>
-                            ) : isListening ? (
-                                <svg className="chat-send-btn-icon is-stop" viewBox="0 0 24 24" fill="currentColor">
-                                    <rect x="5.5" y="5.5" width="13" height="13" rx="2.1" />
-                                </svg>
-                            ) : showMic ? (
-                                <svg className="chat-send-btn-icon is-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <rect x="9" y="1" width="6" height="12" rx="3" />
-                                    <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
-                                    <line x1="12" y1="18" x2="12" y2="23" />
-                                    <line x1="8" y1="23" x2="16" y2="23" />
-                                </svg>
-                            ) : (
-                                <svg className="chat-send-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-                                    <path d="M12 19V5" />
-                                    <path d="M6.5 10.5L12 5l5.5 5.5" />
-                                </svg>
-                            )}
-                        </button>
+                        <div className="chat-send-actions">
+                            <button
+                                type="button"
+                                className="chat-quick-continue-btn"
+                                onClick={handleQuickContinue}
+                                disabled={!canQuickContinue}
+                                aria-label={t('chat.quickContinue')}
+                                title={t('chat.quickContinue')}
+                            >
+                                {t('chat.quickContinue')}
+                            </button>
+
+                            <button
+                                className={`chat-send-btn-new ${isGenerating ? 'is-stop' : ''} ${isListening ? 'is-recording' : ''}`}
+                                onClick={
+                                    isGenerating ? handleStopGeneration :
+                                    isListening ? stopListening :
+                                    showMic ? startListening :
+                                    handleSubmit
+                                }
+                                disabled={
+                                    isGenerating ? !onStopGeneration :
+                                    isListening ? false :
+                                    showMic ? disabled :
+                                    (disabled || !hasContent || isAnyFileLoading)
+                                }
+                                aria-label={
+                                    isListening ? t('chat.stopRecording') :
+                                    showMic ? t('chat.voiceInput') :
+                                    isGenerating ? t('chat.stopGeneration') :
+                                    t('chat.sendMessage')
+                                }
+                                title={
+                                    isListening ? t('chat.stopRecording') :
+                                    showMic ? t('chat.voiceInput') :
+                                    isGenerating ? t('chat.stopGeneration') :
+                                    t('chat.sendMessage')
+                                }
+                            >
+                                {isGenerating ? (
+                                    <svg className="chat-send-btn-icon is-stop" viewBox="0 0 24 24" fill="currentColor">
+                                        <rect x="5.5" y="5.5" width="13" height="13" rx="2.1" />
+                                    </svg>
+                                ) : isListening ? (
+                                    <svg className="chat-send-btn-icon is-stop" viewBox="0 0 24 24" fill="currentColor">
+                                        <rect x="5.5" y="5.5" width="13" height="13" rx="2.1" />
+                                    </svg>
+                                ) : showMic ? (
+                                    <svg className="chat-send-btn-icon is-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <rect x="9" y="1" width="6" height="12" rx="3" />
+                                        <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
+                                        <line x1="12" y1="18" x2="12" y2="23" />
+                                        <line x1="8" y1="23" x2="16" y2="23" />
+                                    </svg>
+                                ) : (
+                                    <svg className="chat-send-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                                        <path d="M12 19V5" />
+                                        <path d="M6.5 10.5L12 5l5.5 5.5" />
+                                    </svg>
+                                )}
+                            </button>
+                        </div>
                     )
                 })()}
             </div>
