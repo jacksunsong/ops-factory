@@ -79,4 +79,32 @@ public class AgentSkillControllerTest {
                 .expectBody()
                 .jsonPath("$.success").isEqualTo(false);
     }
+
+    @Test
+    public void uninstallSkill_asAdmin() throws Exception {
+        Mockito.when(installService.uninstall("agent1", "log-analysis"))
+                .thenReturn(Map.of(
+                        "success", true,
+                        "skillId", "log-analysis",
+                        "restartRequired", true));
+
+        webTestClient.delete().uri("/gateway/agents/agent1/skills/log-analysis")
+                .header("x-secret-key", "test")
+                .header("x-user-id", "admin")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(true)
+                .jsonPath("$.skillId").isEqualTo("log-analysis")
+                .jsonPath("$.restartRequired").isEqualTo(true);
+    }
+
+    @Test
+    public void uninstallSkill_nonAdminForbidden() {
+        webTestClient.delete().uri("/gateway/agents/agent1/skills/log-analysis")
+                .header("x-secret-key", "test")
+                .header("x-user-id", "regular-user")
+                .exchange()
+                .expectStatus().isForbidden();
+    }
 }

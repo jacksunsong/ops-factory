@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,6 +41,21 @@ public class AgentSkillController {
                 .onErrorMap(Exception.class, e -> new ResponseStatusException(
                         HttpStatus.BAD_GATEWAY,
                         e.getMessage() == null ? "Failed to install skill" : e.getMessage(),
+                        e))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @DeleteMapping("/{agentId}/skills/{skillId}")
+    public Mono<ResponseEntity<Map<String, Object>>> uninstallSkill(
+            @PathVariable String agentId,
+            @PathVariable String skillId,
+            ServerWebExchange exchange) {
+        UserContextFilter.requireAdmin(exchange);
+        return Mono.fromCallable(() -> ResponseEntity.ok(installService.uninstall(agentId, skillId)))
+                .onErrorResume(IllegalArgumentException.class, e -> Mono.just(badRequest(e.getMessage())))
+                .onErrorMap(Exception.class, e -> new ResponseStatusException(
+                        HttpStatus.BAD_GATEWAY,
+                        e.getMessage() == null ? "Failed to uninstall skill" : e.getMessage(),
                         e))
                 .subscribeOn(Schedulers.boundedElastic());
     }

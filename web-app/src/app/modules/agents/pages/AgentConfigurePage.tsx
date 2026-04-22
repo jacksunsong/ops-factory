@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAgentConfig } from '../hooks/useAgentConfig'
 import { useToast } from '../../../platform/providers/ToastContext'
 import { McpSection } from '../components/mcp'
-import { SkillSection } from '../components/skill'
+import { SkillMarketDrawer, SkillSection } from '../components/skill'
 import { PromptsSection } from '../components/prompt'
 import { MemorySection } from '../components/memory'
 import Button from '../../../platform/ui/primitives/Button'
 import PageBackLink from '../../../platform/ui/primitives/PageBackLink'
-import { useRightPanel } from '../../../platform/providers/RightPanelContext'
+import { useGoosed } from '../../../platform/providers/GoosedContext'
+import type { SkillEntry } from '../../../../types/skill'
 import '../styles/agents.css'
 
 type ConfigTab = 'overview' | 'prompts' | 'mcp' | 'skills' | 'memory'
@@ -20,19 +21,26 @@ export default function AgentConfigure() {
     const navigate = useNavigate()
     const { config, isLoading, error, fetchConfig, updateConfig } = useAgentConfig()
     const { showToast } = useToast()
+    const { refreshAgents } = useGoosed()
 
     // Tab state
     const [activeTab, setActiveTab] = useState<ConfigTab>('overview')
-
-    const { openMarket } = useRightPanel()
-
-    const handleBrowseMarket = (tab: 'all' | 'mcp' | 'skill' = 'all') => {
-        openMarket(tab)
-    }
+    const [isSkillMarketOpen, setIsSkillMarketOpen] = useState(false)
+    const [skillRefreshKey, setSkillRefreshKey] = useState(0)
+    const [installedSkills, setInstalledSkills] = useState<SkillEntry[]>([])
 
     // Form state
     const [agentsMd, setAgentsMd] = useState('')
     const [isSavingPrompt, setIsSavingPrompt] = useState(false)
+
+    const handleSkillsLoaded = useCallback((skills: SkillEntry[]) => {
+        setInstalledSkills(skills)
+    }, [])
+
+    const handleSkillInstalled = useCallback(() => {
+        setSkillRefreshKey(value => value + 1)
+        void refreshAgents()
+    }, [refreshAgents])
 
     useEffect(() => {
         if (agentId) {
@@ -45,6 +53,12 @@ export default function AgentConfigure() {
             setAgentsMd(config.agentsMd)
         }
     }, [config])
+
+    useEffect(() => {
+        if (activeTab !== 'skills') {
+            setIsSkillMarketOpen(false)
+        }
+    }, [activeTab])
 
     const handleSavePrompt = async () => {
         if (!agentId) return
@@ -91,98 +105,105 @@ export default function AgentConfigure() {
     ]
 
     return (
-        <div
-            className="agent-configure-scroll-area"
-            style={{
-                width: '100%',
-                height: '100%',
-                overflowY: 'auto',
-                overflowX: 'hidden'
-            }}
-        >
-            <div className="page-container sidebar-top-page agent-configure-page">
-                <div className="agent-configure-header">
-                <PageBackLink onClick={() => navigate('/agents')}>
-                    {t('agentConfigure.backToAgents')}
-                </PageBackLink>
-                <div className="agent-configure-title-section">
-                    <h1 className="agent-configure-title">{config.name}</h1>
-                    <span className="agent-configure-id">{config.id}</span>
+        <div className={`agent-configure-workspace ${isSkillMarketOpen ? 'agent-configure-workspace-with-drawer' : ''}`}>
+            <div className="agent-configure-scroll-area">
+                <div className="page-container sidebar-top-page agent-configure-page">
+                    <div className="agent-configure-header">
+                        <PageBackLink onClick={() => navigate('/agents')}>
+                            {t('agentConfigure.backToAgents')}
+                        </PageBackLink>
+                        <div className="agent-configure-title-section">
+                            <h1 className="agent-configure-title">{config.name}</h1>
+                            <span className="agent-configure-id">{config.id}</span>
+                        </div>
+                    </div>
+
+                    {/* Tab Navigation */}
+                    <div className="config-tabs">
+                        {tabs.map(tab => (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                className={`config-tab ${activeTab === tab.key ? 'config-tab-active' : ''}`}
+                                onClick={() => setActiveTab(tab.key)}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Tab Content */}
+                    <div className="agent-configure-content">
+                        {activeTab === 'overview' && (
+                            <section className="agent-configure-section">
+                                <div className="agent-configure-section-header">
+                                    <div className="agent-configure-section-copy">
+                                        <h2 className="agent-configure-section-title">{t('agentConfigure.agentPromptTitle')}</h2>
+                                        <p className="agent-configure-section-desc">
+                                            {t('agentConfigure.agentPromptDesc')}
+                                        </p>
+                                    </div>
+                                    <div className="agent-configure-actions agent-configure-actions-top">
+                                        <Button
+                                            variant="primary"
+                                            size="sm"
+                                            onClick={handleSavePrompt}
+                                            disabled={isSavingPrompt}
+                                        >
+                                            {isSavingPrompt ? t('agentConfigure.saving') : t('agentConfigure.savePrompt')}
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="agent-prompt-editor">
+                                    <textarea
+                                        value={agentsMd}
+                                        onChange={(e) => setAgentsMd(e.target.value)}
+                                        placeholder={t('agentConfigure.promptPlaceholder')}
+                                        rows={15}
+                                    />
+                                </div>
+                            </section>
+                        )}
+
+                        {activeTab === 'prompts' && (
+                            <section className="agent-configure-section">
+                                <PromptsSection agentId={agentId || null} />
+                            </section>
+                        )}
+
+                        {activeTab === 'mcp' && (
+                            <section className="agent-configure-section">
+                                <McpSection agentId={agentId || null} />
+                            </section>
+                        )}
+
+                        {activeTab === 'skills' && (
+                            <section className="agent-configure-section">
+                                <SkillSection
+                                    agentId={agentId || ''}
+                                    onBrowseMarket={() => setIsSkillMarketOpen(true)}
+                                    refreshKey={skillRefreshKey}
+                                    onSkillsLoaded={handleSkillsLoaded}
+                                />
+                            </section>
+                        )}
+
+                        {activeTab === 'memory' && (
+                            <section className="agent-configure-section">
+                                <MemorySection agentId={agentId || null} />
+                            </section>
+                        )}
+                    </div>
                 </div>
             </div>
-
-            {/* Tab Navigation */}
-            <div className="config-tabs">
-                {tabs.map(tab => (
-                    <button
-                        key={tab.key}
-                        type="button"
-                        className={`config-tab ${activeTab === tab.key ? 'config-tab-active' : ''}`}
-                        onClick={() => setActiveTab(tab.key)}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Tab Content */}
-            <div className="agent-configure-content">
-                {activeTab === 'overview' && (
-                    <section className="agent-configure-section">
-                        <div className="agent-configure-section-header">
-                            <div className="agent-configure-section-copy">
-                                <h2 className="agent-configure-section-title">{t('agentConfigure.agentPromptTitle')}</h2>
-                                <p className="agent-configure-section-desc">
-                                    {t('agentConfigure.agentPromptDesc')}
-                                </p>
-                            </div>
-                            <div className="agent-configure-actions agent-configure-actions-top">
-                                <Button
-                                    variant="primary"
-                                    size="sm"
-                                    onClick={handleSavePrompt}
-                                    disabled={isSavingPrompt}
-                                >
-                                    {isSavingPrompt ? t('agentConfigure.saving') : t('agentConfigure.savePrompt')}
-                                </Button>
-                            </div>
-                        </div>
-                        <div className="agent-prompt-editor">
-                            <textarea
-                                value={agentsMd}
-                                onChange={(e) => setAgentsMd(e.target.value)}
-                                placeholder={t('agentConfigure.promptPlaceholder')}
-                                rows={15}
-                            />
-                        </div>
-                    </section>
-                )}
-
-                {activeTab === 'prompts' && (
-                    <section className="agent-configure-section">
-                        <PromptsSection agentId={agentId || null} />
-                    </section>
-                )}
-
-                {activeTab === 'mcp' && (
-                    <section className="agent-configure-section">
-                        <McpSection agentId={agentId || null} onBrowseMarket={() => handleBrowseMarket('mcp')} />
-                    </section>
-                )}
-
-                {activeTab === 'skills' && (
-                    <section className="agent-configure-section">
-                        <SkillSection agentId={agentId || ''} onBrowseMarket={() => handleBrowseMarket('skill')} />
-                    </section>
-                )}
-
-                {activeTab === 'memory' && (
-                    <section className="agent-configure-section">
-                        <MemorySection agentId={agentId || null} />
-                    </section>
-                )}
-            </div>
-            </div>
+            <SkillMarketDrawer
+                isOpen={isSkillMarketOpen}
+                agentId={agentId || ''}
+                agentName={config.name}
+                installedSkills={installedSkills}
+                onClose={() => setIsSkillMarketOpen(false)}
+                onInstalled={handleSkillInstalled}
+            />
         </div>
     )
 }

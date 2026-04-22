@@ -105,6 +105,32 @@ public class AgentSkillInstallService {
                 "restartRequired", true);
     }
 
+    public Map<String, Object> uninstall(String agentId, String requestedSkillId) throws IOException {
+        AgentRegistryEntry agent = agentConfigService.findAgent(agentId);
+        if (agent == null) {
+            throw new IllegalArgumentException("Agent '" + agentId + "' not found");
+        }
+
+        String skillId = validateSkillId(requestedSkillId);
+        Path skillDir = agentConfigService.getAgentConfigDir(agentId).resolve("skills").resolve(skillId).normalize();
+        Path skillsDir = agentConfigService.getAgentConfigDir(agentId).resolve("skills").normalize();
+        if (!skillDir.startsWith(skillsDir)) {
+            throw new IllegalArgumentException("Skill id must use lowercase letters, numbers, and hyphens");
+        }
+        if (!Files.isDirectory(skillDir)) {
+            throw new IllegalArgumentException("Skill '" + skillId + "' is not installed for agent '" + agentId + "'");
+        }
+
+        deleteRecursively(skillDir);
+        agentConfigService.invalidateCache(agentId);
+
+        log.info("Uninstalled skill id={} agentId={}", skillId, agentId);
+        return Map.of(
+                "success", true,
+                "skillId", skillId,
+                "restartRequired", true);
+    }
+
     private void extractPackage(byte[] packageBytes, Path targetDir) throws IOException {
         try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(packageBytes))) {
             ZipEntry entry;

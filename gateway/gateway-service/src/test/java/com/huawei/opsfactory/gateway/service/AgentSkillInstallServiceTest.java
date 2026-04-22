@@ -23,8 +23,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class AgentSkillInstallServiceTest {
@@ -106,6 +108,26 @@ public class AgentSkillInstallServiceTest {
         when(agentConfigService.findAgent("missing")).thenReturn(null);
 
         assertThrows(IllegalArgumentException.class, () -> service.install("missing", "log-analysis"));
+    }
+
+    @Test
+    public void uninstallDeletesInstalledSkillDirectory() throws Exception {
+        Path skillDir = configDir.resolve("skills/log-analysis");
+        Files.createDirectories(skillDir.resolve("scripts"));
+        Files.writeString(skillDir.resolve("SKILL.md"), "# Log Analysis\n");
+        Files.writeString(skillDir.resolve("scripts/analyze.py"), "print('ok')\n");
+
+        Map<String, Object> result = service.uninstall("agent1", "log-analysis");
+
+        assertEquals(true, result.get("success"));
+        assertEquals("log-analysis", result.get("skillId"));
+        assertFalse(Files.exists(skillDir));
+        verify(agentConfigService).invalidateCache("agent1");
+    }
+
+    @Test
+    public void uninstallRejectsMissingSkill() {
+        assertThrows(IllegalArgumentException.class, () -> service.uninstall("agent1", "missing-skill"));
     }
 
     private byte[] zipBytes(ZipTestEntry... entries) throws IOException {

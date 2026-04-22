@@ -10,10 +10,9 @@ import './Mcp.css'
 
 interface McpSectionProps {
   agentId: string | null
-  onBrowseMarket?: () => void
 }
 
-export default function McpSection({ agentId, onBrowseMarket }: McpSectionProps) {
+export default function McpSection({ agentId }: McpSectionProps) {
   const { t } = useTranslation()
   const {
     categorized,
@@ -71,11 +70,6 @@ export default function McpSection({ agentId, onBrowseMarket }: McpSectionProps)
       <div className="mcp-section-header">
         <h3 className="mcp-section-title">{t('mcp.title')}</h3>
         <div className="mcp-header-actions">
-          {onBrowseMarket && (
-            <Button variant="secondary" size="sm" onClick={onBrowseMarket}>
-              {t('market.browseMarket')}
-            </Button>
-          )}
           <Button variant="primary" size="sm" onClick={handleOpenAddModal}>
             {t('mcp.addServer')}
           </Button>

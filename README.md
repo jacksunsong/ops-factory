@@ -7,6 +7,7 @@ The current architectural boundary is:
 - `gateway` is the single backend entry for agent access, sessions, files, config, and runtime orchestration
 - `control-center` provides platform health, config, log, and service control views
 - `knowledge-service` and `business-intelligence` provide domain services consumed by the platform
+- `skill-market` provides a reusable skill package catalog that agents can install from
 - optional integrations such as `langfuse`, `onlyoffice`, and `prometheus-exporter` stay optional
 
 ## Demo Media
@@ -67,6 +68,14 @@ The current architectural boundary is:
 
 ![Knowledge Recall Testing](media/screenshot-knowledge-recall-testing.png)
 
+#### Skill Market
+
+![Skill Market](media/screenshot-skill-market.png)
+
+#### Agent Skill Market Integration
+
+![Agent Skill Market Integration](media/screenshot-skill-market-integration-agent.png)
+
 ## Architecture
 
 ```text
@@ -84,6 +93,9 @@ Web App (:5173)
     +--> Business Intelligence (:8093, optional)
     |      - BI data APIs and workbook-backed analytics
     |
+    +--> Skill Market (:8095)
+    |      - reusable skill catalog, package validation, package download
+    |
     +--> Control Center (:8094)
            - service health, logs, config, service actions
 
@@ -96,6 +108,7 @@ Optional integrations:
 Two boundary rules matter across the repo:
 - frontend traffic should not bypass the gateway for agent runtime access
 - agent-specific runtime behavior belongs under `gateway/agents/<agent-id>/config`
+- Skill Market owns catalog/package storage, while Gateway owns installing packages into agent config directories
 
 See [docs/architecture/overview.md](./docs/architecture/overview.md) for the service-level source of truth and [docs/architecture/api-boundaries.md](./docs/architecture/api-boundaries.md) for compatibility rules.
 
@@ -107,6 +120,7 @@ See [docs/architecture/overview.md](./docs/architecture/overview.md) for the ser
 | Gateway | `gateway/` | `3000` | Java 21 + Spring Boot | Auth, routing, config CRUD, file/session APIs, `goosed` runtime management |
 | Knowledge Service | `knowledge-service/` | `8092` | Java 21 + Spring Boot | Knowledge ingest, indexing, retrieval, recall workflows |
 | Business Intelligence | `business-intelligence/` | `8093` | Java 21 + Spring Boot | BI APIs backed by workbook-style source data |
+| Skill Market | `skill-market/` | `8095` | Java 21 + Spring Boot | Reusable skill package catalog, validation, metadata, and package downloads |
 | Control Center | `control-center/` | `8094` | Java 21 + Spring Boot | Service health, logs, config access, service control actions |
 | Prometheus Exporter | `prometheus-exporter/` | `9091` | Java 21 + Spring Boot | Gateway-oriented Prometheus metrics export |
 | TypeScript SDK | `typescript-sdk/` | n/a | TypeScript | Programmatic gateway client |
@@ -121,6 +135,7 @@ ops-factory/
 ├── web-app/                  # React/Vite frontend
 ├── knowledge-service/        # Knowledge ingest and retrieval service
 ├── business-intelligence/    # BI service
+├── skill-market/             # Reusable skill package catalog service
 ├── control-center/           # Platform control plane service
 ├── prometheus-exporter/      # Prometheus metrics exporter
 ├── typescript-sdk/           # @goosed/sdk client library
@@ -152,6 +167,7 @@ Mandatory for the main stack:
 cp gateway/config.yaml.example gateway/config.yaml
 cp web-app/config.json.example web-app/config.json
 cp knowledge-service/config.yaml.example knowledge-service/config.yaml
+cp skill-market/config.yaml.example skill-market/config.yaml
 cp control-center/config.yaml.example control-center/config.yaml
 ```
 
@@ -165,6 +181,7 @@ cp onlyoffice/config.yaml.example onlyoffice/config.yaml
 ```
 
 At minimum, set a real gateway secret in `gateway/config.yaml` and keep `web-app/config.json` aligned with your local service URLs and secrets.
+For Skill Market, keep `web-app/config.json` `skillMarketServiceUrl` and `gateway/config.yaml` `gateway.skill-market.base-url` aligned with `skill-market/config.yaml`.
 
 ### 2. Start services
 
@@ -204,7 +221,7 @@ Once started, the main UI is available at [http://127.0.0.1:5173](http://127.0.0
 
 ```bash
 ./scripts/ctl.sh startup all
-./scripts/ctl.sh startup gateway knowledge control-center webapp
+./scripts/ctl.sh startup gateway knowledge skill-market control-center webapp
 ./scripts/ctl.sh status
 ./scripts/ctl.sh shutdown all
 ./scripts/ctl.sh restart gateway
@@ -225,6 +242,7 @@ cd web-app && npm run build
 cd gateway && mvn test
 cd knowledge-service && mvn test
 cd business-intelligence && mvn test
+cd skill-market && mvn test
 cd control-center && mvn test
 cd prometheus-exporter && mvn test
 ```
@@ -247,6 +265,7 @@ Main config entry points:
 - [`gateway/config.yaml.example`](./gateway/config.yaml.example)
 - [`knowledge-service/config.yaml.example`](./knowledge-service/config.yaml.example)
 - [`business-intelligence/config.yaml.example`](./business-intelligence/config.yaml.example)
+- [`skill-market/config.yaml.example`](./skill-market/config.yaml.example)
 - [`control-center/config.yaml.example`](./control-center/config.yaml.example)
 - [`prometheus-exporter/config.yaml.example`](./prometheus-exporter/config.yaml.example)
 - [`langfuse/config.yaml.example`](./langfuse/config.yaml.example)

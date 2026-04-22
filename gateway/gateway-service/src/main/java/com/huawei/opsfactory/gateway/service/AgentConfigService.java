@@ -204,6 +204,7 @@ public class AgentConfigService {
                 if (Files.isDirectory(entry)) {
                     String dirName = entry.getFileName().toString();
                     Map<String, String> skill = new HashMap<>();
+                    skill.put("id", dirName);
                     skill.put("name", dirName);
                     skill.put("description", "");
                     skill.put("path", "skills/" + dirName);

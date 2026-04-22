@@ -47,10 +47,18 @@ describe('skill market frontend structure', () => {
     it('agent skills page installs from skill market instead of mock capability market', () => {
         const agentPage = read('src/app/modules/agents/pages/AgentConfigurePage.tsx')
         const skillSection = read('src/app/modules/agents/components/skill/SkillSection.tsx')
+        const drawerSource = read('src/app/modules/agents/components/skill/SkillMarketDrawer.tsx')
+        const hookSource = read('src/app/modules/agents/hooks/useAgentSkillMarket.ts')
 
-        expect(agentPage).toContain("<SkillSection agentId={agentId || ''} onBrowseMarket={() => handleBrowseMarket('skill')} />")
+        expect(agentPage).toContain('SkillMarketDrawer')
+        expect(agentPage).toContain('setIsSkillMarketOpen(true)')
+        expect(agentPage).not.toContain("handleBrowseMarket('skill')")
         expect(skillSection).toContain('onBrowseMarket')
         expect(skillSection).toContain("t('market.browseMarket')")
+        expect(drawerSource).toContain('useAgentSkillMarket')
+        expect(drawerSource).toContain('onInstalled')
+        expect(hookSource).toContain('SKILL_MARKET_SERVICE_URL')
+        expect(hookSource).toContain('/skills/install')
         expect(skillSection).not.toContain('AddSkillFromMarketModal')
     })
 

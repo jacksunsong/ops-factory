@@ -9,6 +9,7 @@ interface UseSkillsResult {
     isLoading: boolean
     error: string | null
     fetchSkills: (agentId: string) => Promise<void>
+    uninstallSkill: (agentId: string, skillId: string) => Promise<{ success: boolean; error?: string }>
 }
 
 export function useSkills(): UseSkillsResult {
@@ -40,10 +41,30 @@ export function useSkills(): UseSkillsResult {
         }
     }, [userId])
 
+    const uninstallSkill = useCallback(async (agentId: string, skillId: string) => {
+        try {
+            const res = await fetch(`${GATEWAY_URL}/agents/${encodeURIComponent(agentId)}/skills/${encodeURIComponent(skillId)}`, {
+                method: 'DELETE',
+                headers: gatewayHeaders(userId),
+                signal: AbortSignal.timeout(10000),
+            })
+
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}: ${await res.text()}`)
+            }
+
+            await fetchSkills(agentId)
+            return { success: true }
+        } catch (err) {
+            return { success: false, error: getErrorMessage(err) }
+        }
+    }, [fetchSkills, userId])
+
     return {
         skills,
         isLoading,
         error,
         fetchSkills,
+        uninstallSkill,
     }
 }
