@@ -2,663 +2,110 @@
 
 ## 1. 这份 Excel 是什么
 
-`itil-ticket-export-schema-v1.xlsx` 是一份面向 IT 运维、ITSM 数据治理和跨系统工单分析的标准化导出模型。
+`itil-ticket-export-schema-v1.xlsx` 是一个 MVP 级别的 ITIL 工单标准导出文件定义。它的目标是让不同 ITSM 平台通过 adapter 输出同一结构的 Excel 文件，而不是一次性覆盖所有审计、治理、BI、供应商和自动化场景。
 
-它覆盖 ITIL 四大流程：
+覆盖流程：
 
 - Incident
 - Service Request
 - Problem
 - Change
 
-它的目标不是替代 ServiceNow、Remedy、HPSM、iMOC eTicket、Freshservice 或 IBM ServiceDesk 的原生表结构，而是在这些系统之上定义一套统一的 **canonical schema**，用于承接不同系统导出的字段，并把它们归一化到同一套字段、枚举和质量规则中。
+覆盖平台：
 
-适合的使用场景包括：
-
-- 多套 ITSM 系统工单数据合并
-- 运维 KPI / SLA / OLA 报表
-- Incident、Problem、Change 复盘分析
-- 供应商和外包团队绩效考核
-- 变更风险与失败变更分析
-- 服务目录履约效率分析
-- 工单数据湖、数据仓库或 BI 模型建设
-- ITSM 系统迁移前的数据字段盘点
+- ServiceNow
+- BMC Remedy / BMC Helix
+- HPSM / Micro Focus Service Manager
+- OpenText Service Management Automation X (SMAX)
+- iMOC eTicket / Huawei
+- Freshservice
+- IBM ServiceDesk / IBM Control Desk / Maximo
 
 ## 2. 文件概览
 
-工作簿共有 24 个工作表。
+工作簿是精简 MVP 版本，核心规模如下：
 
-核心规模：
+- `Canonical_Schema`：64 个字段，全流程字段全集
+- `Incident_Schema`：38 个字段
+- `Service_Request_Schema`：41 个字段
+- `Problem_Schema`：42 个字段
+- `Change_Schema`：47 个字段
+- `Incident_Sample_Data`：8,977 条真实 incident 样例归一化数据
+- `SR_Sample_Data` / `Problem_Sample_Data` / `Change_Sample_Data`：各 120 条 MVP 模拟数据
 
-- `Canonical_Schema`：245 个标准字段
-- `Incident_Schema`：167 个 Incident 适用字段
-- `Service_Request_Schema`：136 个 Service Request 适用字段
-- `Problem_Schema`：141 个 Problem 适用字段
-- `Change_Schema`：159 个 Change 适用字段
-- `Incident_Sample_Data`：8,977 条按 schema 归一化后的 incident 样例，并嵌入原始 incident 导出的 16 个 source-specific 字段
-- `SR_Sample_Data`：120 条 Service Request 模拟数据
-- `Problem_Sample_Data`：120 条 Problem 模拟数据
-- `Change_Sample_Data`：120 条 Change 模拟数据
+## 3. 设计原则
 
-## 3. 推荐阅读顺序
+本版本只保留最小可验证字段：
 
-第一次使用时，建议按这个顺序看：
+- 头部平台都能稳定输出或通过 adapter 映射的字段
+- 四大流程 MVP 所需的最小流程差异字段
+- 能保留原始数据回溯能力的 `source_raw_fields`
 
-1. `README`
-2. `Operational_Gap_Assessment`
-3. `Canonical_Schema`
-4. 对应流程的 schema sheet，例如 `Incident_Schema`
-5. `Enum_Definitions`
-6. `System_Header_Mapping`
-7. 对应系统的 header sheet，例如 `ServiceNow_Headers`
-8. 对应 sample data sheet
-9. `Data_Quality_Rules`
-10. `Validation`
+以下内容不进入主 schema：
 
-这样可以先理解设计目标，再看字段定义，最后看样例和质量规则。
+- SLA breach 结果和超时分钟等派生指标
+- 数据质量评分、字段映射置信度、record hash
+- 审计轨迹、供应商生命周期、war room、PIR、自动化和成本字段
+- 每个源系统的原始字段展开列
 
 ## 4. 各工作表说明
 
-### README
+- `README`：版本、范围和文件说明
+- `Sources`：设计依据和来源
+- `Canonical_Schema`：全流程字段全集
+- `Incident_Schema`、`Service_Request_Schema`、`Problem_Schema`、`Change_Schema`：各流程字段定义
+- `Enum_Definitions`：标准枚举和平台枚举映射
+- `System_Header_Mapping`：标准字段到各平台字段的映射
+- 平台 header sheets：各平台关键原生字段和标准字段映射
+- `Incident_Source_Profile`：现有 incident 附件字段画像
+- `Incident_Raw_SLA_Criteria`：现有 incident 附件中的 SLA 标准
+- sample data sheets：各流程样例数据
+- `Validation`：结构和样例数据校验摘要
 
-说明工作簿版本、用途、来源策略和样例数据范围。
+## 5. 如何理解 Required 和 Optional
 
-重点看：
+`requirement_level = Required` 表示 adapter 输出标准 Excel 时必须尽量填充。MVP 的 Required 字段很少，主要是：
 
-- `Version`
-- `Incident sample inclusion`
-- `Sample data`
+- 来源、流程和工单编号
+- 标题、状态、优先级、分类
+- 打开和更新时间
+- `source_raw_fields`
 
-### Sources
+`Optional` 字段不是不重要，而是不同平台、不同租户、不同流程配置下可能不存在。adapter 应能留空，但不要删除列。
 
-记录字段设计和系统表头映射所参考的来源。
+## 6. source_raw_fields 的作用
 
-这里用于区分：
+`source_raw_fields` 是 MVP 版的关键字段。它用 JSON/Text 保存源系统原始字段快照。
 
-- 厂商公开文档确认的字段
-- 第三方公开表定义或接口文档确认的字段
-- 用户提供的真实 incident 导出附件
-- 治理字段、派生字段和源系统专用字段
+这样做的原因：
 
-注意：iMOC eTicket 的完整字段字典没有公开资料，因此没有假装提供完整官方字段。iMOC 部分主要基于公开可查的 Huawei 资料和你提供的真实 incident 导出样例。
+- 不把每个源系统字段都展开成标准列
+- 不丢失原始导出信息
+- 方便排查映射问题
+- 支持源系统差异和租户自定义字段
 
-### Canonical_Schema
+对于现有 incident 样例，原始的 16 个字段都进入 `source_raw_fields`。
 
-这是最重要的工作表。
+## 7. 平台适配接口
 
-每一行代表一个标准字段。主要列如下：
+各流程平台的标准适配接口是文件接口。adapter 的职责是调用平台 API 或导出接口，最终生成符合本 schema 的 Excel 文件。
 
-| 列名 | 含义 |
-|---|---|
-| `field_id` | 标准字段英文 ID，用于 ETL、数据仓库、API、BI 建模 |
-| `processes` | 字段适用流程，`All` 表示四类流程都适用 |
-| `label_zh` | 中文字段名 |
-| `label_en` | 英文字段名 |
-| `data_type` | 数据类型 |
-| `field_tier` | 字段等级 |
-| `requirement_level` | 字段要求级别，取值为 `Required` 或 `Optional` |
-| `allowed_values_or_format` | 枚举值或格式要求 |
-| `example` | 示例值 |
-| `field_domain` | 字段所属管理域 |
-| `definition_or_note` | 字段定义 |
-| `data_quality_rule` | 数据质量规则 |
-| `normalization_rule` | 归一化规则 |
+典型 adapter 流程：
 
-如果你只想理解标准字段定义，从这个 sheet 开始。
+1. 调用平台 API 拉取 Incident / Service Request / Problem / Change 数据。
+2. 按 `System_Header_Mapping` 做字段映射。
+3. 按 `Enum_Definitions` 做枚举归一化。
+4. 填充 Required 字段。
+5. 把源系统原始字段放入 `source_raw_fields`。
+6. 输出标准 Excel 文件。
 
-### Incident_Schema
+SMAX adapter 需要特别注意：OpenText SMAX 的 mandatory fields 会受租户配置影响，所以 adapter 应支持配置化 mapping 和字段发现，不应把租户私有字段直接变成标准 schema 字段。
 
-Incident 流程适用字段。
+## 8. 如何使用样例数据
 
-适合用于：
+- 用 `Incident_Sample_Data` 验证真实 incident 数据兼容性。
+- 用 `SR_Sample_Data` 验证服务请求 adapter 输出。
+- 用 `Problem_Sample_Data` 验证 Problem / RCA 基础字段。
+- 用 `Change_Sample_Data` 验证 Change 审批、计划、实施和回退字段。
 
-- 事件单导出模板
-- 事件 SLA 报表
-- 重大事件复盘
-- 监控告警转 incident 的字段设计
-- incident 数据入湖字段表
-
-这张表包含所有 `processes = All` 和 `processes` 包含 `Incident` 的字段。
-
-### Service_Request_Schema
-
-Service Request 流程适用字段。
-
-适合用于：
-
-- 服务目录请求导出
-- 申请、审批、履约数据分析
-- 自动化履约效果评估
-- 服务目录成本和 chargeback 分析
-
-重点关注这些字段域：
-
-- `Request Fulfillment`
-- `Governance & Risk`
-- `Automation & Effort`
-- `Financial & Effort`
-
-### Problem_Schema
-
-Problem 流程适用字段。
-
-适合用于：
-
-- RCA 分析
-- 已知错误库 KEDB
-- 问题老化管理
-- 复发问题分析
-- 永久修复跟踪
-
-重点关注这些字段：
-
-- `root_cause`
-- `workaround`
-- `known_error`
-- `rca_owner`
-- `rca_due_at`
-- `rca_completed_at`
-- `permanent_fix_required`
-- `permanent_fix_change_id`
-- `recurrence_count`
-- `prevented_incident_estimate`
-
-### Change_Schema
-
-Change 流程适用字段。
-
-适合用于：
-
-- CAB 审批分析
-- 变更成功率分析
-- 失败变更复盘
-- 高风险变更审计
-- 变更冲突检查
-- 变更导致 incident 的追踪
-
-重点关注这些字段：
-
-- `change_type`
-- `risk`
-- `approval_status`
-- `cab_required`
-- `planned_start_at`
-- `planned_end_at`
-- `actual_start_at`
-- `actual_end_at`
-- `implementation_plan`
-- `test_plan`
-- `backout_plan`
-- `deployment_result`
-- `backout_executed`
-- `change_failure_reason`
-- `caused_incident_ids`
-
-### Enum_Definitions
-
-定义标准枚举值，以及不同系统中的对应值。
-
-典型用途：
-
-- 把 ServiceNow、Remedy、HPSM、Freshservice 等系统的状态统一到 `New / Open / Pending / Resolved / Closed`
-- 把不同系统的优先级统一到 `P1 / P2 / P3 / P4`
-- 统一 Change Type、Approval Status、Risk、Support Tier 等管理口径
-
-做 ETL 时，应优先使用这里的枚举映射。
-
-### Data_Quality_Rules
-
-定义数据质量校验规则。
-
-典型规则包括：
-
-- 核心字段不能为空
-- 时间先后顺序必须合理
-- SLA breach 标识和 breach minutes 必须一致
-- Closed 工单必须有关闭证据
-- Priority 必须归一化到 P1-P4
-- Pending 工单应有等待原因或延迟责任方
-- Change 必须有实施、测试、回退和审批证据
-- Problem 关闭前应有 RCA 或永久修复信息
-
-这张表适合交给数据工程、ETL、数据治理或 BI 团队使用。
-
-### Operational_Gap_Assessment
-
-说明本 schema 覆盖的运维管理域和业务价值。
-
-它不是字段定义表，而是帮助管理者理解为什么要增加这些字段。
-
-覆盖的改进域包括：
-
-- SLA/OLA
-- Responsibility
-- Vendor
-- Major Incident
-- Problem
-- Change
-- Service Request
-- Data Quality
-
-### System_Header_Mapping
-
-这是标准字段和各源系统字段之间的映射总表。
-
-列包括：
-
-- `canonical_field_id`
-- `canonical_label_zh`
-- `canonical_label_en`
-- `ServiceNow`
-- `Remedy/BMC Helix`
-- `HPSM/Micro Focus SM`
-- `iMOC eTicket/Huawei`
-- `Freshservice`
-- `IBM ServiceDesk/Control Desk`
-- `Mapping notes`
-
-使用方式：
-
-1. 先确定目标标准字段，例如 `ticket_id`
-2. 查看每个系统中对应的原生字段
-3. 在 ETL 或导出模板中建立映射
-4. 对于空白或标注为 derived/custom 的字段，不要强行要求源系统一定存在原生字段，可以通过审计日志、SLA 引擎、CMDB、审批历史或 ETL 派生
-
-### 系统 Header 工作表
-
-包括：
-
-- `ServiceNow_Headers`
-- `Remedy_Headers`
-- `HPSM_Headers`
-- `iMOC_eTicket_Headers`
-- `Freshservice_Headers`
-- `IBM_ServiceDesk_Headers`
-
-这些表的作用是列出各系统中已查证或可追溯的原生字段/表头，并说明它们映射到哪个 canonical field。
-
-使用时要注意：
-
-- 这些不是完整替代厂商数据字典
-- 它们用于导出字段识别、字段映射和差异分析
-- 如果你的系统有大量自定义字段，需要额外补充到映射表中
-
-### Incident_Source_Profile
-
-对用户提供的 incident 附件做字段画像。
-
-它说明：
-
-- 附件有多少行
-- 有哪些字段
-- 每个字段的非空情况
-- 主要值域或范围
-- 映射到哪个 canonical field
-
-这张表用于证明 schema 兼容原始 incident 附件。
-
-### Incident_Raw_SLA_Criteria
-
-保留原始附件里的 SLA 标准：
-
-- Priority
-- Response minutes
-- Resolution hours
-
-它是 incident 样例归一化时计算 SLA 相关字段的依据。
-
-### Incident_Sample_Data
-
-把原始 incident 附件按 Incident schema 归一化后的结果。
-
-这张表同时承担两类用途：
-
-- 提供可直接用于入湖、ETL、BI 的标准化 incident 字段
-- 通过 `incident_raw_*` source-specific 字段保留原始导出的 16 个字段值
-
-因此工作簿不再单独保留 `Incident_Raw_Sample` tab，避免同一批 incident 数据在两个 tab 中重复存放。
-
-例如：
-
-| 原始字段 | 归一化字段 |
-|---|---|
-| `Order Number` | `ticket_id` |
-| `Order Name` | `title` |
-| `Begin Date` | `opened_at` |
-| `End Date` | `closed_at` |
-| `Current Phase` | `phase` |
-| `Suspend Time(m)` | `suspend_time_minutes` / `paused_duration_minutes` |
-| `Resolver` | `resolver` / `assigned_to` |
-| `Category` | `category` / `service` |
-| `Priority` | `priority` |
-| `Order Status` | `status` |
-| `Resolution Time(m)` | `resolution_time_minutes` |
-| `Resolution Date` | `resolved_at` |
-| `Response Time(m)` | `response_time_minutes` |
-| `Duration(m)` | `business_duration_minutes` 或相关耗时字段 |
-
-这张表可以直接作为 incident 数据入湖或 BI 样例，也可以用于和原始附件字段逐项对账。
-
-### SR_Sample_Data
-
-基于 Service Request schema 生成的 120 条样例数据。
-
-它展示了服务请求中常见的字段组合：
-
-- catalog item
-- approval
-- fulfillment
-- requested item variables
-- cost center
-- chargeback
-- automation
-- manual effort
-
-### Problem_Sample_Data
-
-基于 Problem schema 生成的 120 条样例数据。
-
-它展示了 Problem 管理中常见的字段组合：
-
-- known error
-- root cause
-- workaround
-- RCA owner
-- RCA due/completed
-- permanent fix change
-- recurrence count
-- related incident count
-
-### Change_Sample_Data
-
-基于 Change schema 生成的 120 条样例数据。
-
-它展示了 Change 管理中常见的字段组合：
-
-- change type
-- CAB approval
-- planned/actual window
-- conflict detection
-- freeze window
-- implementation/test/backout plan
-- deployment result
-- backout reason
-- caused incidents
-
-### Validation
-
-自动校验结果。
-
-当前校验显示：
-
-- 245 个 canonical 字段
-- 字段等级齐全
-- 原始 incident 16 个字段已嵌入 `Incident_Sample_Data`，不再单独存放重复 raw tab
-- Incident 归一化样例 8,977 条
-- SR / Problem / Change 各 120 条
-- 枚举和数据质量规则存在
-
-## 5. 如何理解字段等级 field_tier
-
-`field_tier` 是本 schema 的关键设计。
-
-### Core
-
-最小必备字段。
-
-如果系统只能先导出最小字段集，应优先满足 Core 字段。
-
-典型字段：
-
-- `source_system`
-- `process_type`
-- `ticket_id`
-- `title`
-- `status`
-- `priority`
-- `created_at`
-- `opened_at`
-- `assignment_group`
-
-### Recommended
-
-强烈建议字段。
-
-这些字段通常用于 KPI、SLA、责任分析、流程治理和管理报表。
-
-如果要做正式运维看板，Recommended 字段应尽量导出。
-
-### Advanced
-
-高级治理字段。
-
-这些字段通常来自：
-
-- 审批历史
-- SLA 引擎
-- 审计日志
-- 供应商系统
-- CMDB
-- 自动化平台
-- 重大事件管理模块
-- 变更日历
-
-Advanced 字段不一定每个源系统原生导出都有，但成熟的 ITSM 数据治理应该逐步补齐。
-
-### Source Specific
-
-源系统或附件专用字段。
-
-例如 incident 附件中的：
-
-- `incident_raw_num`
-- `incident_raw_order_name`
-- `incident_raw_order_number`
-- `incident_raw_begin_date`
-- `incident_raw_end_date`
-- `incident_raw_current_phase`
-- `incident_raw_suspend_time_minutes`
-- `incident_raw_total_time_minutes`
-- `incident_raw_resolver`
-- `incident_raw_category`
-- `incident_raw_priority`
-- `incident_raw_order_status`
-- `incident_raw_resolution_time_minutes`
-- `incident_raw_resolution_date`
-- `incident_raw_response_time_minutes`
-- `incident_raw_duration_minutes`
-
-这些字段用于保留源数据兼容性，不一定作为跨系统通用报表字段。
-
-## 6. 如何按阶段落地
-
-### 第一阶段：最小可用导出
-
-目标：先让所有系统能进入统一数据模型。
-
-建议范围：
-
-- 所有 Core 字段
-- 基础时间字段
-- 基础分类字段
-- 基础责任字段
-- `System_Header_Mapping` 中已有明确映射的字段
-
-输出结果：
-
-- 可以合并多系统工单
-- 可以做基础工单量、状态、优先级、处理组统计
-
-### 第二阶段：SLA 和责任分析
-
-目标：能准确回答 SLA 是否违约、为什么违约、谁负责。
-
-建议补齐：
-
-- `first_response_at`
-- `acknowledged_at`
-- `response_due_at`
-- `resolution_due_at`
-- `response_sla_breached`
-- `resolution_sla_breached`
-- `response_breach_minutes`
-- `resolution_breach_minutes`
-- `breach_reason`
-- `delay_owner`
-- `initial_assignment_group`
-- `final_assignment_group`
-- `resolver_group`
-- `accountable_group`
-
-输出结果：
-
-- SLA 报表
-- 超时原因分析
-- 处理组绩效
-- 等待客户 / 等待供应商 / 内部延误拆分
-
-### 第三阶段：流程治理
-
-目标：让 Incident、Problem、Change、Service Request 具备完整管理闭环。
-
-Incident 补齐：
-
-- major incident
-- outage
-- communication
-- PIR
-
-Problem 补齐：
-
-- RCA
-- known error
-- workaround
-- permanent fix
-- recurrence
-
-Change 补齐：
-
-- approval
-- CAB
-- risk
-- conflict
-- backout
-- failure reason
-
-Service Request 补齐：
-
-- catalog owner
-- fulfillment
-- cost
-- automation
-- manual effort
-
-输出结果：
-
-- 重大事件复盘
-- Problem 治理看板
-- CAB 和失败变更分析
-- 服务目录效率与自动化 ROI
-
-### 第四阶段：审计、供应商和数据质量
-
-目标：让数据可审计、可追责、可持续运营。
-
-建议补齐：
-
-- `vendor_*`
-- `contract_id`
-- `underpinning_contract_id`
-- `audit_required`
-- `audit_trail_url`
-- `source_exported_at`
-- `source_export_batch_id`
-- `record_hash`
-- `field_mapping_confidence`
-- `data_quality_score`
-- `raw_payload_reference`
-
-输出结果：
-
-- 供应商 SLA 绩效
-- 合同履约分析
-- 审计取证
-- 数据质量监控
-
-## 7. 如何做源系统映射
-
-推荐做法：
-
-1. 选定源系统，例如 ServiceNow
-2. 打开对应的 header sheet，例如 `ServiceNow_Headers`
-3. 打开 `System_Header_Mapping`
-4. 对每个 `canonical_field_id` 判断源系统是否有原生字段
-5. 对没有原生字段的字段，标记为：
-   - `Derived`：可由时间、状态、审计历史计算
-   - `Custom`：需要源系统配置自定义字段
-   - `Not Available`：当前阶段不采集
-   - `Manual`：人工维护或来自线下复盘
-
-建议不要把所有字段都强制要求源系统一次性导出。更实际的做法是按 `field_tier` 分阶段推进。
-
-## 8. 平台适配接口与样例数据使用
-
-各流程平台的标准适配接口是 **文件接口**。也就是说，不同 ITSM 平台的适配器最终都应输出一个符合本 schema 的 Excel 文件，而不是直接把各平台的原生字段暴露给下游系统。
-
-适配器的输入是各平台 API 或导出接口，例如：
-
-- ServiceNow Table API / Export API
-- BMC Remedy / BMC Helix REST 或 SOAP API
-- HPSM / Micro Focus Service Manager REST API
-- iMOC eTicket / Huawei 相关工单接口或导出接口
-- Freshservice API
-- IBM ServiceDesk / IBM Control Desk / Maximo API
-
-适配器的输出是标准 Excel 文件，至少应包含：
-
-- 对应流程的 sample/data sheet，例如 `Incident_Sample_Data`、`SR_Sample_Data`、`Problem_Sample_Data`、`Change_Sample_Data`
-- 符合 `Canonical_Schema` 和对应流程 schema 的字段名
-- 标准化后的枚举值，例如 priority、status、change_type、approval_status
-- 必填字段 `requirement_level = Required` 的完整填充
-- 可追溯的来源字段，例如 `source_system`、`source_object`、`source_record_id`、`source_exported_at`
-- 数据质量结果，例如 `field_mapping_confidence`、`mandatory_field_missing`、`data_quality_score`、`normalization_notes`
-
-一个平台适配器的推荐处理流程：
-
-1. 调用平台 API，按流程拉取 Incident / Service Request / Problem / Change 数据。
-2. 保留源系统关键标识，例如原生 ticket id、sys_id、request id、source object。
-3. 按 `System_Header_Mapping` 做字段映射。
-4. 按 `Enum_Definitions` 做枚举归一化。
-5. 按源系统时区和 `source_timezone` 做时间标准化。
-6. 派生 SLA、等待时长、责任组、数据质量等字段。
-7. 按 `Data_Quality_Rules` 做校验。
-8. 输出符合本 schema 的 Excel 文件。
-
-适配器职责边界：
-
-- 适配器负责抽取、映射、归一化、校验和生成 Excel。
-- 适配器不负责改变源系统流程配置。
-- 适配器不应把源系统私有字段名作为下游标准接口。
-- 如果源系统没有某个 Advanced 字段，可以留空，但应通过 `field_mapping_confidence` 或 `normalization_notes` 说明。
-- 如果字段是派生字段，应在 `normalization_rule` 和实现文档中说明计算逻辑。
-
-建议每个平台适配器都实现两类导出：
-
-- 全量导出：用于首次建模、历史回补、迁移和校验。
-- 增量导出：按更新时间、关闭时间或 source export batch 拉取，用于日常 BI 和数据湖更新。
-
-### 样例数据使用
-
-样例数据有两个用途：
-
-1. 帮助理解字段应如何填值
-2. 用于测试导入、ETL、BI 报表和数据质量校验逻辑
-
-建议使用方式：
-
-- 用 `Incident_Sample_Data` 测试真实数据兼容性
-- 用 `SR_Sample_Data` 测试服务目录和履约报表
-- 用 `Problem_Sample_Data` 测试 RCA、KEDB、复发问题分析
-- 用 `Change_Sample_Data` 测试 CAB、变更窗口、失败变更、回退分析
-
-不要把模拟数据当作真实业务分布。它们的目的是覆盖字段组合和流程逻辑，不是反映真实工单量或真实 SLA 表现。
+样例数据用于验证文件结构和字段填值逻辑，不代表真实业务分布。
