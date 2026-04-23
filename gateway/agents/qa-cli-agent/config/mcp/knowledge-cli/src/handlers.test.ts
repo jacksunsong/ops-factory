@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import os from 'node:os'
 import path from 'node:path'
 import { mkdtemp, mkdir, writeFile, rm, realpath } from 'node:fs/promises'
-import { handleFindFiles, handleReadFile, handleSearchContent } from './handlers.js'
+import { extractConfiguredRootDir, handleFindFiles, handleReadFile, handleSearchContent } from './handlers.js'
 
 async function withTempRoot(run: (rootDir: string) => Promise<void>) {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'knowledge-cli-'))
@@ -21,6 +21,17 @@ async function withTempRoot(run: (rootDir: string) => Promise<void>) {
     await rm(tempDir, { recursive: true, force: true })
   }
 }
+
+test('extractConfiguredRootDir reads only knowledge-cli scope rootDir', () => {
+  assert.equal(
+    extractConfiguredRootDir('extensions:\n  other:\n    rootDir: /tmp/wrong\n  knowledge-cli:\n    x-opsfactory:\n      scope:\n        rootDir: ../../../../knowledge-service/data/artifacts/src_1\n        sourceId: src_1\n'),
+    '../../../../knowledge-service/data/artifacts/src_1',
+  )
+  assert.equal(
+    extractConfiguredRootDir('extensions: {other: {rootDir: /tmp/wrong}, knowledge-cli: {x-opsfactory: {scope: {rootDir: ../../../../knowledge-service/data/artifacts/src_1, sourceId: src_1}}}}\n'),
+    '../../../../knowledge-service/data/artifacts/src_1',
+  )
+})
 
 test('find_files lists matching files within the configured root', async () => {
   await withTempRoot(async (rootDir) => {

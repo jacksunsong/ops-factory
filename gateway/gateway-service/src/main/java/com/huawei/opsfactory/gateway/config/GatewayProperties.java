@@ -36,6 +36,7 @@ public class GatewayProperties {
     private FileCapsules fileCapsules = new FileCapsules();
     private FileBrowser files = new FileBrowser();
     private SkillMarket skillMarket = new SkillMarket();
+    private Knowledge knowledge = new Knowledge();
 
     // ---- Getters / Setters ----
 
@@ -185,6 +186,14 @@ public class GatewayProperties {
 
     public void setSkillMarket(SkillMarket skillMarket) {
         this.skillMarket = skillMarket;
+    }
+
+    public Knowledge getKnowledge() {
+        return knowledge;
+    }
+
+    public void setKnowledge(Knowledge knowledge) {
+        this.knowledge = knowledge;
     }
 
     public Path getConfigPath() {
@@ -425,6 +434,13 @@ public class GatewayProperties {
         public void setRequestTimeoutMs(int requestTimeoutMs) { this.requestTimeoutMs = requestTimeoutMs; }
         public int getMaxPackageSizeMb() { return maxPackageSizeMb; }
         public void setMaxPackageSizeMb(int maxPackageSizeMb) { this.maxPackageSizeMb = maxPackageSizeMb; }
+    }
+
+    public static class Knowledge {
+        private String artifactsRoot = "../knowledge-service/data/artifacts";
+
+        public String getArtifactsRoot() { return artifactsRoot; }
+        public void setArtifactsRoot(String artifactsRoot) { this.artifactsRoot = artifactsRoot; }
     }
 
     // ---- PostConstruct for logging configuration values ----

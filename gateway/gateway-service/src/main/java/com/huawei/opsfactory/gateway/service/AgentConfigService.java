@@ -9,6 +9,7 @@ import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.error.YAMLException;
 
@@ -30,6 +31,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class AgentConfigService {
 
     private static final Logger log = LoggerFactory.getLogger(AgentConfigService.class);
+    private static final String KNOWLEDGE_SERVICE_MCP = "knowledge-service";
+    private static final String KNOWLEDGE_CLI_MCP = "knowledge-cli";
+    private static final String DEFAULT_KNOWLEDGE_CLI_ROOT_DIR = "../data";
 
     private final GatewayProperties properties;
     private final CopyOnWriteArrayList<AgentRegistryEntry> registry = new CopyOnWriteArrayList<>();
@@ -383,8 +387,11 @@ public class AgentConfigService {
     }
 
     public Map<String, Object> readMcpSettings(String agentId, String mcpName) throws IOException {
-        if ("knowledge-service".equals(mcpName)) {
+        if (KNOWLEDGE_SERVICE_MCP.equals(mcpName)) {
             return readKnowledgeServiceScopeFromConfig(agentId);
+        }
+        if (KNOWLEDGE_CLI_MCP.equals(mcpName)) {
+            return readKnowledgeCliScopeFromConfig(agentId);
         }
         Path settingsPath = getAgentConfigDir(agentId).resolve("mcp").resolve(mcpName).resolve("settings.json");
         if (!Files.exists(settingsPath)) {
@@ -410,8 +417,13 @@ public class AgentConfigService {
     }
 
     public void writeMcpSettings(String agentId, String mcpName, Map<String, Object> settings) throws IOException {
-        if ("knowledge-service".equals(mcpName)) {
+        if (KNOWLEDGE_SERVICE_MCP.equals(mcpName)) {
             writeKnowledgeServiceScopeToConfig(agentId, settings);
+            invalidateCache(agentId);
+            return;
+        }
+        if (KNOWLEDGE_CLI_MCP.equals(mcpName)) {
+            writeKnowledgeCliScopeToConfig(agentId, settings);
             invalidateCache(agentId);
             return;
         }
@@ -421,7 +433,7 @@ public class AgentConfigService {
         }
         Path settingsPath = mcpDir.resolve("settings.json");
         Files.createDirectories(mcpDir);
-        Yaml yaml = new Yaml();
+        Yaml yaml = createBlockYaml();
         Files.writeString(settingsPath, yaml.dump(settings));
     }
 
@@ -432,7 +444,7 @@ public class AgentConfigService {
         if (!(extensionsObj instanceof Map<?, ?> extensions)) {
             return null;
         }
-        Object extensionObj = extensions.get("knowledge-service");
+        Object extensionObj = extensions.get(KNOWLEDGE_SERVICE_MCP);
         if (!(extensionObj instanceof Map<?, ?> extension)) {
             return null;
         }
@@ -460,7 +472,7 @@ public class AgentConfigService {
             throw new IllegalArgumentException("Agent config for '" + agentId + "' does not contain extensions");
         }
         Map<String, Object> extensions = (Map<String, Object>) rawExtensions;
-        Object extensionObj = extensions.get("knowledge-service");
+        Object extensionObj = extensions.get(KNOWLEDGE_SERVICE_MCP);
         if (!(extensionObj instanceof Map<?, ?> rawExtension)) {
             throw new IllegalArgumentException("MCP 'knowledge-service' not found for agent '" + agentId + "'");
         }
@@ -488,8 +500,127 @@ public class AgentConfigService {
         String sourceId = sourceIdObj instanceof String s && !s.isBlank() ? s.trim() : null;
         knowledgeScope.put("sourceId", sourceId);
 
-        Yaml yaml = new Yaml();
+        Yaml yaml = createBlockYaml();
         Files.writeString(configPath, yaml.dump(config));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> readKnowledgeCliScopeFromConfig(String agentId) {
+        Map<String, Object> config = loadAgentConfigYaml(agentId);
+        Object extensionsObj = config.get("extensions");
+        if (!(extensionsObj instanceof Map<?, ?> extensions)) {
+            return null;
+        }
+        Object extensionObj = extensions.get(KNOWLEDGE_CLI_MCP);
+        if (!(extensionObj instanceof Map<?, ?> extension)) {
+            return null;
+        }
+        Object opsfactoryObj = extension.get("x-opsfactory");
+        if (!(opsfactoryObj instanceof Map<?, ?> opsfactory)) {
+            return null;
+        }
+        Object scopeObj = opsfactory.get("scope");
+        if (!(scopeObj instanceof Map<?, ?> scope)) {
+            return null;
+        }
+
+        Object sourceIdObj = scope.get("sourceId");
+        Object rootDirObj = scope.get("rootDir");
+        String sourceId = sourceIdObj instanceof String source ? source : null;
+        String rootDir = rootDirObj instanceof String root ? root : null;
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("sourceId", sourceId);
+        result.put("rootDir", rootDir);
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void writeKnowledgeCliScopeToConfig(String agentId, Map<String, Object> settings) throws IOException {
+        Path configPath = getAgentConfigDir(agentId).resolve("config.yaml");
+        Map<String, Object> config = YamlLoader.load(configPath);
+
+        Object extensionsObj = config.get("extensions");
+        if (!(extensionsObj instanceof Map<?, ?> rawExtensions)) {
+            throw new IllegalArgumentException("Agent config for '" + agentId + "' does not contain extensions");
+        }
+        Map<String, Object> extensions = (Map<String, Object>) rawExtensions;
+        Object extensionObj = extensions.get(KNOWLEDGE_CLI_MCP);
+        if (!(extensionObj instanceof Map<?, ?> rawExtension)) {
+            throw new IllegalArgumentException("MCP 'knowledge-cli' not found for agent '" + agentId + "'");
+        }
+        Map<String, Object> extension = (Map<String, Object>) rawExtension;
+
+        Map<String, Object> opsfactory;
+        Object opsfactoryObj = extension.get("x-opsfactory");
+        if (opsfactoryObj instanceof Map<?, ?> rawOpsfactory) {
+            opsfactory = (Map<String, Object>) rawOpsfactory;
+        } else {
+            opsfactory = new HashMap<>();
+            extension.put("x-opsfactory", opsfactory);
+        }
+
+        Map<String, Object> scope;
+        Object scopeObj = opsfactory.get("scope");
+        if (scopeObj instanceof Map<?, ?> rawScope) {
+            scope = (Map<String, Object>) rawScope;
+        } else {
+            scope = new HashMap<>();
+            opsfactory.put("scope", scope);
+        }
+
+        Object sourceIdObj = settings != null ? settings.get("sourceId") : null;
+        String sourceId = sourceIdObj instanceof String s && !s.isBlank() ? s.trim() : null;
+
+        if (sourceId == null) {
+            scope.put("sourceId", null);
+            scope.put("rootDir", DEFAULT_KNOWLEDGE_CLI_ROOT_DIR);
+        } else {
+            validateKnowledgeSourceId(sourceId);
+            Path artifactsDir = resolveKnowledgeArtifactsRoot().resolve(sourceId).normalize();
+            scope.put("sourceId", sourceId);
+            scope.put("rootDir", relativizeForAgentConfig(agentId, artifactsDir));
+        }
+
+        Yaml yaml = createBlockYaml();
+        Files.writeString(configPath, yaml.dump(config));
+    }
+
+    private void validateKnowledgeSourceId(String sourceId) {
+        if (!sourceId.matches("^[A-Za-z0-9._-]+$")) {
+            throw new IllegalArgumentException("Invalid knowledge sourceId '" + sourceId + "'");
+        }
+    }
+
+    private Path resolveKnowledgeArtifactsRoot() {
+        String configuredRoot = properties.getKnowledge() != null
+                ? properties.getKnowledge().getArtifactsRoot()
+                : null;
+        String artifactsRoot = configuredRoot != null && !configuredRoot.isBlank()
+                ? configuredRoot.trim()
+                : "../knowledge-service/data/artifacts";
+        Path rootPath = Path.of(artifactsRoot);
+        return rootPath.isAbsolute()
+                ? rootPath.normalize()
+                : gatewayRoot.resolve(rootPath).normalize();
+    }
+
+    private String relativizeForAgentConfig(String agentId, Path targetPath) {
+        Path configDir = getAgentConfigDir(agentId).normalize();
+        Path projectRoot = gatewayRoot.getParent() != null ? gatewayRoot.getParent().normalize() : properties.getProjectRootPath();
+        Path normalizedTarget = targetPath.normalize();
+
+        if (normalizedTarget.startsWith(projectRoot)) {
+            return configDir.relativize(normalizedTarget).toString().replace('\\', '/');
+        }
+        return normalizedTarget.toString();
+    }
+
+    private Yaml createBlockYaml() {
+        DumperOptions options = new DumperOptions();
+        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        options.setPrettyFlow(true);
+        return new Yaml(options);
     }
 
     /**
@@ -614,7 +745,7 @@ public class AgentConfigService {
             throw new IllegalArgumentException("Agent config for '" + agentId + "' does not contain extensions");
         }
 
-        Object extensionObj = extensions.get("knowledge-cli");
+        Object extensionObj = extensions.get(KNOWLEDGE_CLI_MCP);
         if (!(extensionObj instanceof Map<?, ?> extension)) {
             throw new IllegalArgumentException("MCP 'knowledge-cli' not found for agent '" + agentId + "'");
         }
@@ -630,7 +761,7 @@ public class AgentConfigService {
         }
 
         Object rootDirObj = scope.get("rootDir");
-        String configuredRoot = rootDirObj instanceof String s && !s.isBlank() ? s.trim() : "../data";
+        String configuredRoot = rootDirObj instanceof String s && !s.isBlank() ? s.trim() : DEFAULT_KNOWLEDGE_CLI_ROOT_DIR;
         Path configDir = getAgentConfigDir(agentId);
         return Path.of(configuredRoot).isAbsolute()
                 ? Path.of(configuredRoot).normalize()

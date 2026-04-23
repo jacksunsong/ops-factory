@@ -43,6 +43,24 @@
 
 当环境变量未设置时，MCP 从 `config.yaml` 中读取 `rootDir`；如果仍未配置，则默认使用 `../data`。
 
+在前端 Agent MCP 配置页中，`knowledge-cli` 的配置体验与 `knowledge-service` 保持一致：用户从知识库下拉框选择一个知识库。保存时网关会把所选 `sourceId` 解析为该知识库的 Markdown 产物根目录，并写回：
+
+```yaml
+extensions:
+  knowledge-cli:
+    x-opsfactory:
+      scope:
+        sourceId: src_285c13458d3a
+        rootDir: ../../../../knowledge-service/data/artifacts/src_285c13458d3a
+```
+
+其中：
+
+- `sourceId` 用于前端回显当前选择的知识库。
+- `rootDir` 是 `knowledge-cli` 运行时真正读取的文件系统范围。
+- 网关使用 `gateway.knowledge.artifacts-root` 作为 Markdown 产物根目录，最终范围为 `<artifacts-root>/<sourceId>`。
+- 当知识库产物目录位于当前仓库内时，`rootDir` 优先写成相对 `gateway/agents/<agentId>/config` 的路径，便于仓库整体迁移。
+
 ## 5. 工具
 
 当前只暴露 3 个工具：

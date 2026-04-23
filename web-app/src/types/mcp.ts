@@ -31,6 +31,7 @@ export interface McpEntry {
 
 export interface McpSettings {
   sourceId?: string | null;
+  rootDir?: string | null;
 }
 
 export interface McpResponse {

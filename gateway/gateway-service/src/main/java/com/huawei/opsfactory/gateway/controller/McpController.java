@@ -26,6 +26,9 @@ import reactor.core.scheduler.Schedulers;
 @RequestMapping("/gateway/agents/{agentId}/mcp")
 public class McpController {
 
+    private static final String KNOWLEDGE_SERVICE_MCP = "knowledge-service";
+    private static final String KNOWLEDGE_CLI_MCP = "knowledge-cli";
+
     private final InstanceManager instanceManager;
     private final GoosedProxy goosedProxy;
     private final AgentConfigService agentConfigService;
@@ -105,11 +108,9 @@ public class McpController {
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> settings = agentConfigService.readMcpSettings(agentId, name);
-                if ("knowledge-service".equals(name)) {
+                if (hasConfigBackedSettings(name)) {
                     if (settings == null) {
-                        Map<String, Object> fallback = new java.util.HashMap<>();
-                        fallback.put("sourceId", null);
-                        return ResponseEntity.ok(fallback);
+                        return ResponseEntity.ok(emptyKnowledgeSettings(name));
                     }
                     if (!settings.containsKey("sourceId")) {
                         settings.put("sourceId", null);
@@ -121,10 +122,8 @@ public class McpController {
                 }
                 return ResponseEntity.ok(settings);
             } catch (IOException e) {
-                if ("knowledge-service".equals(name)) {
-                    Map<String, Object> fallback = new java.util.HashMap<>();
-                    fallback.put("sourceId", null);
-                    return ResponseEntity.ok(fallback);
+                if (hasConfigBackedSettings(name)) {
+                    return ResponseEntity.ok(emptyKnowledgeSettings(name));
                 }
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.<String, Object>of(
                     "code", "SETTINGS_READ_FAILED",
@@ -160,5 +159,18 @@ public class McpController {
 
     private void requireAdmin(ServerWebExchange exchange) {
         UserContextFilter.requireAdmin(exchange);
+    }
+
+    private boolean hasConfigBackedSettings(String name) {
+        return KNOWLEDGE_SERVICE_MCP.equals(name) || KNOWLEDGE_CLI_MCP.equals(name);
+    }
+
+    private Map<String, Object> emptyKnowledgeSettings(String name) {
+        Map<String, Object> fallback = new java.util.HashMap<>();
+        fallback.put("sourceId", null);
+        if (KNOWLEDGE_CLI_MCP.equals(name)) {
+            fallback.put("rootDir", null);
+        }
+        return fallback;
     }
 }

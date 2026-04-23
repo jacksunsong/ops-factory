@@ -37,7 +37,11 @@ export default function ConfigKnowledgeModal({
   const [isVerifying, setIsVerifying] = useState(false)
   const [knowledgeScopeEnabled, setKnowledgeScopeEnabled] = useState(false)
   const [selectedSourceId, setSelectedSourceId] = useState('')
+  const [configuredSourceId, setConfiguredSourceId] = useState('')
+  const [configuredRootDir, setConfiguredRootDir] = useState('')
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSourceOption[]>([])
+  const mcpKey = mcpName.toLowerCase()
+  const isKnowledgeCli = mcpKey === 'knowledge-cli'
 
   useEffect(() => {
     if (!isOpen) {
@@ -66,6 +70,7 @@ export default function ConfigKnowledgeModal({
         }
         const settings = await settingsResponse.json() as McpSettings
         const nextSourceId = typeof settings.sourceId === 'string' ? settings.sourceId : ''
+        const nextRootDir = typeof settings.rootDir === 'string' ? settings.rootDir : ''
 
         const sourcesData = await sourcesResponse.json().catch(() => null) as { items?: KnowledgeSourceOption[]; message?: string } | null
         if (!sourcesResponse.ok) {
@@ -77,11 +82,15 @@ export default function ConfigKnowledgeModal({
         }
 
         setSelectedSourceId(nextSourceId)
+        setConfiguredSourceId(nextSourceId)
+        setConfiguredRootDir(nextRootDir)
         setKnowledgeScopeEnabled(Boolean(nextSourceId))
         setKnowledgeSources(sourcesData?.items || [])
       } catch (err) {
         if (!cancelled) {
           setSelectedSourceId('')
+          setConfiguredSourceId('')
+          setConfiguredRootDir('')
           setKnowledgeScopeEnabled(false)
           setKnowledgeSources([])
           setError(getErrorMessage(err))
@@ -103,7 +112,7 @@ export default function ConfigKnowledgeModal({
 
   const handleVerify = async () => {
     if (!selectedSourceId) {
-      const message = t('mcp.knowledgeScopeRequired')
+      const message = t(isKnowledgeCli ? 'mcp.knowledgeCliScopeRequired' : 'mcp.knowledgeScopeRequired')
       setError(message)
       showToast('warning', message)
       return
@@ -119,7 +128,7 @@ export default function ConfigKnowledgeModal({
       if (!response.ok) {
         throw new Error(data?.message || response.statusText)
       }
-      showToast('success', t('mcp.knowledgeScopeVerifySuccess', { name: data?.name || selectedSourceId }))
+      showToast('success', t(isKnowledgeCli ? 'mcp.knowledgeCliScopeVerifySuccess' : 'mcp.knowledgeScopeVerifySuccess', { name: data?.name || selectedSourceId }))
     } catch (err) {
       const message = getErrorMessage(err)
       setError(message)
@@ -131,7 +140,7 @@ export default function ConfigKnowledgeModal({
 
   const handleSave = async () => {
     if (knowledgeScopeEnabled && !selectedSourceId) {
-      const message = t('mcp.knowledgeScopeRequired')
+      const message = t(isKnowledgeCli ? 'mcp.knowledgeCliScopeRequired' : 'mcp.knowledgeScopeRequired')
       setError(message)
       showToast('warning', message)
       return
@@ -153,7 +162,7 @@ export default function ConfigKnowledgeModal({
         throw new Error(`HTTP ${response.status}: ${await response.text()}`)
       }
 
-      showToast('success', t('mcp.knowledgeScopeSaved'))
+      showToast('success', t(isKnowledgeCli ? 'mcp.knowledgeCliScopeSaved' : 'mcp.knowledgeScopeSaved'))
       onClose()
     } catch (err) {
       const message = getErrorMessage(err)
@@ -193,8 +202,8 @@ export default function ConfigKnowledgeModal({
           <div className="mcp-settings-card">
             <div className="mcp-settings-head">
               <div>
-                <label className="form-label">{t('mcp.knowledgeScopeTitle')}</label>
-                <p className="mcp-form-hint">{t('mcp.knowledgeScopeHint')}</p>
+                <label className="form-label">{t(isKnowledgeCli ? 'mcp.knowledgeCliScopeTitle' : 'mcp.knowledgeScopeTitle')}</label>
+                <p className="mcp-form-hint">{t(isKnowledgeCli ? 'mcp.knowledgeCliScopeHint' : 'mcp.knowledgeScopeHint')}</p>
               </div>
               <label className="mcp-toggle">
                 <input
@@ -230,8 +239,14 @@ export default function ConfigKnowledgeModal({
                 </select>
                 {selectedSourceId && (
                   <p className="mcp-form-hint">
-                    {knowledgeSources.find(source => source.id === selectedSourceId)?.description || t('mcp.knowledgeScopeSelectedHint')}
+                    {knowledgeSources.find(source => source.id === selectedSourceId)?.description || t(isKnowledgeCli ? 'mcp.knowledgeCliScopeSelectedHint' : 'mcp.knowledgeScopeSelectedHint')}
                   </p>
+                )}
+                {isKnowledgeCli && configuredRootDir && selectedSourceId === configuredSourceId && (
+                  <div className="mcp-form-hint mcp-form-path-hint">
+                    <span>{t('mcp.knowledgeCliSavedScope')}</span>
+                    <code>{configuredRootDir}</code>
+                  </div>
                 )}
               </div>
             )}
@@ -239,7 +254,7 @@ export default function ConfigKnowledgeModal({
         </div>
 
         <div className="modal-footer">
-          {knowledgeScopeEnabled && (
+          {knowledgeScopeEnabled && !isKnowledgeCli && (
             <Button
               type="button"
               variant="secondary"

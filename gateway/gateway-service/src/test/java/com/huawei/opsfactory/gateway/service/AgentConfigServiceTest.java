@@ -569,6 +569,65 @@ public class AgentConfigServiceTest {
     }
 
     @Test
+    public void testWriteKnowledgeCliSettings_storesSourceIdAndRelativeArtifactsRoot() throws IOException {
+        Path configDir = gatewayRoot.resolve("agents").resolve("qa-cli-agent").resolve("config");
+        Files.createDirectories(configDir);
+        Files.writeString(configDir.resolve("config.yaml"),
+                "extensions:\n"
+                        + "  knowledge-cli:\n"
+                        + "    x-opsfactory:\n"
+                        + "      scope:\n"
+                        + "        rootDir: ../data\n");
+
+        service.writeMcpSettings("qa-cli-agent", "knowledge-cli", Map.of("sourceId", "src_123"));
+
+        Map<String, Object> settings = service.readMcpSettings("qa-cli-agent", "knowledge-cli");
+        assertEquals("src_123", settings.get("sourceId"));
+        assertEquals("../../../../knowledge-service/data/artifacts/src_123", settings.get("rootDir"));
+        assertEquals(configDir.resolve("../../../../knowledge-service/data/artifacts/src_123").normalize(),
+                service.getKnowledgeCliRootDir("qa-cli-agent"));
+    }
+
+    @Test
+    public void testWriteKnowledgeCliSettings_usesConfiguredArtifactsRoot() throws IOException {
+        Path configDir = gatewayRoot.resolve("agents").resolve("qa-cli-agent").resolve("config");
+        Files.createDirectories(configDir);
+        Files.writeString(configDir.resolve("config.yaml"),
+                "extensions:\n"
+                        + "  knowledge-cli:\n"
+                        + "    x-opsfactory:\n"
+                        + "      scope:\n"
+                        + "        rootDir: ../data\n");
+        Path externalArtifactsRoot = tempFolder.getRoot().toPath().getParent().resolve("external-artifacts");
+        properties.getKnowledge().setArtifactsRoot(externalArtifactsRoot.toString());
+
+        service.writeMcpSettings("qa-cli-agent", "knowledge-cli", Map.of("sourceId", "src_external"));
+
+        Map<String, Object> settings = service.readMcpSettings("qa-cli-agent", "knowledge-cli");
+        assertEquals("src_external", settings.get("sourceId"));
+        assertEquals(externalArtifactsRoot.resolve("src_external").normalize().toString(), settings.get("rootDir"));
+    }
+
+    @Test
+    public void testWriteKnowledgeCliSettings_clearResetsDefaultRoot() throws IOException {
+        Path configDir = gatewayRoot.resolve("agents").resolve("qa-cli-agent").resolve("config");
+        Files.createDirectories(configDir);
+        Files.writeString(configDir.resolve("config.yaml"),
+                "extensions:\n"
+                        + "  knowledge-cli:\n"
+                        + "    x-opsfactory:\n"
+                        + "      scope:\n"
+                        + "        sourceId: src_old\n"
+                        + "        rootDir: ../../../../knowledge-service/data/artifacts/src_old\n");
+
+        service.writeMcpSettings("qa-cli-agent", "knowledge-cli", Map.of("sourceId", ""));
+
+        Map<String, Object> settings = service.readMcpSettings("qa-cli-agent", "knowledge-cli");
+        assertNull(settings.get("sourceId"));
+        assertEquals("../data", settings.get("rootDir"));
+    }
+
+    @Test
     public void testLoadRegistry_disabledAgentIsExcludedFromResidentExpansion() throws IOException {
         String configYaml = "agents:\n"
                 + "  - id: visible-agent\n    name: Visible Agent\n"

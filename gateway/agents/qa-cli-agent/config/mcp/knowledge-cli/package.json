@@ -9,7 +9,8 @@
     "test": "npm run build && node --test dist/handlers.test.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "yaml": "^2.8.3"
   },
   "devDependencies": {
     "@types/node": "^22.19.15",

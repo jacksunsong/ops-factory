@@ -57,6 +57,16 @@ export default function McpSection({ agentId }: McpSectionProps) {
     setIsAddModalOpen(true)
   }
 
+  const getKnowledgeConfigHandler = (entry: McpEntry) => {
+    const name = entry.name.toLowerCase()
+    return name === 'knowledge-service' || name === 'knowledge-cli' ? setKnowledgeEntry : undefined
+  }
+
+  const normalizeKnowledgeMcpName = (name: string) => {
+    const normalized = name.toLowerCase()
+    return normalized === 'knowledge-cli' ? 'knowledge-cli' : 'knowledge-service'
+  }
+
   if (!agentId) {
     return null
   }
@@ -101,7 +111,7 @@ export default function McpSection({ agentId }: McpSectionProps) {
                     key={entry.name}
                     entry={entry}
                     onToggle={toggleMcp}
-                    onConfigKnowledge={entry.name === 'knowledge-service' ? setKnowledgeEntry : undefined}
+                    onConfigKnowledge={getKnowledgeConfigHandler(entry)}
                   />
                 ))}
               </div>
@@ -117,7 +127,7 @@ export default function McpSection({ agentId }: McpSectionProps) {
                     key={entry.name}
                     entry={entry}
                     onToggle={toggleMcp}
-                    onConfigKnowledge={entry.name === 'knowledge-service' ? setKnowledgeEntry : undefined}
+                    onConfigKnowledge={getKnowledgeConfigHandler(entry)}
                   />
                 ))}
               </div>
@@ -133,7 +143,7 @@ export default function McpSection({ agentId }: McpSectionProps) {
                     key={entry.name}
                     entry={entry}
                     onToggle={toggleMcp}
-                    onConfigKnowledge={entry.name === 'knowledge-service' ? setKnowledgeEntry : undefined}
+                    onConfigKnowledge={getKnowledgeConfigHandler(entry)}
                     onEdit={handleOpenEditModal}
                     onDelete={(name) => handleDelete(name)}
                     isCustom
@@ -171,7 +181,7 @@ export default function McpSection({ agentId }: McpSectionProps) {
       {knowledgeEntry && (
         <ConfigKnowledgeModal
           agentId={agentId}
-          mcpName={knowledgeEntry.name}
+          mcpName={normalizeKnowledgeMcpName(knowledgeEntry.name)}
           isOpen={Boolean(knowledgeEntry)}
           onClose={() => setKnowledgeEntry(null)}
         />

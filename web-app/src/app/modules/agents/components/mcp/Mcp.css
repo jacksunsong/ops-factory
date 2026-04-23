@@ -303,6 +303,19 @@
     margin: var(--spacing-1) 0 0;
 }
 
+.mcp-form-path-hint {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-wrap: anywhere;
+}
+
+.mcp-form-path-hint code {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+}
+
 .mcp-form-env-list {
     display: flex;
     flex-direction: column;

@@ -117,7 +117,8 @@ extensions:
     available_tools: []
     x-opsfactory:
       scope:
-        rootDir: ../data
+        rootDir: ../../../../knowledge-service/data/artifacts/src_285c13458d3a
+        sourceId: src_285c13458d3a
   analyze:
     enabled: false
     type: platform

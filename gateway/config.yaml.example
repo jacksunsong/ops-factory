@@ -81,6 +81,11 @@ gateway:
     request-timeout-ms: 10000
     max-package-size-mb: 200
 
+  # Local filesystem root containing knowledge-service markdown artifacts.
+  # knowledge-cli scopes are resolved as <artifacts-root>/<sourceId>.
+  knowledge:
+    artifacts-root: "../knowledge-service/data/artifacts"
+
   credential-encryption-key: "changeit-changeit-changeit-32ch"
 
   remote-execution:

@@ -3,6 +3,7 @@ import { readFile, realpath, stat } from 'node:fs/promises'
 import { promisify } from 'node:util'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import YAML from 'yaml'
 import { logError, logInfo } from './logger.js'
 
 const execFile = promisify(execFileCallback)
@@ -133,8 +134,14 @@ function clamp(value: unknown, min: number, max: number, fallback: number): numb
   return Math.max(min, Math.min(max, number))
 }
 
-function stripYamlScalar(value: string): string {
-  return value.trim().replace(/^['"]|['"]$/g, '')
+export function extractConfiguredRootDir(content: string): string | null {
+  const parsed = YAML.parse(content)
+  const rootDir = parsed?.extensions?.['knowledge-cli']?.['x-opsfactory']?.scope?.rootDir
+  if (typeof rootDir === 'string' && rootDir.trim()) {
+    return rootDir.trim()
+  }
+
+  return null
 }
 
 async function readConfiguredRootDir(): Promise<string> {
@@ -144,9 +151,9 @@ async function readConfiguredRootDir(): Promise<string> {
 
   try {
     const content = await readFile(CONFIG_FILE_PATH, 'utf8')
-    const match = content.match(/^\s*rootDir:\s*(.+)\s*$/m)
-    if (match?.[1]) {
-      return stripYamlScalar(match[1])
+    const rootDir = extractConfiguredRootDir(content)
+    if (rootDir) {
+      return rootDir
     }
   } catch {
     // fall through to default
