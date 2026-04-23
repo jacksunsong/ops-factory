@@ -124,7 +124,7 @@ public class FileServiceExtendedTest {
     public void testListFiles_skipsDirs_nodeModules() throws IOException {
         File nodeModules = tempFolder.newFolder("node_modules");
         createFile(new File(nodeModules, "package.json"), "{}");
-        createFile(new File(tempFolder.getRoot(), "index.js"), "console.log()");
+        createFile(new File(tempFolder.getRoot(), "index.txt"), "hello");
 
         List<Map<String, Object>> files = fileService.listFiles(tempFolder.getRoot().toPath());
         assertEquals(1, files.size());
@@ -134,7 +134,7 @@ public class FileServiceExtendedTest {
     public void testListFiles_skipsDirs_dotGoose() throws IOException {
         File gooseDir = tempFolder.newFolder(".goose");
         createFile(new File(gooseDir, "session.json"), "{}");
-        createFile(new File(tempFolder.getRoot(), "main.py"), "print()");
+        createFile(new File(tempFolder.getRoot(), "main.txt"), "hello");
 
         List<Map<String, Object>> files = fileService.listFiles(tempFolder.getRoot().toPath());
         assertEquals(1, files.size());
@@ -178,7 +178,7 @@ public class FileServiceExtendedTest {
     @Test
     public void testListFiles_skipsGitkeep() throws IOException {
         createFile(new File(tempFolder.getRoot(), ".gitkeep"), "");
-        createFile(new File(tempFolder.getRoot(), "code.py"), "pass");
+        createFile(new File(tempFolder.getRoot(), "code.txt"), "pass");
 
         List<Map<String, Object>> files = fileService.listFiles(tempFolder.getRoot().toPath());
         assertEquals(1, files.size());

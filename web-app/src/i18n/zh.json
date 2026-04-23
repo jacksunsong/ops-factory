@@ -1110,6 +1110,9 @@
       "doc": "文档",
       "sheet": "表格",
       "slide": "幻灯片",
+      "csv": "CSV",
+      "json": "JSON",
+      "txt": "文本",
       "markdown": "Markdown",
       "html": "HTML"
     }
