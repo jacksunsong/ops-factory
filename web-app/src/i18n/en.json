@@ -1110,6 +1110,9 @@
       "doc": "Doc",
       "sheet": "Sheet",
       "slide": "Slide",
+      "csv": "CSV",
+      "json": "JSON",
+      "txt": "Text",
       "markdown": "Markdown",
       "html": "HTML"
     }

@@ -104,11 +104,12 @@ public class FileService {
      */
     public List<Map<String, Object>> listFiles(Path userAgentDir) throws IOException {
         List<Map<String, Object>> files = new ArrayList<>();
+        Set<String> allowedExtensions = fileCapsuleAllowedExtensions();
         for (FileScanRoot root : fileScanRoots(userAgentDir)) {
             if (root.recursive()) {
-                listFilesRecursive(root, root.path(), files);
+                listFilesRecursive(root, root.path(), files, allowedExtensions);
             } else {
-                listRootFiles(root, files);
+                listRootFiles(root, files, allowedExtensions);
             }
         }
         return files;
@@ -119,11 +120,11 @@ public class FileService {
      */
     public List<Map<String, Object>> listTopLevelFiles(Path dir) throws IOException {
         List<Map<String, Object>> files = new ArrayList<>();
-        listRootFiles(new FileScanRoot("workingDir", dir, false), files);
+        listRootFiles(new FileScanRoot("workingDir", dir, false), files, fileCapsuleAllowedExtensions());
         return files;
     }
 
-    private void listRootFiles(FileScanRoot root, List<Map<String, Object>> files) throws IOException {
+    private void listRootFiles(FileScanRoot root, List<Map<String, Object>> files, Set<String> allowedExtensions) throws IOException {
         Path dir = root.path();
         if (!Files.isDirectory(dir)) {
             return;
@@ -131,7 +132,7 @@ public class FileService {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
             for (Path entry : stream) {
                 if (Files.isRegularFile(entry) && !SKIP_FILES.contains(entry.getFileName().toString())) {
-                    addFileEntry(root, entry, files);
+                    addFileEntry(root, entry, files, allowedExtensions);
                 }
             }
         }
@@ -145,7 +146,7 @@ public class FileService {
         return listFiles(dir);
     }
 
-    private void listFilesRecursive(FileScanRoot root, Path current, List<Map<String, Object>> files) throws IOException {
+    private void listFilesRecursive(FileScanRoot root, Path current, List<Map<String, Object>> files, Set<String> allowedExtensions) throws IOException {
         if (!Files.isDirectory(current)) {
             return;
         }
@@ -154,21 +155,24 @@ public class FileService {
                 String name = entry.getFileName().toString();
                 if (Files.isDirectory(entry)) {
                     if (!SKIP_DIRS.contains(name) && !name.startsWith(".")) {
-                        listFilesRecursive(root, entry, files);
+                        listFilesRecursive(root, entry, files, allowedExtensions);
                     }
                 } else {
                     if (!SKIP_FILES.contains(name)) {
-                        addFileEntry(root, entry, files);
+                        addFileEntry(root, entry, files, allowedExtensions);
                     }
                 }
             }
         }
     }
 
-    private void addFileEntry(FileScanRoot root, Path entry, List<Map<String, Object>> files) throws IOException {
+    private void addFileEntry(FileScanRoot root, Path entry, List<Map<String, Object>> files, Set<String> allowedExtensions) throws IOException {
         String name = entry.getFileName().toString();
         int dot = name.lastIndexOf('.');
         String ext = dot >= 0 ? name.substring(dot + 1).toLowerCase() : "";
+        if (!allowedExtensions.isEmpty() && !allowedExtensions.contains(ext)) {
+            return;
+        }
         String relativePath = toApiPath(root.path().relativize(entry));
         Map<String, Object> file = new LinkedHashMap<>();
         file.put("rootId", root.id());
@@ -179,6 +183,24 @@ public class FileService {
         file.put("type", ext);
         file.put("modifiedAt", Files.getLastModifiedTime(entry).toInstant().toString());
         files.add(file);
+    }
+
+    private Set<String> fileCapsuleAllowedExtensions() {
+        Set<String> allowed = new HashSet<>();
+        List<String> configured = gatewayProperties.getFileCapsules() != null
+                ? gatewayProperties.getFileCapsules().getAllowedExtensions()
+                : null;
+        if (configured == null) {
+            return allowed;
+        }
+        for (String ext : configured) {
+            if (ext == null) continue;
+            String normalized = ext.trim().toLowerCase();
+            if (!normalized.isEmpty()) {
+                allowed.add(normalized);
+            }
+        }
+        return allowed;
     }
 
     public Optional<Path> resolveFileScanRoot(Path userAgentDir, String rootId) {
