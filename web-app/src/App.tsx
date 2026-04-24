@@ -14,12 +14,16 @@ import { useRouteDiagnostics } from './app/platform/logging/useRouteDiagnostics'
 const IS_EMBED = getUrlParam('embed') === 'true'
 
 function AppContent() {
-    const { previewFile } = usePreview()
+    const { previewFile, isPreviewFullscreen } = usePreview()
     const { isCollapsed } = useSidebar()
     const { isMarketOpen } = useRightPanel()
     const isPreviewOpen = !!previewFile
     const isRightPanelOpen = isMarketOpen || isPreviewOpen
-    const rightPanelMode = isMarketOpen ? 'panel-drawer' : isPreviewOpen ? 'panel-preview' : ''
+    const rightPanelMode = isMarketOpen
+        ? 'panel-drawer'
+        : isPreviewOpen
+            ? `panel-preview${isPreviewFullscreen ? ' panel-preview-fullscreen' : ''}`
+            : ''
     const isEmbed = IS_EMBED
     const enabledModules = useEnabledModules()
     const routes = buildRoutes(enabledModules)
