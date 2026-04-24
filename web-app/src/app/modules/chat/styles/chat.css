@@ -202,6 +202,10 @@
     width: calc(45% - 110px);
 }
 
+.main-wrapper.with-right-panel.panel-preview-fullscreen .chat-input-area-bottom {
+    width: 100%;
+}
+
 .main-wrapper.with-right-panel.panel-preview .chat-input-area-inner {
     max-width: 880px;
 }
