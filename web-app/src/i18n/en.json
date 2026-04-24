@@ -1130,6 +1130,7 @@
     "filterUser": "User",
     "filterScheduled": "Scheduled",
     "filterAll": "All",
+    "allAgents": "All agents",
     "sessionDeleted": "Session deleted",
     "noMatchSessions": "No sessions match \"{{term}}\"",
     "noSessions": "No sessions yet",

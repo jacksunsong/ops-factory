@@ -16,10 +16,17 @@
     min-width: 220px;
     width: auto;
     min-height: 40px;
-    padding: 0 14px 0 12px;
+    padding: 0 38px 0 12px;
     border: 1px solid #d9e0e9;
     border-radius: var(--radius-md);
-    background: var(--surface-1, var(--color-bg-primary));
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: var(--surface-1, var(--color-bg-primary));
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%2364758b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px 16px;
     color: var(--color-text-primary);
     font: inherit;
     transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
@@ -27,7 +34,7 @@
 
 .filter-select:hover:not(:disabled) {
     border-color: #c7cfdb;
-    background: #fbfcfd;
+    background-color: #fbfcfd;
 }
 
 .filter-select:focus {

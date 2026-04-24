@@ -8,10 +8,10 @@ import { useToast } from '../../../platform/providers/ToastContext'
 import PageHeader from '../../../platform/ui/primitives/PageHeader'
 import Pagination from '../../../platform/ui/primitives/Pagination'
 import ListFooter from '../../../platform/ui/list/ListFooter'
-import ListResultsMeta from '../../../platform/ui/list/ListResultsMeta'
 import ListSearchInput from '../../../platform/ui/list/ListSearchInput'
 import ListToolbar from '../../../platform/ui/list/ListToolbar'
 import ListWorkbench from '../../../platform/ui/list/ListWorkbench'
+import FilterSelect from '../../../platform/ui/filters/FilterSelect'
 import { buildChatSessionState } from '../../../platform/chat/chatRouteState'
 import { isScheduledSession } from '../../../../config/runtime'
 import RenameSessionDialog from '../components/RenameSessionDialog'
@@ -26,6 +26,14 @@ type HistoryFilter = 'user' | 'scheduled' | 'all'
 function parseHistoryFilter(raw: string | null): HistoryFilter {
     if (raw === 'scheduled' || raw === 'all' || raw === 'user') return raw
     return 'user'
+}
+
+const ALL_AGENTS = '__all__'
+
+function hasSessionMessages(session: Session): boolean {
+    if (typeof session.message_count === 'number') return session.message_count > 0
+    if (Array.isArray(session.conversation)) return session.conversation.length > 0
+    return true
 }
 
 export default function HistoryPage() {
@@ -45,12 +53,26 @@ export default function HistoryPage() {
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(20)
     const historyFilter = parseHistoryFilter(searchParams.get('type'))
+    const selectedAgent = useMemo(() => {
+        const raw = searchParams.get('agent')
+        if (!raw || raw === ALL_AGENTS) return ALL_AGENTS
+        return agents.some((agent) => agent.id === raw) ? raw : ALL_AGENTS
+    }, [agents, searchParams])
     const setHistoryFilter = useCallback((filter: HistoryFilter) => {
         const nextParams = new URLSearchParams(searchParams)
         if (filter === 'user') {
             nextParams.delete('type')
         } else {
             nextParams.set('type', filter)
+        }
+        setSearchParams(nextParams, { replace: true })
+    }, [searchParams, setSearchParams])
+    const setSelectedAgent = useCallback((agentId: string) => {
+        const nextParams = new URLSearchParams(searchParams)
+        if (!agentId || agentId === ALL_AGENTS) {
+            nextParams.delete('agent')
+        } else {
+            nextParams.set('agent', agentId)
         }
         setSearchParams(nextParams, { replace: true })
     }, [searchParams, setSearchParams])
@@ -108,13 +130,20 @@ export default function HistoryPage() {
         }
     }, [getClient, agents, isConnected])
 
+    const nonEmptySessions = useMemo(() => sessions.filter(hasSessionMessages), [sessions])
+
+    const filteredByAgent = useMemo(() => {
+        if (selectedAgent === ALL_AGENTS) return nonEmptySessions
+        return nonEmptySessions.filter((session) => session.agentId === selectedAgent)
+    }, [nonEmptySessions, selectedAgent])
+
     const filteredByType = useMemo(() => {
-        if (historyFilter === 'all') return sessions
+        if (historyFilter === 'all') return filteredByAgent
         if (historyFilter === 'scheduled') {
-            return sessions.filter((session) => isScheduledSession(session))
+            return filteredByAgent.filter((session) => isScheduledSession(session))
         }
-        return sessions.filter((session) => (session.session_type || 'user') === 'user' && !session.schedule_id)
-    }, [sessions, historyFilter])
+        return filteredByAgent.filter((session) => (session.session_type || 'user') === 'user' && !session.schedule_id)
+    }, [filteredByAgent, historyFilter])
 
     const filteredSessions = useMemo(() => {
         if (!searchTerm.trim()) return filteredByType
@@ -135,7 +164,7 @@ export default function HistoryPage() {
 
     useEffect(() => {
         setCurrentPage(1)
-    }, [historyFilter, searchTerm])
+    }, [historyFilter, searchTerm, selectedAgent])
 
     const handleResumeSession = (session: SessionWithAgent) => {
         const resolvedAgentId = session.agentId || agents[0]?.id || ''
@@ -260,11 +289,24 @@ export default function HistoryPage() {
                 controls={(
                     <ListToolbar
                         primary={(
-                            <>
+                            <div className="history-toolbar-controls">
                                 <ListSearchInput
                                     value={searchTerm}
                                     placeholder={t('history.searchPlaceholder')}
                                     onChange={setSearchTerm}
+                                />
+
+                                <FilterSelect
+                                    value={selectedAgent}
+                                    options={[
+                                        { value: ALL_AGENTS, label: t('history.allAgents') },
+                                        ...agents.map((agent) => ({
+                                            value: agent.id,
+                                            label: agent.name,
+                                        })),
+                                    ]}
+                                    onChange={setSelectedAgent}
+                                    disabled={agents.length === 0}
                                 />
 
                                 <div className="seg-filter" role="tablist" aria-label="Session type filter">
@@ -278,9 +320,9 @@ export default function HistoryPage() {
                                         {t('history.filterAll')}
                                     </button>
                                 </div>
-                            </>
+                            </div>
                         )}
-                        secondary={searchTerm ? <ListResultsMeta>{t('common.resultsFound', { count: filteredSessions.length })}</ListResultsMeta> : undefined}
+                        secondary={undefined}
                     />
                 )}
                 footer={filteredSessions.length > 0 ? (
@@ -320,6 +362,7 @@ export default function HistoryPage() {
                         onDelete={handleDeleteSession}
                         deletingSessionKeys={deletingSessionKeys}
                         getSessionKey={getSessionKey}
+                        agentNameById={Object.fromEntries(agents.map((agent) => [agent.id, agent.name]))}
                         onMarkUnread={historyFilter !== 'user' ? handleMarkUnread : undefined}
                     />
                 )}

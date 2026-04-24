@@ -1130,6 +1130,7 @@
     "filterUser": "用户",
     "filterScheduled": "定时",
     "filterAll": "全部",
+    "allAgents": "全部 Agent",
     "sessionDeleted": "会话已删除",
     "noMatchSessions": "没有匹配 \"{{term}}\" 的会话",
     "noSessions": "暂无会话",

@@ -8,6 +8,7 @@ export type SessionWithAgent = Session & { agentId?: string }
 
 interface SessionItemProps {
     session: SessionWithAgent
+    agentName?: string
     onResume: (session: SessionWithAgent) => void
     onRename: (session: SessionWithAgent) => void
     onDelete: (session: SessionWithAgent) => void
@@ -20,7 +21,7 @@ function truncateSessionId(sessionId: string, edgeLength = 6): string {
     return `${sessionId.slice(0, edgeLength)}...${sessionId.slice(-edgeLength)}`
 }
 
-export default function SessionItem({ session, onResume, onRename, onDelete, isDeleting = false, onMarkUnread }: SessionItemProps) {
+export default function SessionItem({ session, agentName, onResume, onRename, onDelete, isDeleting = false, onMarkUnread }: SessionItemProps) {
     const { t } = useTranslation()
     const formattedDate = new Date(session.created_at).toLocaleDateString(undefined, {
         month: 'short',
@@ -53,6 +54,14 @@ export default function SessionItem({ session, onResume, onRename, onDelete, isD
                 <div className="session-meta">
                     <div className="session-meta-tags">
                         <span className={`session-type-badge ${sessionType}`}>{sessionType.toUpperCase()}</span>
+                        {session.agentId && (
+                            <span
+                                className="session-agent-tag"
+                                title={agentName && agentName !== session.agentId ? `${agentName} (${session.agentId})` : session.agentId}
+                            >
+                                {agentName || session.agentId}
+                            </span>
+                        )}
                     </div>
                     <div className="session-meta-details">
                         {sessionType === 'scheduled' && session.schedule_id && (

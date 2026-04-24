@@ -13,6 +13,7 @@ interface SessionListProps {
     onDelete: (session: SessionWithAgent) => void
     deletingSessionKeys?: Set<string>
     getSessionKey?: (session: SessionWithAgent) => string
+    agentNameById?: Record<string, string>
     onMarkUnread?: (session: SessionWithAgent) => void
 }
 
@@ -24,6 +25,7 @@ export default function SessionList({
     onDelete,
     deletingSessionKeys,
     getSessionKey,
+    agentNameById,
     onMarkUnread,
 }: SessionListProps) {
     const { t } = useTranslation()
@@ -88,6 +90,7 @@ export default function SessionList({
                 <SessionItem
                     key={`${session.agentId || 'unknown'}:${session.id}`}
                     session={session}
+                    agentName={session.agentId ? agentNameById?.[session.agentId] : undefined}
                     onResume={onResume}
                     onRename={onRename}
                     onDelete={onDelete}

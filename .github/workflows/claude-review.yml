@@ -36,6 +36,7 @@ jobs:
         env:
           # ANTHROPIC_BASE_URL: https://api.moonshot.cn/anthropic
           ANTHROPIC_BASE_URL: https://open.bigmodel.cn/api/anthropic
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.PAT_TOKEN }}
