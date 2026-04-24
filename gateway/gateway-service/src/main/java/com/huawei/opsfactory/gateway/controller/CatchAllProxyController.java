@@ -27,6 +27,9 @@ public class CatchAllProxyController {
     private static final Set<String> USER_ACCESSIBLE_PATHS = Set.of(
             "/system_info", "/status"
     );
+    private static final Set<String> REMOVED_CHAT_PATHS = Set.of(
+            "/reply", "/agent/reply", "/agent/stop", "/stop"
+    );
 
     private final InstanceManager instanceManager;
     private final GoosedProxy goosedProxy;
@@ -65,6 +68,10 @@ public class CatchAllProxyController {
             proxyTarget = remainderPath + "?" + query;
         }
 
+        if (isRemovedChatPath(remainderPath)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "legacy chat endpoint removed");
+        }
+
         // Check if user has access (using path only, without query string)
         UserRole role = exchange.getAttribute(UserContextFilter.USER_ROLE_ATTR);
         boolean isAdmin = role != null && role.isAdmin();
@@ -91,5 +98,12 @@ public class CatchAllProxyController {
             }
         }
         return false;
+    }
+
+    private boolean isRemovedChatPath(String remainder) {
+        String normalized = remainder != null && remainder.length() > 1 && remainder.endsWith("/")
+                ? remainder.substring(0, remainder.length() - 1)
+                : remainder;
+        return REMOVED_CHAT_PATHS.contains(normalized);
     }
 }

@@ -195,8 +195,8 @@ Each user:
 
 Expected stress point:
 
-- `/agent/stop`
-- SSE cancellation
+- `/sessions/{sessionId}/cancel`
+- session event disconnect/reconnect
 - recovery after interrupted generation
 
 ## 10. Metric Collection

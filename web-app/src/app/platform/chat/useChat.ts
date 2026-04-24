@@ -1,6 +1,6 @@
 import { useCallback, useReducer, useRef, useEffect, useState } from 'react'
-import { GoosedClient } from '@goosed/sdk'
-import type { TokenState, ImageData, OutputFile } from '@goosed/sdk'
+import { GoosedClient, normalizeSessionError } from '@goosed/sdk'
+import type { TokenState, ImageData, OutputFile, SSEEvent, Message as GoosedMessage, SessionErrorEnvelope } from '@goosed/sdk'
 import type { AttachedFile, ChatMessage, MessageContent, MessageMetadata, SelectedSkill } from '../../../types/message'
 import { getCompactingMessage, getThinkingMessage } from '../../../utils/messageContent'
 import { normalizeChatStreamError } from '../../../utils/chatStreamError'
@@ -8,9 +8,13 @@ import { normalizeChatStreamError } from '../../../utils/chatStreamError'
 // ── ChatState enum ──────────────────────────────────────────────
 export enum ChatState {
     Idle = 'idle',
+    Submitting = 'submitting',
     Streaming = 'streaming',
     Thinking = 'thinking',
     Compacting = 'compacting',
+    Reconnecting = 'reconnecting',
+    Cancelling = 'cancelling',
+    Cancelled = 'cancelled',
     Errored = 'errored',
 }
 
@@ -19,6 +23,7 @@ interface StreamState {
     messages: ChatMessage[]
     chatState: ChatState
     error: string | null
+    sessionError: ChatSessionError | null
     tokenState: TokenState | null
 }
 
@@ -26,6 +31,7 @@ type StreamAction =
     | { type: 'SET_MESSAGES'; payload: ChatMessage[] }
     | { type: 'SET_CHAT_STATE'; payload: ChatState }
     | { type: 'SET_ERROR'; payload: string | null }
+    | { type: 'SET_SESSION_ERROR'; payload: ChatSessionError | null }
     | { type: 'SET_TOKEN_STATE'; payload: TokenState }
     | { type: 'START_STREAMING' }
     | { type: 'STREAM_FINISH'; error?: string }
@@ -34,6 +40,7 @@ const initialState: StreamState = {
     messages: [],
     chatState: ChatState.Idle,
     error: null,
+    sessionError: null,
     tokenState: null,
 }
 
@@ -49,10 +56,12 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
             return { ...state, chatState: action.payload }
         case 'SET_ERROR':
             return { ...state, error: action.payload }
+        case 'SET_SESSION_ERROR':
+            return { ...state, sessionError: action.payload }
         case 'SET_TOKEN_STATE':
             return { ...state, tokenState: action.payload }
         case 'START_STREAMING':
-            return { ...state, chatState: ChatState.Streaming, error: null }
+            return { ...state, chatState: ChatState.Streaming, error: null, sessionError: null }
         case 'STREAM_FINISH':
             return {
                 ...state,
@@ -81,12 +90,27 @@ export interface UseChatReturn {
     chatState: ChatState
     isLoading: boolean
     error: string | null
+    sessionError: ChatSessionError | null
     tokenState: TokenState | null
     outputFilesEvent: OutputFilesEvent | null
     sendMessage: (text: string, images?: ImageData[], attachedFiles?: AttachedFile[], selectedSkill?: SelectedSkill) => string | null
     stopMessage: () => Promise<boolean>
     clearMessages: () => void
     setInitialMessages: (msgs: ChatMessage[]) => void
+}
+
+export interface ChatSessionError {
+    layer?: string
+    code: string
+    messageKey: string
+    fallback: string
+    detail?: string
+    retryable: boolean
+    suggestedActions: string[]
+    traceId?: string
+    requestId?: string
+    sessionId?: string
+    agentId?: string
 }
 
 /**
@@ -183,6 +207,100 @@ function readWebQueryFlag(name: string): string | null {
         return new URLSearchParams(window.location.search).get(name)
     } catch {
         return null
+    }
+}
+
+function createRequestId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID()
+    }
+    return `00000000-0000-4000-8000-${Date.now().toString(16).padStart(12, '0').slice(-12)}`
+}
+
+function sessionErrorMessageKey(error: SessionErrorEnvelope): string {
+    switch (error.code) {
+        case 'frontend_events_disconnected':
+            return 'chat.sessionErrors.frontendEventsDisconnected'
+        case 'user_cancelled':
+        case 'goosed_request_cancelled':
+            return 'chat.sessionErrors.userCancelled'
+        case 'gateway_submit_timeout':
+            return 'chat.sessionErrors.gatewaySubmitTimeout'
+        case 'gateway_unauthorized':
+            return 'chat.sessionErrors.gatewayUnauthorized'
+        case 'gateway_agent_not_found':
+            return 'chat.sessionErrors.gatewayAgentNotFound'
+        case 'gateway_agent_unavailable':
+            return 'chat.sessionErrors.gatewayAgentUnavailable'
+        case 'gateway_goosed_unavailable':
+            return 'chat.sessionErrors.gatewayGoosedUnavailable'
+        case 'gateway_max_duration_reached':
+            return 'chat.sessionErrors.gatewayMaxDurationReached'
+        case 'goosed_active_request_conflict':
+            return 'chat.sessionErrors.goosedActiveRequestConflict'
+        case 'provider_timeout':
+            return 'chat.sessionErrors.providerTimeout'
+        case 'provider_rate_limited':
+            return 'chat.sessionErrors.providerRateLimited'
+        case 'provider_auth_or_quota_failed':
+            return 'chat.sessionErrors.providerAuthOrQuotaFailed'
+        case 'tool_execution_failed':
+            return 'chat.sessionErrors.toolExecutionFailed'
+        case 'mcp_unavailable':
+            return 'chat.sessionErrors.mcpUnavailable'
+        case 'context_too_large':
+            return 'chat.sessionErrors.contextTooLarge'
+        default:
+            return error.layer === 'frontend'
+                ? 'chat.sessionErrors.frontendEventsDisconnected'
+                : 'chat.sessionErrors.unknown'
+    }
+}
+
+function toChatSessionError(error: unknown, context: {
+    sessionId?: string
+    requestId?: string
+    layer?: SessionErrorEnvelope['layer']
+    code?: string
+    message?: string
+    retryable?: boolean
+    suggestedActions?: SessionErrorEnvelope['suggested_actions']
+} = {}): ChatSessionError {
+    const envelope = normalizeSessionError(error, {
+        sessionId: context.sessionId,
+        requestId: context.requestId,
+        layer: context.layer,
+        code: context.code,
+        message: context.message,
+        retryable: context.retryable,
+        suggestedActions: context.suggestedActions,
+    })
+    return {
+        layer: envelope.layer,
+        code: envelope.code,
+        messageKey: sessionErrorMessageKey(envelope),
+        fallback: envelope.message,
+        detail: envelope.detail,
+        retryable: envelope.retryable,
+        suggestedActions: envelope.suggested_actions,
+        traceId: envelope.trace_id,
+        requestId: envelope.request_id,
+        sessionId: envelope.session_id,
+        agentId: envelope.agent_id,
+    }
+}
+
+function createSessionErrorMessage(error: ChatSessionError): ChatMessage {
+    return {
+        id: `session-error-${error.requestId || Date.now()}-${error.code}`,
+        role: 'assistant',
+        content: [],
+        created: Math.floor(Date.now() / 1000),
+        metadata: {
+            userVisible: true,
+            agentVisible: false,
+            sessionError: error,
+        },
     }
 }
 
@@ -305,6 +423,24 @@ function convertBackendMessage(msg: Record<string, unknown>, useLocalTime = fals
     }
 }
 
+function buildGoosedUserMessage(text: string, images?: ImageData[]): GoosedMessage {
+    const content: MessageContent[] = []
+    if (text.trim()) {
+        content.push({ type: 'text', text })
+    }
+    if (images && images.length > 0) {
+        for (const img of images) {
+            content.push({ type: 'image', data: img.data, mimeType: img.mimeType } as MessageContent)
+        }
+    }
+    return {
+        role: 'user',
+        created: Math.floor(Date.now() / 1000),
+        content,
+        metadata: { userVisible: true, agentVisible: true },
+    }
+}
+
 // ── Hook ────────────────────────────────────────────────────────
 
 export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
@@ -313,6 +449,10 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
     const messagesRef = useRef<ChatMessage[]>([])
     const isStreamingRef = useRef(false)
     const abortControllerRef = useRef<AbortController | null>(null)
+    const sessionEventsControllerRef = useRef<AbortController | null>(null)
+    const currentRequestIdRef = useRef<string | null>(null)
+    const lastSessionEventIdRef = useRef<string | null>(null)
+    const cancelRequestedRef = useRef(false)
     const streamErrorRef = useRef<string | null>(null)
     const [outputFilesEvent, setOutputFilesEvent] = useState<OutputFilesEvent | null>(null)
 
@@ -342,10 +482,7 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
         dispatch({ type: 'START_STREAMING' })
         isStreamingRef.current = true
         streamErrorRef.current = null
-
-        // Create an AbortController so we can cancel the HTTP connection
-        const controller = new AbortController()
-        abortControllerRef.current = controller
+        cancelRequestedRef.current = false
 
         // Build the API text: append full server paths so the agent can process files
         let apiText = text.trim()
@@ -391,89 +528,167 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
         let currentMessages = [...messagesRef.current, userMessage]
         dispatch({ type: 'SET_MESSAGES', payload: currentMessages })
 
+        const publishSessionError = (error: ChatSessionError) => {
+            const errorMsg = error.fallback
+            streamErrorRef.current = errorMsg
+            dispatch({ type: 'SET_ERROR', payload: errorMsg })
+            dispatch({ type: 'SET_SESSION_ERROR', payload: error })
+            currentMessages = [...currentMessages, createSessionErrorMessage(error)]
+            dispatch({ type: 'SET_MESSAGES', payload: currentMessages })
+        }
+
+        const processEvent = (event: SSEEvent): boolean => {
+            switch (event.type) {
+                case 'Message': {
+                    if (!event.message) break
+                    const incomingMessage = convertBackendMessage(event.message as Record<string, unknown>, true)
+                    currentMessages = pushMessage(currentMessages, incomingMessage)
+                    dispatch({ type: 'SET_MESSAGES', payload: currentMessages })
+
+                    if (event.token_state) {
+                        dispatch({ type: 'SET_TOKEN_STATE', payload: event.token_state })
+                    }
+
+                    if (getCompactingMessage(incomingMessage)) {
+                        dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Compacting })
+                    } else if (getThinkingMessage(incomingMessage)) {
+                        dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Thinking })
+                    } else {
+                        dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Streaming })
+                    }
+                    break
+                }
+                case 'UpdateConversation': {
+                    if (event.conversation && Array.isArray(event.conversation)) {
+                        currentMessages = event.conversation.map(msg =>
+                            convertBackendMessage(msg as Record<string, unknown>, true)
+                        )
+                        dispatch({ type: 'SET_MESSAGES', payload: currentMessages })
+                    }
+                    break
+                }
+                case 'Finish': {
+                    if (event.token_state) {
+                        dispatch({ type: 'SET_TOKEN_STATE', payload: event.token_state })
+                    }
+                    return true
+                }
+                case 'Error': {
+                    const sessionError = toChatSessionError(event, {
+                        sessionId,
+                        requestId: event.chat_request_id ?? event.request_id ?? currentRequestIdRef.current ?? undefined,
+                        message: event.error || event.detail || 'Agent request failed',
+                    })
+                    publishSessionError(sessionError)
+                    return true
+                }
+                case 'OutputFiles': {
+                    if (event.files && event.files.length > 0 && event.sessionId) {
+                        setOutputFilesEvent({
+                            sessionId: event.sessionId,
+                            files: event.files,
+                        })
+                    }
+                    break
+                }
+                case 'ActiveRequests':
+                case 'ModelChange':
+                case 'Notification':
+                case 'Ping':
+                    break
+            }
+            return false
+        }
+
         void (async () => {
             try {
-                for await (const event of client.sendMessage(sessionId, apiText, images)) {
-                    if (!isMountedRef.current || controller.signal.aborted) break
+                const requestId = createRequestId()
+                const eventsController = new AbortController()
+                currentRequestIdRef.current = requestId
+                sessionEventsControllerRef.current = eventsController
+                abortControllerRef.current = eventsController
+                dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Submitting })
 
-                    switch (event.type) {
-                        case 'Message': {
-                            if (!event.message) break
-                            const incomingMessage = convertBackendMessage(event.message as Record<string, unknown>, true)
-                            currentMessages = pushMessage(currentMessages, incomingMessage)
-                            dispatch({ type: 'SET_MESSAGES', payload: currentMessages })
+                let streamCompleted = false
+                const eventsTask = (async () => {
+                    let reconnectAttempts = 0
+                    while (!eventsController.signal.aborted && !streamCompleted) {
+                        try {
+                            for await (const item of client.subscribeSessionEvents(sessionId, {
+                                lastEventId: lastSessionEventIdRef.current ?? undefined,
+                                signal: eventsController.signal,
+                            })) {
+                                if (!isMountedRef.current || eventsController.signal.aborted) break
+                                reconnectAttempts = 0
+                                if (item.eventId) {
+                                    lastSessionEventIdRef.current = item.eventId
+                                }
 
-                            // Update token state
-                            if (event.token_state) {
-                                dispatch({ type: 'SET_TOKEN_STATE', payload: event.token_state })
+                                if (item.event.type === 'ActiveRequests') {
+                                    if (item.event.request_ids?.includes(requestId)) {
+                                        dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Streaming })
+                                    }
+                                    continue
+                                }
+
+                                const eventRequestId = item.event.chat_request_id
+                                if (eventRequestId && eventRequestId !== requestId) {
+                                    continue
+                                }
+                                if (processEvent(item.event)) {
+                                    streamCompleted = true
+                                    break
+                                }
                             }
-
-                            // Determine chat sub-state from message content
-                            if (getCompactingMessage(incomingMessage)) {
-                                dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Compacting })
-                            } else if (getThinkingMessage(incomingMessage)) {
-                                dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Thinking })
-                            } else {
-                                dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Streaming })
+                            if (!streamCompleted && !eventsController.signal.aborted) {
+                                reconnectAttempts += 1
+                                if (reconnectAttempts > 5) {
+                                    throw new Error('Agent events connection lost')
+                                }
+                                dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Reconnecting })
+                                await new Promise(resolve => setTimeout(resolve, Math.min(1000 * reconnectAttempts, 5000)))
                             }
-                            break
-                        }
-
-                        case 'UpdateConversation': {
-                            // Context compaction: backend sends entire replacement conversation
-                            if (event.conversation && Array.isArray(event.conversation)) {
-                                currentMessages = event.conversation.map(msg =>
-                                    convertBackendMessage(msg as Record<string, unknown>, true)
-                                )
-                                dispatch({ type: 'SET_MESSAGES', payload: currentMessages })
+                        } catch (err) {
+                            if (eventsController.signal.aborted || streamCompleted) break
+                            reconnectAttempts += 1
+                            if (reconnectAttempts > 5) {
+                                throw err
                             }
-                            break
+                            dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Reconnecting })
+                            await new Promise(resolve => setTimeout(resolve, Math.min(1000 * reconnectAttempts, 5000)))
                         }
-
-                        case 'Finish': {
-                            // Stream completed. Capture final token state.
-                            if (event.token_state) {
-                                dispatch({ type: 'SET_TOKEN_STATE', payload: event.token_state })
-                            }
-                            break
-                        }
-
-                        case 'Error': {
-                            const errorMsg = normalizeChatStreamError(event.error || 'Unknown error occurred')
-                            streamErrorRef.current = errorMsg
-                            dispatch({ type: 'SET_ERROR', payload: errorMsg })
-                            break
-                        }
-
-                        case 'OutputFiles': {
-                            // Gateway detected new/modified files after this reply
-                            if (event.files && event.files.length > 0 && event.sessionId) {
-                                setOutputFilesEvent({
-                                    sessionId: event.sessionId,
-                                    files: event.files,
-                                })
-                            }
-                            break
-                        }
-
-                        case 'ModelChange':
-                        case 'Notification':
-                        case 'Ping':
-                            // Acknowledged but no action needed for now
-                            break
                     }
-                }
+                })()
+
+                await client.submitSessionReply(sessionId, {
+                    request_id: requestId,
+                    user_message: buildGoosedUserMessage(apiText, images),
+                })
+                dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Streaming })
+                await eventsTask
             } catch (err) {
                 if (isMountedRef.current && !(err instanceof DOMException && err.name === 'AbortError')) {
-                    const errorMsg = normalizeChatStreamError(err)
-                    streamErrorRef.current = errorMsg
-                    dispatch({ type: 'SET_ERROR', payload: errorMsg })
+                    const sessionError = toChatSessionError(err, {
+                        sessionId,
+                        requestId: currentRequestIdRef.current ?? undefined,
+                    })
+                    publishSessionError({
+                        ...sessionError,
+                        fallback: normalizeChatStreamError(sessionError.fallback),
+                    })
                 }
             } finally {
                 if (isMountedRef.current) {
-                    dispatch({ type: 'STREAM_FINISH', error: streamErrorRef.current ?? undefined })
+                    if (cancelRequestedRef.current) {
+                        dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Cancelled })
+                    } else {
+                        dispatch({ type: 'STREAM_FINISH', error: streamErrorRef.current ?? undefined })
+                    }
                     isStreamingRef.current = false
                     abortControllerRef.current = null
+                    sessionEventsControllerRef.current = null
+                    currentRequestIdRef.current = null
+                    cancelRequestedRef.current = false
                 }
             }
         })()
@@ -486,38 +701,68 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
 
         console.info('[chat-stop] stop requested', { sessionId })
 
-        // Abort the SSE connection immediately
+        if (currentRequestIdRef.current) {
+            const requestId = currentRequestIdRef.current
+            cancelRequestedRef.current = true
+            dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Cancelling })
+            try {
+                await client.cancelSessionReply(sessionId, requestId)
+                sessionEventsControllerRef.current?.abort()
+                abortControllerRef.current?.abort()
+                isStreamingRef.current = false
+                currentRequestIdRef.current = null
+                sessionEventsControllerRef.current = null
+                abortControllerRef.current = null
+                dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Cancelled })
+                console.info('[chat-stop] session request cancel acknowledged', { sessionId, requestId })
+                return true
+            } catch (err) {
+                cancelRequestedRef.current = false
+                const sessionError = toChatSessionError(err, {
+                    sessionId,
+                    requestId,
+                    code: 'gateway_goosed_unavailable',
+                    retryable: true,
+                    suggestedActions: ['retry', 'wait'],
+                })
+                console.warn('[chat-stop] session request cancel failed', {
+                    sessionId,
+                    requestId,
+                    error: err instanceof Error ? err.message : String(err),
+                })
+                if (isMountedRef.current) {
+                    dispatch({ type: 'SET_ERROR', payload: sessionError.fallback })
+                    dispatch({ type: 'SET_SESSION_ERROR', payload: sessionError })
+                    dispatch({ type: 'STREAM_FINISH', error: sessionError.fallback })
+                }
+                return false
+            }
+        }
+
         abortControllerRef.current?.abort()
         isStreamingRef.current = false
-        dispatch({ type: 'STREAM_FINISH' })
-        console.info('[chat-stop] local stream aborted', { sessionId })
-
-        try {
-            await client.stopSession(sessionId)
-            console.info('[chat-stop] gateway stop acknowledged', { sessionId })
-            return true
-        } catch (err) {
-            console.warn('[chat-stop] gateway stop failed', {
-                sessionId,
-                error: err instanceof Error ? err.message : String(err),
-            })
-            if (isMountedRef.current) {
-                dispatch({ type: 'SET_ERROR', payload: err instanceof Error ? err.message : 'Failed to stop message' })
-            }
-            return false
-        }
+        dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Cancelled })
+        console.info('[chat-stop] local session-events stream aborted without active request', { sessionId })
+        return true
     }, [client, sessionId])
 
     const clearMessages = useCallback(() => {
         dispatch({ type: 'SET_MESSAGES', payload: [] })
         dispatch({ type: 'SET_ERROR', payload: null })
+        dispatch({ type: 'SET_SESSION_ERROR', payload: null })
     }, [])
 
     return {
         messages: state.messages,
         chatState: state.chatState,
-        isLoading: state.chatState === ChatState.Streaming || state.chatState === ChatState.Thinking || state.chatState === ChatState.Compacting,
+        isLoading: state.chatState === ChatState.Submitting ||
+            state.chatState === ChatState.Streaming ||
+            state.chatState === ChatState.Thinking ||
+            state.chatState === ChatState.Compacting ||
+            state.chatState === ChatState.Reconnecting ||
+            state.chatState === ChatState.Cancelling,
         error: state.error,
+        sessionError: state.sessionError,
         tokenState: state.tokenState,
         outputFilesEvent,
         sendMessage,

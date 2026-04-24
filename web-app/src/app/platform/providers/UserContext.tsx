@@ -124,7 +124,7 @@ export function useUser(): UserContextType {
     return context
 }
 
-/** Redirect to /login if not authenticated */
+/** User identity is resolved from URL, cookie, localStorage, or the default runtime user. */
 export function ProtectedRoute({ children }: { children: ReactNode }) {
     return <>{children}</>
 }

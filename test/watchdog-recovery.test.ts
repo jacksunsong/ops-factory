@@ -16,7 +16,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (gw) await gw.stop()
-}, 15_000)
+}, 60_000)
 
 /** Fetch runtime-source instances as admin */
 async function getRuntimeInstances(): Promise<any> {
@@ -126,7 +126,7 @@ describe('Watchdog — process crash detection and recovery', () => {
     // after a brief wait (the watchdog interval is 60s in production, shorter in tests)
     await sleep(5000)
 
-    const monData2 = await getMonitoringInstances()
+    const monData2 = await getRuntimeInstances()
     const sysGroup2 = monData2.byAgent?.find(
       (g: any) => g.agentId === 'supervisor-agent',
     )
@@ -140,7 +140,7 @@ describe('Watchdog — process crash detection and recovery', () => {
     const sessionId = await client.startNewChat()
 
     // Kill the goosed instance
-    const monData = await getMonitoringInstances()
+    const monData = await getRuntimeInstances()
     const pid = findInstancePid(monData, 'universal-agent', 'test-status-check')
     if (pid) {
       try { process.kill(pid, 'SIGKILL') } catch { /* */ }

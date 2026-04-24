@@ -37,10 +37,12 @@ const UPDATED_NAME = 'E2E-EditPreserve-Updated'
 // ---------------------------------------------------------------------------
 
 async function loginAs(page: Page, username: string) {
-    await page.goto('/login')
-    await page.fill('input[placeholder="Your name"]', username)
-    await page.click('button:has-text("Enter")')
-    await page.waitForURL('/')
+    await page.goto('/#/')
+  await page.evaluate((userId) => {
+    localStorage.setItem('opsfactory:userId', userId)
+  }, username)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
     await page.waitForTimeout(800)
 }
 
@@ -88,7 +90,7 @@ test.describe('Host Edit Password Preservation', () => {
 
     test.beforeEach(async ({ page }) => {
         await loginAs(page, ADMIN_USER)
-        await page.goto('/remote-diagnosis')
+        await page.goto('/#/remote-diagnosis')
         await page.waitForTimeout(1000)
         await clickTab(page, '主机管理|Hosts')
         await page.waitForTimeout(1000)

@@ -53,19 +53,38 @@ send_reply() {
 
     local start_time=$(date +%s)
 
-    # Build the reply body
-    local body="{\"session_id\":\"${SESSION_ID}\",\"user_message\":{\"role\":\"user\",\"created\":$(date +%s),\"content\":[{\"type\":\"text\",\"text\":$(echo "$message" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))')}],\"metadata\":{\"userVisible\":true,\"agentVisible\":true}}}"
+    # Build the session reply body
+    local request_id
+    request_id=$(uuidgen | tr '[:upper:]' '[:lower:]')
+    local body="{\"request_id\":\"${request_id}\",\"user_message\":{\"role\":\"user\",\"created\":$(date +%s),\"content\":[{\"type\":\"text\",\"text\":$(echo "$message" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))')}],\"metadata\":{\"userVisible\":true,\"agentVisible\":true}}}"
 
-    # Send reply and capture SSE response (with timeout)
+    # Subscribe to session events, then submit the reply.
     local tmpfile=$(mktemp)
+    curl -sk --max-time $MAX_WAIT \
+        -N "${GATEWAY}/agents/${AGENT}/sessions/${SESSION_ID}/events" \
+        -H "X-Secret-Key: ${SECRET}" -H "X-User-Id: admin" \
+        > "$tmpfile" 2>/dev/null &
+    local events_pid=$!
+    sleep 0.5
+
     local http_code
     http_code=$(curl -sk --max-time $MAX_WAIT \
         -w "%{http_code}" \
-        -o "$tmpfile" \
-        -X POST "${GATEWAY}/agents/${AGENT}/reply" \
+        -o /dev/null \
+        -X POST "${GATEWAY}/agents/${AGENT}/sessions/${SESSION_ID}/reply" \
         -H "Content-Type: application/json" \
         -H "X-Secret-Key: ${SECRET}" -H "X-User-Id: admin" \
         -d "$body" 2>/dev/null) || true
+
+    local waited=0
+    while [ "$waited" -lt "$MAX_WAIT" ]; do
+        if grep -q '"type":"Finish"\|"type":"Error"' "$tmpfile" 2>/dev/null; then
+            break
+        fi
+        sleep 1
+        waited=$((waited + 1))
+    done
+    kill "$events_pid" 2>/dev/null || true
 
     local end_time=$(date +%s)
     local elapsed=$((end_time - start_time))

@@ -15,10 +15,12 @@ import { test, expect, type Page } from '@playwright/test'
 const USER = 'e2e-inbox'
 
 async function loginAs(page: Page, username: string) {
-  await page.goto('/login')
-  await page.fill('input[placeholder="Your name"]', username)
-  await page.click('button:has-text("Enter")')
-  await page.waitForURL('/')
+  await page.goto('/#/')
+  await page.evaluate((userId) => {
+    localStorage.setItem('opsfactory:userId', userId)
+  }, username)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
   await page.waitForTimeout(500)
 }
 
@@ -31,7 +33,7 @@ test.describe('Inbox — rendering', () => {
   })
 
   test('renders page title and unread count', async ({ page }) => {
-    await page.goto('/inbox')
+    await page.goto('/#/inbox')
     await expect(page.locator('.page-title')).toBeVisible({ timeout: 5000 })
     await expect(page.locator('.inbox-count')).toBeVisible()
 
@@ -41,7 +43,7 @@ test.describe('Inbox — rendering', () => {
   })
 
   test('renders toolbar with actions', async ({ page }) => {
-    await page.goto('/inbox')
+    await page.goto('/#/inbox')
     await expect(page.locator('.inbox-toolbar')).toBeVisible({ timeout: 5000 })
   })
 })
@@ -52,7 +54,7 @@ test.describe('Inbox — rendering', () => {
 test.describe('Inbox — content display', () => {
   test('shows session items or empty state', async ({ page }) => {
     await loginAs(page, USER)
-    await page.goto('/inbox')
+    await page.goto('/#/inbox')
     await page.waitForTimeout(3000)
 
     const hasItems = await page.locator('.inbox-item').count() > 0
@@ -79,7 +81,7 @@ test.describe('Inbox — content display', () => {
 test.describe('Inbox — open session', () => {
   test('Open button navigates to chat with session loaded', async ({ page }) => {
     await loginAs(page, USER)
-    await page.goto('/inbox')
+    await page.goto('/#/inbox')
     await page.waitForTimeout(3000)
 
     const items = page.locator('.inbox-item')
@@ -106,7 +108,7 @@ test.describe('Inbox — open session', () => {
 test.describe('Inbox — dismiss', () => {
   test('Dismiss button removes session from inbox list', async ({ page }) => {
     await loginAs(page, USER)
-    await page.goto('/inbox')
+    await page.goto('/#/inbox')
     await page.waitForTimeout(3000)
 
     const items = page.locator('.inbox-item')
@@ -136,7 +138,7 @@ test.describe('Inbox — dismiss', () => {
 test.describe('Inbox — mark all read', () => {
   test('Mark All Read clears all items and updates count to 0', async ({ page }) => {
     await loginAs(page, USER)
-    await page.goto('/inbox')
+    await page.goto('/#/inbox')
     await page.waitForTimeout(3000)
 
     const items = page.locator('.inbox-item')
@@ -167,7 +169,7 @@ test.describe('Inbox — mark all read', () => {
 test.describe('Inbox — sidebar badge', () => {
   test('sidebar badge count matches inbox header count', async ({ page }) => {
     await loginAs(page, USER)
-    await page.goto('/inbox')
+    await page.goto('/#/inbox')
     await page.waitForTimeout(3000)
 
     // Get inbox header count
@@ -193,7 +195,7 @@ test.describe('Inbox — sidebar badge', () => {
 test.describe('Inbox — grouping', () => {
   test('sessions are grouped under agent headings', async ({ page }) => {
     await loginAs(page, USER)
-    await page.goto('/inbox')
+    await page.goto('/#/inbox')
     await page.waitForTimeout(3000)
 
     const groups = page.locator('.inbox-group')

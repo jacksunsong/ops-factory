@@ -584,7 +584,7 @@ public class InstanceManager {
 
     /**
      * Kill a hung instance asynchronously so the next getOrSpawn() will create a fresh one.
-     * Called by SseRelayService when a timeout is detected (goosed is deadlocked).
+     * Called by gateway health and timeout handlers when goosed is considered unrecoverable.
      */
     public void forceRecycle(String agentId, String userId) {
         String key = ManagedInstance.buildKey(agentId, userId);

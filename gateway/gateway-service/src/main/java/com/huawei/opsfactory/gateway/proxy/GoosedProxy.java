@@ -12,6 +12,7 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -111,6 +112,31 @@ public class GoosedProxy {
                     copyUpstreamHeaders(upstream.headers().asHttpHeaders(), response.getHeaders());
                     return response.writeWith(upstream.bodyToFlux(DataBuffer.class));
                 }).timeout(Duration.ofSeconds(60))
+                .onErrorMap(this::isProxyError, this::mapProxyError);
+    }
+
+    /**
+     * Proxy a goosed session event stream. This method intentionally does not
+     * apply a whole-stream timeout: the session events channel is long-lived,
+     * and client disconnect must not imply agent cancellation.
+     */
+    public Mono<Void> proxySessionEvents(ServerHttpResponse response, int port, String path,
+                                         String secretKey, String lastEventId) {
+        String target = goosedBaseUrl(port) + path;
+
+        WebClient.RequestHeadersSpec<?> spec = webClient.get()
+                .uri(target)
+                .header(GatewayConstants.HEADER_SECRET_KEY, secretKey)
+                .accept(MediaType.TEXT_EVENT_STREAM);
+        if (lastEventId != null && !lastEventId.isBlank()) {
+            spec = spec.header("Last-Event-ID", lastEventId);
+        }
+
+        return spec.exchangeToMono(upstream -> {
+                    response.setStatusCode(upstream.statusCode());
+                    copyUpstreamHeaders(upstream.headers().asHttpHeaders(), response.getHeaders());
+                    return response.writeWith(upstream.bodyToFlux(DataBuffer.class));
+                })
                 .onErrorMap(this::isProxyError, this::mapProxyError);
     }
 

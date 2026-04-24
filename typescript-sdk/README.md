@@ -65,8 +65,21 @@ for (const tool of tools) {
 const result = await client.callTool(session.id, 'todo__todo_write', { content: 'My TODO' });
 console.log(result.content);
 
-// Send a message (streaming)
-for await (const event of client.sendMessage(session.id, 'Hello!')) {
+// Send a message using session reply/events
+const requestId = crypto.randomUUID();
+const events = client.subscribeSessionEvents(session.id);
+await client.submitSessionReply(session.id, {
+  request_id: requestId,
+  user_message: {
+    role: 'user',
+    created: Math.floor(Date.now() / 1000),
+    content: [{ type: 'text', text: 'Hello!' }],
+    metadata: { userVisible: true, agentVisible: true },
+  },
+});
+for await (const item of events) {
+  const event = item.event;
+  if (event.chat_request_id && event.chat_request_id !== requestId) continue;
   if (event.type === 'Message' && event.message) {
     const content = event.message.content as Array<{ type: string; text?: string }>;
     for (const c of content) {
@@ -76,15 +89,11 @@ for await (const event of client.sendMessage(session.id, 'Hello!')) {
     }
   } else if (event.type === 'Finish') {
     console.log(`Done (tokens: ${event.token_state?.totalTokens})`);
+    break;
   }
 }
 
-// Or get full response
-const response = await client.chat(session.id, 'What can you do?');
-console.log(response);
-
 // Clean up
-await client.stopSession(session.id);
 await client.deleteSession(session.id);
 ```
 
@@ -98,13 +107,13 @@ await client.deleteSession(session.id);
 - `startSession(workingDir)` - Create new session with working directory
 - `resumeSession(sessionId, loadModelAndExtensions?)` - Resume session and load extensions
 - `restartSession(sessionId)` - Restart agent in session
-- `stopSession(sessionId)` - Stop active session
 - `getTools(sessionId, extensionName?)` - Get available tools
 - `callTool(sessionId, name, args)` - Call a tool directly
 
 ### Chat
-- `sendMessage(sessionId, text)` - Send message and stream events (AsyncGenerator)
-- `chat(sessionId, text)` - Send message and get full response text
+- `submitSessionReply(sessionId, request)` - Submit a user message and receive a request id
+- `subscribeSessionEvents(sessionId, options?)` - Subscribe to session events with optional `Last-Event-ID`
+- `cancelSessionReply(sessionId, requestId)` - Explicitly cancel a running request
 
 ### Sessions
 - `listSessions()` - List all sessions

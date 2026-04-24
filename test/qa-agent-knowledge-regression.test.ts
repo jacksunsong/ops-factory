@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import net from 'node:net'
 
-import { type GatewayHandle, sleep } from './helpers.js'
+import { sendSessionReplyAndWait, type GatewayHandle, sleep } from './helpers.js'
 import { qaKnowledgeRegressionCases } from './qa-agent-knowledge-regression.cases.js'
 
 const AGENT_ID = 'qa-agent'
@@ -154,15 +154,6 @@ async function startQaJavaGateway(): Promise<GatewayHandle> {
       if (!child.killed) child.kill('SIGKILL')
       await sleep(500)
     },
-  }
-}
-
-function makeUserMessage(text: string) {
-  return {
-    role: 'user',
-    created: Math.floor(Date.now() / 1000),
-    content: [{ type: 'text', text }],
-    metadata: { userVisible: true, agentVisible: true },
   }
 }
 
@@ -386,23 +377,7 @@ async function sendReplyAndWait(
   message: string,
   timeoutMs = ROUND_TIMEOUT_MS,
 ): Promise<{ body: string; timedOut: boolean }> {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    const res = await handle.fetchAs(userId, `/agents/${agentId}/agent/reply`, {
-      method: 'POST',
-      body: JSON.stringify({
-        session_id: sessionId,
-        user_message: makeUserMessage(message),
-      }),
-      signal: controller.signal,
-    })
-    return { body: await res.text(), timedOut: false }
-  } catch {
-    return { body: '', timedOut: true }
-  } finally {
-    clearTimeout(timer)
-  }
+  return sendSessionReplyAndWait(handle, userId, agentId, sessionId, message, timeoutMs)
 }
 
 beforeAll(async () => {

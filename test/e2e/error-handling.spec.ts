@@ -25,12 +25,13 @@ async function blockGateway(page: Page) {
     await page.route(GATEWAY_PATTERN_ALT, route => route.abort('connectionrefused'))
 }
 
-/** Set auth in localStorage so ProtectedRoute doesn't redirect to /login */
+/** Set auth in localStorage; the dedicated login route has been removed. */
 async function setAuth(page: Page, userId = 'e2e-error-user') {
-    await page.goto('/login')
+    await page.goto('/#/')
     await page.evaluate((uid) => {
         localStorage.setItem('opsfactory:userId', uid)
     }, userId)
+    await page.reload({ waitUntil: 'domcontentloaded' })
 }
 
 // =====================================================
@@ -43,7 +44,7 @@ test.describe('Gateway unavailable — error display', () => {
     })
 
     test('History page shows error instead of infinite loading', async ({ page }) => {
-        await page.goto('/history')
+        await page.goto('/#/history')
         const errorBanner = page.locator('.conn-banner-error')
         await expect(errorBanner.first()).toBeVisible({ timeout: 15000 })
         const loadingSpinner = page.locator('.loading-spinner')
@@ -51,19 +52,19 @@ test.describe('Gateway unavailable — error display', () => {
     })
 
     test('Chat page shows error instead of infinite loading', async ({ page }) => {
-        await page.goto('/chat')
+        await page.goto('/#/chat')
         const errorIndicator = page.locator('text=/网络连接失败|加载会话失败|Failed to load session|Connection error/i')
         await expect(errorIndicator.first()).toBeVisible({ timeout: 15000 })
     })
 
     test('Agents page shows connection error', async ({ page }) => {
-        await page.goto('/agents')
+        await page.goto('/#/agents')
         const errorBanner = page.locator('.conn-banner-error')
         await expect(errorBanner.first()).toBeVisible({ timeout: 15000 })
     })
 
     test('Files page shows error instead of infinite loading', async ({ page }) => {
-        await page.goto('/files')
+        await page.goto('/#/files')
         const errorBanner = page.locator('.conn-banner-error')
         await expect(errorBanner.first()).toBeVisible({ timeout: 15000 })
         const loadingSpinner = page.locator('.loading-spinner')
@@ -71,13 +72,13 @@ test.describe('Gateway unavailable — error display', () => {
     })
 
     test('Inbox page shows connection error banner', async ({ page }) => {
-        await page.goto('/inbox')
+        await page.goto('/#/inbox')
         const errorBanner = page.locator('.conn-banner-error')
         await expect(errorBanner.first()).toBeVisible({ timeout: 15000 })
     })
 
     test('Home page shows error banner', async ({ page }) => {
-        await page.goto('/')
+        await page.goto('/#/')
         const errorBanner = page.locator('.conn-banner-error')
         await expect(errorBanner.first()).toBeVisible({ timeout: 15000 })
     })
@@ -93,7 +94,7 @@ test.describe('Unified error banner styling', () => {
     })
 
     test('all pages use conn-banner CSS class', async ({ page }) => {
-        const pages = ['/history', '/files', '/inbox', '/agents']
+        const pages = ['/#/history', '/#/files', '/#/inbox', '/#/agents']
         for (const p of pages) {
             await page.goto(p)
             const banner = page.locator('.conn-banner.conn-banner-error')
@@ -112,7 +113,7 @@ test.describe('Error message friendliness', () => {
     })
 
     test('error messages do not show raw HTTP status codes', async ({ page }) => {
-        await page.goto('/agents')
+        await page.goto('/#/history')
         await page.waitForTimeout(7000)
         const bodyText = await page.locator('body').textContent()
         expect(bodyText).not.toMatch(/HTTP \d{3}:/)
@@ -122,7 +123,7 @@ test.describe('Error message friendliness', () => {
     })
 
     test('error messages are localized', async ({ page }) => {
-        await page.goto('/agents')
+        await page.goto('/#/history')
         const errorText = page.locator('text=/网络连接失败|Network connection failed/i')
         await expect(errorText.first()).toBeVisible({ timeout: 15000 })
     })

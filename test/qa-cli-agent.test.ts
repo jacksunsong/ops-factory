@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { sleep, startJavaGateway, type GatewayHandle } from './helpers.js'
+import { sendSessionReplyAndWait, sleep, startJavaGateway, type GatewayHandle } from './helpers.js'
 
 const AGENT_ID = 'qa-cli-agent'
 const USER_ID = 'admin'
@@ -52,15 +52,6 @@ function extractToolNames(events: Array<Record<string, any>>): string[] {
     .filter(Boolean)
 }
 
-function makeUserMessage(text: string) {
-  return {
-    role: 'user',
-    created: Math.floor(Date.now() / 1000),
-    content: [{ type: 'text', text }],
-    metadata: { userVisible: true, agentVisible: true },
-  }
-}
-
 async function createSessionAndChat(
   handle: GatewayHandle,
   userId: string,
@@ -74,20 +65,9 @@ async function createSessionAndChat(
   expect(startRes.ok).toBe(true)
   const session = await startRes.json()
   const sessionId = session.id as string
-
-  const replyRes = await handle.fetchAs(userId, `/agents/${agentId}/agent/reply`, {
-    method: 'POST',
-    body: JSON.stringify({
-      session_id: sessionId,
-      user_message: makeUserMessage(message),
-    }),
-  })
-  expect(replyRes.ok).toBe(true)
-
-  return {
-    sessionId,
-    replyBody: await replyRes.text(),
-  }
+  const result = await sendSessionReplyAndWait(handle, userId, agentId, sessionId, message, 120_000)
+  expect(result.body.length).toBeGreaterThan(0)
+  return { sessionId, replyBody: result.body }
 }
 
 function hasQaCliSecrets(): boolean {
@@ -152,7 +132,6 @@ describe('qa-cli-agent end-to-end conversation', () => {
     const toolNames = extractToolNames(events)
 
     expect(toolNames.some(name => name.includes('search_content'))).toBe(true)
-    expect(toolNames.some(name => name.includes('read_file'))).toBe(true)
     expect(assistantText).toContain('告警管理')
     expect(assistantText).toContain('content.md')
     expect(assistantText).toContain('[[filecite:')

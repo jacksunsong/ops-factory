@@ -4,6 +4,45 @@
 
 import { GoosedClient } from './src/index.js';
 
+function buildTextMessage(text: string) {
+    return {
+        role: 'user' as const,
+        created: Math.floor(Date.now() / 1000),
+        content: [{ type: 'text' as const, text }],
+        metadata: { userVisible: true, agentVisible: true },
+    };
+}
+
+async function sendAndCollect(client: GoosedClient, sessionId: string, text: string): Promise<string> {
+    const requestId = crypto.randomUUID();
+    const events = client.subscribeSessionEvents(sessionId);
+    await client.submitSessionReply(sessionId, {
+        request_id: requestId,
+        user_message: buildTextMessage(text),
+    });
+
+    let response = '';
+    for await (const item of events) {
+        const event = item.event;
+        if (event.chat_request_id && event.chat_request_id !== requestId) continue;
+        if (event.type === 'Message' && event.message) {
+            const content = event.message.content as Array<{ type: string; text?: string }>;
+            for (const c of content) {
+                if (c.type === 'text' && c.text) {
+                    response += c.text;
+                    process.stdout.write(c.text);
+                }
+            }
+        } else if (event.type === 'Finish') {
+            console.log(`\n   Tokens used: ${event.token_state?.totalTokens || 'N/A'}`);
+            break;
+        } else if (event.type === 'Error') {
+            throw new Error(event.error || 'Unknown chat error');
+        }
+    }
+    return response;
+}
+
 async function testGoosedSDK() {
     const client = new GoosedClient({
         baseUrl: 'http://127.0.0.1:3000',
@@ -57,26 +96,13 @@ async function testGoosedSDK() {
         // 7. Test chat
         console.log('\n7. Testing chat...');
         console.log('   Sending: "Hello! Please respond with a short greeting."');
-        const response = await client.chat(session.id, 'Hello! Please respond with a short greeting.');
+        const response = await sendAndCollect(client, session.id, 'Hello! Please respond with a short greeting.');
         console.log(`   Response: ${response.slice(0, 200)}${response.length > 200 ? '...' : ''}`);
 
         // 8. Test streaming chat
         console.log('\n8. Testing streaming chat...');
         console.log('   Sending: "Count from 1 to 5"');
-        for await (const event of client.sendMessage(session.id, 'Count from 1 to 5')) {
-            if (event.type === 'Message' && event.message) {
-                const content = event.message.content as Array<{ type: string; text?: string }>;
-                for (const c of content) {
-                    if (c.type === 'text' && c.text) {
-                        process.stdout.write(c.text);
-                    }
-                }
-            } else if (event.type === 'Finish') {
-                console.log(`\n   Tokens used: ${event.token_state?.totalTokens || 'N/A'}`);
-            } else if (event.type === 'Error') {
-                console.error(`   Error: ${event.error}`);
-            }
-        }
+        await sendAndCollect(client, session.id, 'Count from 1 to 5');
 
         // 9. List sessions
         console.log('\n9. Listing sessions...');
@@ -90,7 +116,6 @@ async function testGoosedSDK() {
 
         // 11. Clean up
         console.log('\n11. Cleaning up...');
-        await client.stopSession(session.id);
         await client.deleteSession(session.id);
         console.log('   Session deleted');
 

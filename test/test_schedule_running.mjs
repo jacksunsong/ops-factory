@@ -7,15 +7,14 @@ function pass(n) { console.log(`  ✅ PASS: ${n}`); testsPassed++; }
 function fail(n, r) { console.log(`  ❌ FAIL: ${n} — ${r}`); testsFailed++; }
 
 try {
-    console.log('=== Login ===');
+    console.log('=== Set runtime user ===');
     await page.goto('http://127.0.0.1:5173/');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await page.fill('input[placeholder="Your name"]', 'admin');
-    await page.click('button:has-text("Enter")');
+    await page.evaluate(() => localStorage.setItem('opsfactory:userId', 'admin'));
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
-    await page.goto('http://127.0.0.1:5173/scheduled-actions');
+    await page.goto('http://127.0.0.1:5173/#/scheduler');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 
@@ -35,7 +34,7 @@ try {
         await runNowBtn.first().click();
         await page.waitForTimeout(3000);
         // Reload to get fresh state
-        await page.goto('http://127.0.0.1:5173/scheduled-actions');
+        await page.goto('http://127.0.0.1:5173/#/scheduler');
         await page.waitForLoadState('networkidle');
         await page.waitForTimeout(3000);
     }
@@ -74,7 +73,7 @@ try {
         await page.waitForTimeout(5000);
 
         // Wait for auto-refresh or reload
-        await page.goto('http://127.0.0.1:5173/scheduled-actions');
+        await page.goto('http://127.0.0.1:5173/scheduler');
         await page.waitForLoadState('networkidle');
         await page.waitForTimeout(20000);
 

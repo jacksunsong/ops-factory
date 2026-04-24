@@ -122,8 +122,8 @@ test.describe('Cluster Type — commandPrefix & envVariables', () => {
     test.setTimeout(180_000)
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/')
-        await page.evaluate(() => localStorage.setItem('ops-factory-user', 'admin'))
+        await page.goto('/#/')
+        await page.evaluate(() => localStorage.setItem('opsfactory:userId', 'admin'))
         await navigateToClusterTypesTab(page)
         await ss(page, '00-cluster-types-tab')
     })

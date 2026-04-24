@@ -19,21 +19,17 @@ async function waitToastDismiss(page) { await sleep(1500); }
     const page = await browser.newPage();
     page.setDefaultTimeout(15000);
 
-    // Login first as "admin" (admin user)
+    // Set current runtime user to admin.
     await page.goto(BASE_URL);
     await page.waitForLoadState('networkidle');
     await sleep(1000);
-    const nameInput0 = page.locator('input[placeholder*="name"], input[placeholder*="Your name"]');
-    if (await nameInput0.count() > 0) {
-        await nameInput0.fill('admin');
-        await page.locator('button:has-text("Enter")').click();
-        await page.waitForLoadState('networkidle');
-        await sleep(2000);
-        log('Logged in as admin');
-    }
+    await page.evaluate(() => localStorage.setItem('opsfactory:userId', 'admin'));
+    await page.waitForLoadState('networkidle');
+    await sleep(2000);
+    log('Using runtime user admin');
 
     // Navigate to scheduled actions
-    await page.goto(`${BASE_URL}/scheduled-actions`);
+    await page.goto(`${BASE_URL}/#/scheduler`);
     await page.waitForLoadState('networkidle');
     await sleep(2000);
     await page.screenshot({ path: '/tmp/schedule_01_initial.png', fullPage: true });

@@ -47,7 +47,7 @@
 - `ChannelBindingService`
   - 为外部会话生成稳定 binding，并创建 `syntheticUserId`
 - `SessionBridgeService`
-  - 负责启动或复用 agent runtime/session，把外部文本转成 `/reply` 调用，并从 SSE 中抽取最终可见回复
+  - 负责启动或复用 agent runtime/session，把外部文本转成 session reply 请求，并从 session events 中抽取最终可见回复
 - `ChannelDedupService`
   - 基于 `externalMessageId` 做近 500 条去重，避免重复消费
 
@@ -110,7 +110,7 @@ flowchart LR
     E --> F["ChannelDedupService 去重"]
     F --> G["ChannelBindingService 确认 binding"]
     G --> H["SessionBridgeService 启动或复用内部 session"]
-    H --> I["调用 goosed /reply 并消费 SSE"]
+    H --> I["提交 goosed session reply 并消费 session events"]
     I --> J["生成最终回复文本"]
     J --> K["写入 outbox/pending/*.json"]
     K --> L["helper 发送到外部渠道"]
@@ -138,8 +138,8 @@ flowchart LR
 
 1. 先通过 `InstanceManager` 获取或拉起 `(agentId, syntheticUserId)` 对应 runtime
 2. 调用 `/agent/start` 和 `/agent/resume` 获取/恢复 session
-3. 调用 runtime 的 `/reply`
-4. 消费 SSE 流，只提取 `assistant` 且 `userVisible != false` 的文本内容
+3. 调用 runtime 的 `/sessions/{sessionId}/reply`
+4. 消费 `/sessions/{sessionId}/events`，只提取 `assistant` 且 `userVisible != false` 的文本内容
 5. 再把这段文本当成渠道回复发回去
 
 这意味着：

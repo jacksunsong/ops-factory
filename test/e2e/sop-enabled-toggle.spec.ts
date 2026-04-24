@@ -3,18 +3,18 @@ import { test, expect, type Page } from '@playwright/test'
 const USER_STORAGE_KEY = 'opsfactory:userId'
 
 async function loginAs(page: Page, username: string) {
-    await page.goto('/')
+    await page.goto('/#/')
     await page.evaluate(([storageKey, userId]) => {
         localStorage.setItem(storageKey, userId)
     }, [USER_STORAGE_KEY, username])
-    await page.goto('/')
-    await page.waitForURL('/')
+    await page.goto('/#/')
+    await page.waitForURL(/\/#\/?$/)
     await page.waitForTimeout(500)
 }
 
 async function navigateToSopTab(page: Page) {
     // Navigate to remote diagnosis module
-    await page.goto('/')
+    await page.goto('/#/')
     await page.waitForURL('/')
 
     // Find and click the remote diagnosis / SOP entry point

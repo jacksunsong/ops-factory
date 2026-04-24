@@ -199,34 +199,101 @@ export class WebClient {
    * Send a message and wait for the full SSE response (web app: Chat → send).
    * Returns structured SseResult with parsed events, text, tool calls, timing.
    */
-  async sendMessage(sessionId: string, text: string, timeoutMs = 120_000): Promise<SseResult> {
+  async sendMessage(sessionId: string, text: string, timeoutMs = 90_000): Promise<SseResult> {
     const startTime = Date.now()
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), timeoutMs)
+    const requestId = crypto.randomUUID()
+    const events: ParsedEvent[] = []
     try {
-      const res = await this.gw.fetchAs(
+      const eventsRes = await this.gw.fetchAs(
         this.userId,
-        `/agents/${this.agentId}/reply`,
+        `/agents/${this.agentId}/sessions/${encodeURIComponent(sessionId)}/events`,
         {
-          method: 'POST',
-          body: JSON.stringify({
-            session_id: sessionId,
-            user_message: makeUserMessage(text),
-          }),
+          method: 'GET',
           signal: controller.signal,
         },
       )
-      const body = await res.text()
-      return buildSseResult(body, startTime)
+      if (!eventsRes.ok || !eventsRes.body) {
+        const body = await eventsRes.text()
+        throw new Error(`events failed (${eventsRes.status}): ${body}`)
+      }
+
+      const submitRes = await this.gw.fetchAs(
+        this.userId,
+        `/agents/${this.agentId}/sessions/${encodeURIComponent(sessionId)}/reply`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            request_id: requestId,
+            user_message: makeUserMessage(text),
+          }),
+        },
+      )
+      if (!submitRes.ok) {
+        const body = await submitRes.text()
+        throw new Error(`submit failed (${submitRes.status}): ${body}`)
+      }
+
+      const reader = eventsRes.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        let separatorIndex
+        while ((separatorIndex = buffer.indexOf('\n\n')) >= 0) {
+          const eventBlock = buffer.slice(0, separatorIndex)
+          buffer = buffer.slice(separatorIndex + 2)
+          const data = eventBlock
+            .split('\n')
+            .filter(line => line.startsWith('data:'))
+            .map(line => line.replace(/^data:\s*/, ''))
+            .join('\n')
+          if (!data) continue
+          const event = JSON.parse(data) as ParsedEvent
+          const eventRequestId = event.chat_request_id || event.request_id
+          if (eventRequestId && eventRequestId !== requestId) continue
+          if (event.type === 'ActiveRequests' || event.type === 'Ping') continue
+          events.push(event)
+          if (event.type === 'Finish' || event.type === 'Error') {
+            controller.abort()
+            return {
+              events,
+              textContent: extractTextContent(events),
+              toolCalls: extractToolCalls(events),
+              hasFinish: events.some(e => e.type === 'Finish'),
+              hasError: events.some(e => e.type === 'Error'),
+              errorMessages: events.filter(e => e.type === 'Error').map(e => e.error || JSON.stringify(e)),
+              durationMs: Date.now() - startTime,
+            }
+          }
+        }
+      }
+
+      return {
+        events,
+        textContent: extractTextContent(events),
+        toolCalls: extractToolCalls(events),
+        hasFinish: events.some(e => e.type === 'Finish'),
+        hasError: events.some(e => e.type === 'Error'),
+        errorMessages: events.filter(e => e.type === 'Error').map(e => e.error || JSON.stringify(e)),
+        durationMs: Date.now() - startTime,
+      }
     } catch (err: any) {
       if (err.name === 'AbortError') {
+        if (!events.some(e => e.type === 'Finish')) {
+          await this.stopGeneration(sessionId, requestId)
+        }
         return {
-          events: [],
-          textContent: '',
-          toolCalls: [],
-          hasFinish: false,
-          hasError: true,
-          errorMessages: [`Timeout after ${timeoutMs}ms`],
+          events,
+          textContent: extractTextContent(events),
+          toolCalls: extractToolCalls(events),
+          hasFinish: events.some(e => e.type === 'Finish'),
+          hasError: !events.some(e => e.type === 'Finish'),
+          errorMessages: events.some(e => e.type === 'Finish') ? [] : [`Timeout after ${timeoutMs}ms`],
           durationMs: Date.now() - startTime,
         }
       }
@@ -237,13 +304,13 @@ export class WebClient {
   }
 
   /** Stop generation (web app: click stop button) */
-  async stopGeneration(sessionId: string): Promise<void> {
+  async stopGeneration(sessionId: string, requestId: string): Promise<void> {
     await this.gw.fetchAs(
       this.userId,
-      `/agents/${this.agentId}/agent/stop`,
+      `/agents/${this.agentId}/sessions/${encodeURIComponent(sessionId)}/cancel`,
       {
         method: 'POST',
-        body: JSON.stringify({ session_id: sessionId }),
+        body: JSON.stringify({ request_id: requestId }),
       },
     ).catch(() => {
       // Ignore errors — goosed may have already finished

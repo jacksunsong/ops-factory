@@ -11,7 +11,7 @@ function readSource(relativePath: string): string {
 describe('Chat page header rendering', () => {
     it('falls back to the default new chat title when session.name is missing', () => {
         const src = readSource('app/modules/chat/pages/ChatPage.tsx')
-        expect(src).toContain("const sessionTitle = session?.name?.trim() || t('chat.newChat')")
+        expect(src).toContain("const sessionTitle = session?.name?.trim() || t('sidebar.newChat')")
         expect(src).not.toContain('{session?.name && (')
     })
 

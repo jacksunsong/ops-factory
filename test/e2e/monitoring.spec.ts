@@ -16,10 +16,12 @@ const ADMIN_USER = 'admin'
 const REGULAR_USER = 'e2e-mon-user'
 
 async function loginAs(page: Page, username: string) {
-  await page.goto('/login')
-  await page.fill('input[placeholder="Your name"]', username)
-  await page.click('button:has-text("Enter")')
-  await page.waitForURL('/')
+  await page.goto('/#/')
+  await page.evaluate((userId) => {
+    localStorage.setItem('opsfactory:userId', userId)
+  }, username)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
   await page.waitForTimeout(500)
 }
 
@@ -42,14 +44,14 @@ async function clickTab(page: Page, keyword: string) {
 test.describe('Monitoring — access control', () => {
   test('regular user is redirected to /', async ({ page }) => {
     await loginAs(page, REGULAR_USER)
-    await page.goto('/monitoring')
-    await expect(page).toHaveURL('/')
+    await page.goto('/#/monitoring')
+    await expect(page).toHaveURL(/\/#\/?$/)
   })
 
   test('admin can access and page loads with tabs', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/monitoring')
-    await expect(page).toHaveURL('/monitoring')
+    await page.goto('/#/monitoring')
+    await expect(page).toHaveURL(/\/#\/monitoring$/)
     const tabs = page.locator('.config-tab')
     await expect(tabs.first()).toBeVisible({ timeout: 5000 })
     const count = await tabs.count()
@@ -63,7 +65,7 @@ test.describe('Monitoring — access control', () => {
 test.describe('Monitoring — platform tab', () => {
   test('KPI cards show real values (not empty)', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/monitoring')
+    await page.goto('/#/monitoring')
     await page.waitForTimeout(3000)
 
     // Platform is first tab, should be active by default
@@ -80,7 +82,7 @@ test.describe('Monitoring — platform tab', () => {
 
   test('uptime KPI shows a time value', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/monitoring')
+    await page.goto('/#/monitoring')
     await page.waitForTimeout(3000)
 
     // Find uptime KPI (usually contains "Uptime" or "运行时间" label)
@@ -102,7 +104,7 @@ test.describe('Monitoring — platform tab', () => {
 
   test('instances section shows table or empty message', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/monitoring')
+    await page.goto('/#/monitoring')
     await page.waitForTimeout(3000)
 
     // Look for instances table or section
@@ -121,7 +123,7 @@ test.describe('Monitoring — platform tab', () => {
 test.describe('Monitoring — agents tab', () => {
   test('agent cards show real agent names and status', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/monitoring')
+    await page.goto('/#/monitoring')
     await page.waitForTimeout(2000)
     await clickTab(page, 'agent')
 
@@ -150,7 +152,7 @@ test.describe('Monitoring — agents tab', () => {
 
   test('agent cards show model/provider tags', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/monitoring')
+    await page.goto('/#/monitoring')
     await page.waitForTimeout(2000)
     await clickTab(page, 'agent')
 
@@ -169,7 +171,7 @@ test.describe('Monitoring — agents tab', () => {
 test.describe('Monitoring — observability tab', () => {
   test('shows Langfuse data or disabled message', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/monitoring')
+    await page.goto('/#/monitoring')
     await page.waitForTimeout(2000)
     await clickTab(page, 'observ')
     await page.waitForTimeout(2000)
@@ -204,7 +206,7 @@ test.describe('Monitoring — observability tab', () => {
 test.describe('Monitoring — tab stability', () => {
   test('rapidly switching all tabs does not crash', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/monitoring')
+    await page.goto('/#/monitoring')
     await page.waitForTimeout(2000)
 
     const tabs = page.locator('.config-tab')

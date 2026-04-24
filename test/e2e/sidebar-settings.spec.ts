@@ -5,7 +5,7 @@
  *   - Sidebar collapse/expand: verify nav text hidden/shown
  *   - New Chat button: navigates to /chat and creates new session
  *   - Language switch: change to Chinese, verify UI text changed, switch back to English
- *   - Logout: verify redirect to login and localStorage cleared
+ *   - Logout: verify localStorage is cleared and the app returns home
  *   - Settings modal: verify tabs work, user info displayed
  */
 import { test, expect, type Page } from '@playwright/test'
@@ -13,10 +13,12 @@ import { test, expect, type Page } from '@playwright/test'
 const USER = 'e2e-sidebar'
 
 async function loginAs(page: Page, username: string) {
-  await page.goto('/login')
-  await page.fill('input[placeholder="Your name"]', username)
-  await page.click('button:has-text("Enter")')
-  await page.waitForURL('/')
+  await page.goto('/#/')
+  await page.evaluate((userId) => {
+    localStorage.setItem('opsfactory:userId', userId)
+  }, username)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
   await page.waitForTimeout(500)
 }
 
@@ -55,8 +57,8 @@ test.describe('Sidebar — collapse/expand', () => {
     await page.waitForTimeout(300)
 
     // Click history nav link (should still work by icon)
-    await page.locator('.sidebar-nav a[href="/history"]').click()
-    await expect(page).toHaveURL('/history')
+    await page.getByRole('link', { name: 'History' }).click()
+    await expect(page).toHaveURL(/\/#\/history$/)
   })
 })
 
@@ -67,12 +69,12 @@ test.describe('Sidebar — New Chat', () => {
   test('New Chat button navigates to /chat and creates fresh session', async ({ page }) => {
     await loginAs(page, USER)
 
-    // Wait for agents to load (template cards appear on home page)
-    await page.waitForSelector('.prompt-template-card', { timeout: 15_000 })
+    // Wait for the current home chat entrypoint to load.
+    await page.waitForSelector('.chat-input', { timeout: 15_000 })
 
     // Navigate to history using sidebar link (avoids full page reload)
-    await page.locator('.sidebar-nav a[href="/history"]').click()
-    await page.waitForURL('/history')
+    await page.getByRole('link', { name: 'History' }).click()
+    await page.waitForURL(/\/#\/history$/)
     await page.waitForTimeout(1000)
 
     // Click New Chat — this calls the API to create a session then navigates
@@ -99,7 +101,7 @@ test.describe('Settings — language switch', () => {
     await loginAs(page, USER)
 
     // --- Verify English UI initially ---
-    const homeLink = page.locator('.sidebar-nav a[href="/"]')
+    const homeLink = page.getByRole('link', { name: 'Home' })
     const homeText = await homeLink.textContent()
     expect(homeText).toContain('Home')
 
@@ -121,7 +123,7 @@ test.describe('Settings — language switch', () => {
     await page.waitForTimeout(500)
 
     // --- Verify UI text changed to Chinese ---
-    const homeTextZh = await homeLink.textContent()
+    const homeTextZh = await page.locator('.sidebar-nav').textContent()
     // Should now contain Chinese text (首页) instead of "Home"
     expect(homeTextZh).not.toContain('Home')
     expect(homeTextZh!.trim().length).toBeGreaterThan(0)
@@ -137,7 +139,7 @@ test.describe('Settings — language switch', () => {
     await page.waitForTimeout(500)
 
     // --- Verify English restored ---
-    const homeTextEn = await homeLink.textContent()
+    const homeTextEn = await page.locator('.sidebar-nav').textContent()
     expect(homeTextEn).toContain('Home')
   })
 
@@ -156,7 +158,7 @@ test.describe('Settings — language switch', () => {
     await page.waitForTimeout(1000)
 
     // Should still be in Chinese
-    const homeText = await page.locator('.sidebar-nav a[href="/"]').textContent()
+    const homeText = await page.locator('.sidebar-nav').textContent()
     expect(homeText).not.toContain('Home')
 
     // Switch back to English for cleanup
@@ -172,7 +174,7 @@ test.describe('Settings — language switch', () => {
 // 4. Logout — Verify Redirect & State Cleared
 // =====================================================
 test.describe('Settings — logout', () => {
-  test('logout redirects to login and clears user state', async ({ page }) => {
+  test('logout clears user state and returns home', async ({ page }) => {
     await loginAs(page, USER)
 
     // Open settings → User tab → Logout
@@ -185,15 +187,16 @@ test.describe('Settings — logout', () => {
     await expect(page.locator('.settings-username')).toContainText(USER)
 
     // Click logout
-    await page.locator('.settings-logout-btn').click()
+    await page.locator('.btn.btn-secondary').last().click()
 
-    // Should redirect to /login
-    await page.waitForURL('/login')
-    await expect(page.locator('.login-title')).toHaveText('Ops Factory')
+    // The dedicated login page is gone; logout clears persisted identity and returns home.
+    await page.waitForURL(/\/#\/?$/)
+    const storedUserId = await page.evaluate(() => localStorage.getItem('opsfactory:userId'))
+    expect(storedUserId).toBeNull()
 
-    // Verify cannot access protected pages
-    await page.goto('/')
-    await page.waitForURL('/login')
+    // A fresh app load falls back to the default runtime user instead of a login page.
+    await page.goto('/#/')
+    await expect(page.locator('.sidebar-user-btn')).toBeVisible({ timeout: 5000 })
   })
 })
 

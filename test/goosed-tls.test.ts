@@ -214,7 +214,6 @@ describe('application.yml goose-tls', () => {
 describe('no hardcoded http:// in goosed proxy code', () => {
   const sourceFiles = [
     'gateway-service/src/main/java/com/huawei/opsfactory/gateway/proxy/GoosedProxy.java',
-    'gateway-service/src/main/java/com/huawei/opsfactory/gateway/proxy/SseRelayService.java',
     'gateway-service/src/main/java/com/huawei/opsfactory/gateway/controller/McpController.java',
     'gateway-service/src/main/java/com/huawei/opsfactory/gateway/service/SessionService.java',
     'gateway-service/src/main/java/com/huawei/opsfactory/gateway/process/InstanceManager.java',

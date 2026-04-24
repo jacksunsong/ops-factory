@@ -16,15 +16,17 @@ const REGULAR_USER = 'e2e-agent-user'
 const UNIQUE = Date.now()
 
 async function loginAs(page: Page, username: string) {
-  await page.goto('/login')
-  await page.fill('input[placeholder="Your name"]', username)
-  await page.click('button:has-text("Enter")')
-  await page.waitForURL('/')
+  await page.goto('/#/')
+  await page.evaluate((userId) => {
+    localStorage.setItem('opsfactory:userId', userId)
+  }, username)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
   await page.waitForTimeout(500)
 }
 
 async function goToAgents(page: Page) {
-  await page.goto('/agents')
+  await page.goto('/#/agents')
   await page.waitForSelector('.agent-card', { timeout: 10_000 })
 }
 
@@ -199,7 +201,7 @@ test.describe('Agents CRUD — cancel safety', () => {
 test.describe('Agents CRUD — RBAC', () => {
   test('regular user sees agent list but no Create/Delete buttons', async ({ page }) => {
     await loginAs(page, REGULAR_USER)
-    await page.goto('/agents')
+    await page.goto('/#/agents')
     await page.waitForTimeout(3000)
 
     // Can see agents

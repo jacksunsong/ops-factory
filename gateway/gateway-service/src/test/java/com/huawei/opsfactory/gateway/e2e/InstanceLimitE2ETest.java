@@ -4,15 +4,12 @@ import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
 import com.huawei.opsfactory.gateway.hook.HookContext;
 import org.junit.Before;
 import org.junit.Test;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
-
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -20,7 +17,7 @@ import static org.mockito.Mockito.when;
 /**
  * E2E tests verifying instance limit enforcement at the HTTP layer.
  * When InstanceManager.getOrSpawn throws IllegalStateException for
- * per-user or global limits, the reply endpoint should return 5xx.
+ * per-user or global limits, the session reply endpoint should return 5xx.
  */
 public class InstanceLimitE2ETest extends BaseE2ETest {
 
@@ -32,61 +29,60 @@ public class InstanceLimitE2ETest extends BaseE2ETest {
     }
 
     @Test
-    public void reply_perUserLimitReached_returns5xx() {
+    public void sessionReply_perUserLimitReached_returns5xx() {
         when(instanceManager.getOrSpawn("test-agent", "alice"))
                 .thenReturn(Mono.error(new IllegalStateException("Per-user instance limit reached (5)")));
 
-        webClient.post().uri("/gateway/agents/test-agent/reply")
+        webClient.post().uri("/gateway/agents/test-agent/sessions/session-123/reply")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
                 .header(HEADER_USER_ID, "alice")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"message\":\"hello\"}")
+                .bodyValue("{\"request_id\":\"req-1\",\"user_message\":{\"role\":\"user\",\"created\":1776928807,\"content\":[{\"type\":\"text\",\"text\":\"hello\"}],\"metadata\":{\"userVisible\":true,\"agentVisible\":true}}}")
                 .exchange()
                 .expectStatus().is5xxServerError();
     }
 
     @Test
-    public void reply_globalLimitReached_returns5xx() {
+    public void sessionReply_globalLimitReached_returns5xx() {
         when(instanceManager.getOrSpawn("test-agent", "bob"))
                 .thenReturn(Mono.error(new IllegalStateException("Global instance limit reached (50)")));
 
-        webClient.post().uri("/gateway/agents/test-agent/reply")
+        webClient.post().uri("/gateway/agents/test-agent/sessions/session-123/reply")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
                 .header(HEADER_USER_ID, "bob")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"message\":\"hello\"}")
+                .bodyValue("{\"request_id\":\"req-1\",\"user_message\":{\"role\":\"user\",\"created\":1776928807,\"content\":[{\"type\":\"text\",\"text\":\"hello\"}],\"metadata\":{\"userVisible\":true,\"agentVisible\":true}}}")
                 .exchange()
                 .expectStatus().is5xxServerError();
     }
 
     @Test
-    public void reply_normalSpawn_returns200() {
+    public void sessionReply_normalSpawn_returns200() {
         ManagedInstance mockInstance = new ManagedInstance("test-agent", "alice", 9999, 12345L, null, "test-secret");
         mockInstance.setStatus(ManagedInstance.Status.RUNNING);
 
         when(instanceManager.getOrSpawn("test-agent", "alice"))
                 .thenReturn(Mono.just(mockInstance));
+        when(goosedProxy.fetchJson(eq(9999), eq(HttpMethod.POST), eq("/agent/resume"), anyString(), anyInt(), anyString()))
+                .thenReturn(Mono.just("{\"session\":{\"id\":\"session-123\"},\"extension_results\":[]}"));
+        when(goosedProxy.proxyWithBody(any(), eq(9999), eq("/sessions/session-123/reply"),
+                eq(HttpMethod.POST), anyString(), eq("test-secret")))
+                .thenReturn(Mono.empty());
 
-        DataBuffer buffer = new DefaultDataBufferFactory()
-                .wrap("data: {\"type\":\"Finish\"}\n\n".getBytes(StandardCharsets.UTF_8));
-        when(sseRelayService.relay(eq(9999), eq("/reply"), anyString(), eq("test-agent"), eq("alice"), any()))
-                .thenReturn(Flux.just(buffer));
-
-        webClient.post().uri("/gateway/agents/test-agent/reply")
+        webClient.post().uri("/gateway/agents/test-agent/sessions/session-123/reply")
                 .header(HEADER_SECRET_KEY, SECRET_KEY)
                 .header(HEADER_USER_ID, "alice")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"message\":\"hello\"}")
-                .accept(MediaType.TEXT_EVENT_STREAM)
+                .bodyValue("{\"request_id\":\"req-1\",\"user_message\":{\"role\":\"user\",\"created\":1776928807,\"content\":[{\"type\":\"text\",\"text\":\"hello\"}],\"metadata\":{\"userVisible\":true,\"agentVisible\":true}}}")
                 .exchange()
                 .expectStatus().isOk();
     }
 
     @Test
-    public void reply_unauthenticated_returns401() {
-        webClient.post().uri("/gateway/agents/test-agent/reply")
+    public void sessionReply_unauthenticated_returns401() {
+        webClient.post().uri("/gateway/agents/test-agent/sessions/session-123/reply")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"message\":\"hello\"}")
+                .bodyValue("{\"request_id\":\"req-1\",\"user_message\":{\"role\":\"user\",\"created\":1776928807,\"content\":[{\"type\":\"text\",\"text\":\"hello\"}],\"metadata\":{\"userVisible\":true,\"agentVisible\":true}}}")
                 .exchange()
                 .expectStatus().isUnauthorized();
     }

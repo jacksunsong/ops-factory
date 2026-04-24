@@ -6,7 +6,7 @@
 
 ## 一、问题概述
 
-**现象**：gateway 通过 HTTP 代理到 goosed 的 `/reply` 端点时，简单的纯文本对话正常，但一旦 LLM 触发 tool call（如 `todo_write`、`shell`、`memory` 等），goosed 进程在发送 `toolRequest` SSE 事件后**完全无响应** — 不仅 `/reply` 挂起，连 `/status` 健康检查也无法返回。
+**现象**：gateway 通过当时的旧 HTTP `/reply` 代理到 goosed 时，简单的纯文本对话正常，但一旦 LLM 触发 tool call（如 `todo_write`、`shell`、`memory` 等），goosed 进程在发送 `toolRequest` SSE 事件后**完全无响应** — 不仅旧回复请求挂起，连 `/status` 健康检查也无法返回。
 
 **影响**：所有涉及 tool 调用的对话（即 agent 的核心能力）全部不可用。
 
@@ -341,13 +341,19 @@ SESSION=$(curl -sk https://127.0.0.1:3000/agents/universal-agent/agent/start \
 SID=$(echo "$SESSION" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
 
 # Tool call 测试（关键！简单对话通过不代表 tool call 正常）
-curl -sk https://127.0.0.1:3000/agents/universal-agent/reply \
+REQ_ID=$(uuidgen)
+curl -skN "https://127.0.0.1:3000/agents/universal-agent/sessions/$SID/events" \
+  -H "X-Secret-Key: test" -H "X-User-Id: test" > /tmp/tool-call-events.log &
+EVENTS_PID=$!
+curl -sk "https://127.0.0.1:3000/agents/universal-agent/sessions/$SID/reply" \
   -X POST -H "X-Secret-Key: test" -H "X-User-Id: test" \
   -H "Content-Type: application/json" \
-  -d "{\"session_id\":\"$SID\",\"user_message\":{\"role\":\"user\",\"created\":$(date +%s),
+  -d "{\"request_id\":\"$REQ_ID\",\"user_message\":{\"role\":\"user\",\"created\":$(date +%s),
        \"content\":[{\"type\":\"text\",\"text\":\"Create a todo with 1 item: test. Use the todo tool.\"}],
-       \"metadata\":{\"userVisible\":true,\"agentVisible\":true}}}" \
-  --max-time 30 | grep -v Ping
+       \"metadata\":{\"userVisible\":true,\"agentVisible\":true}}}"
+sleep 30
+kill "$EVENTS_PID"
+grep -v Ping /tmp/tool-call-events.log
 
 # 检查结果中是否有：toolRequest + toolResponse + Finish
 ```

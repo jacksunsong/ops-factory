@@ -15,21 +15,24 @@ import * as fs from 'fs'
 import * as os from 'os'
 
 const USER = 'e2e-chat-adv'
+const USER_STORAGE_KEY = 'opsfactory:userId'
 
 async function loginAs(page: Page, username: string) {
-  await page.goto('/login')
-  await page.fill('input[placeholder="Your name"]', username)
-  await page.click('button:has-text("Enter")')
-  await page.waitForURL('/')
+  await page.goto('/#/')
+  await page.evaluate(([storageKey, userId]) => {
+    localStorage.setItem(storageKey, userId)
+  }, [USER_STORAGE_KEY, username])
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
   await page.waitForTimeout(500)
 }
 
 async function goToChat(page: Page) {
-  // Go to home page and wait for agents/templates to load
-  await page.goto('/')
-  await page.waitForSelector('.prompt-template-card', { timeout: 15_000 })
+  // Go to home page and wait for the current chat entrypoint to load.
+  await page.goto('/#/')
+  await expect(page.locator('.chat-input')).toBeVisible({ timeout: 15_000 })
+  await expect(page.locator('.new-chat-nav')).toBeVisible({ timeout: 15_000 })
 
-  // Use sidebar New Chat button (agents are loaded by now)
   const newChatBtn = page.locator('.new-chat-nav')
   await newChatBtn.click()
   await expect(page).toHaveURL(/\/chat/, { timeout: 15_000 })
@@ -186,8 +189,8 @@ test.describe('Chat — resume from history', () => {
     expect(chatText).toContain(MARKER)
 
     // 2. Navigate to history
-    await page.goto('/history')
-    await page.waitForSelector('.search-input', { timeout: 10_000 })
+    await page.goto('/#/history')
+    await page.waitForSelector('.list-search-input', { timeout: 10_000 })
     await page.waitForTimeout(3000)
 
     // 3. Find and click the session

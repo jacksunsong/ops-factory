@@ -6,7 +6,6 @@ import com.huawei.opsfactory.gateway.monitoring.MetricsBuffer;
 import com.huawei.opsfactory.gateway.process.InstanceManager;
 import com.huawei.opsfactory.gateway.process.PrewarmService;
 import com.huawei.opsfactory.gateway.proxy.GoosedProxy;
-import com.huawei.opsfactory.gateway.proxy.SseRelayService;
 import com.huawei.opsfactory.gateway.service.AgentConfigService;
 import com.huawei.opsfactory.gateway.service.FileService;
 import com.huawei.opsfactory.gateway.service.LangfuseService;
@@ -50,9 +49,6 @@ public abstract class BaseE2ETest {
 
     @MockBean
     protected GoosedProxy goosedProxy;
-
-    @MockBean
-    protected SseRelayService sseRelayService;
 
     @MockBean
     protected SessionService sessionService;

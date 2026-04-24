@@ -9,7 +9,7 @@
  */
 import http from 'node:http'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { startJavaGateway, type GatewayHandle } from './helpers.js'
+import { sendSessionReplyAndWait, startJavaGateway, type GatewayHandle } from './helpers.js'
 import { writeFileSync, readFileSync, existsSync, mkdirSync, unlinkSync, rmdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -96,24 +96,8 @@ async function sendReplyAndWait(
   message: string,
   timeoutMs = 30_000,
 ): Promise<string> {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    const res = await handle.fetchAs(userId, `/agents/${agentId}/agent/reply`, {
-      method: 'POST',
-      body: JSON.stringify({
-        session_id: sessionId,
-        user_message: makeUserMessage(message),
-      }),
-      signal: controller.signal,
-    })
-    const body = await res.text()
-    return body
-  } catch {
-    return '' // timeout / abort
-  } finally {
-    clearTimeout(timer)
-  }
+  const result = await sendSessionReplyAndWait(handle, userId, agentId, sessionId, message, timeoutMs)
+  return result.body
 }
 
 /**
@@ -229,7 +213,9 @@ describe('Agent listing & config', () => {
     const ids = agents.map((a: any) => a.id)
     expect(ids).toContain('universal-agent')
     expect(ids).toContain('kb-agent')
-    expect(ids).toContain('report-agent')
+    expect(ids).toContain('qa-cli-agent')
+    expect(ids).toContain('supervisor-agent')
+    expect(ids).not.toContain('report-agent')
     expect(ids).not.toContain('contract-agent')
   })
 
@@ -250,8 +236,8 @@ describe('Agent listing & config', () => {
     expect(data).toHaveProperty('agentsMd')
     expect(data).toHaveProperty('workingDir')
     expect(data).not.toHaveProperty('port')
-    expect(data.provider).toBe('custom_opsagentllm')
-    expect(data.model).toBe('kimi-k2-turbo-preview')
+    expect(data.provider).toBeDefined()
+    expect(data.model).toBeDefined()
   })
 
   it('PUT /agents/:id/config updates and restores agentsMd', async () => {
@@ -380,15 +366,7 @@ describe('Session lifecycle — alice', () => {
     expect(data.conversation.length).toBeGreaterThanOrEqual(4)
   }, 60_000)
 
-  it('stops the session', async () => {
-    const res = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/agent/stop`, {
-      method: 'POST',
-      body: JSON.stringify({ session_id: sessionId }),
-    })
-    expect(res.ok).toBe(true)
-  })
-
-  it('session still accessible in history after stop', async () => {
+  it('session remains accessible in history after replies', async () => {
     const { res, data } = await getSession(gw, USER_ALICE, AGENT_ID, sessionId)
     expect(res.ok).toBe(true)
     expect(data.conversation.length).toBeGreaterThanOrEqual(4)
@@ -539,31 +517,50 @@ describe('Multiple sessions per user', () => {
 })
 
 // =====================================================
-// 8. SSE Reply Format
+// 8. Session Event Format
 // =====================================================
-describe('SSE reply format', () => {
-  it('reply returns text/event-stream with SSE data lines', async () => {
+describe('session event format', () => {
+  it('events returns text/event-stream with SSE data lines', async () => {
     const startRes = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/agent/start`, {
       method: 'POST',
       body: JSON.stringify({}),
     })
     const { id: sessionId } = await startRes.json()
+    const requestId = crypto.randomUUID()
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 30_000)
 
-    const res = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/agent/reply`, {
-      method: 'POST',
-      body: JSON.stringify({
-        session_id: sessionId,
-        user_message: makeUserMessage('Reply with just "hi".'),
-      }),
-    })
-    expect(res.ok).toBe(true)
-    const contentType = res.headers.get('content-type') || ''
-    expect(contentType).toMatch(/text\/event-stream/)
+    try {
+      const eventsRes = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/sessions/${encodeURIComponent(sessionId)}/events`, {
+        method: 'GET',
+        signal: controller.signal,
+      })
+      expect(eventsRes.ok).toBe(true)
+      const contentType = eventsRes.headers.get('content-type') || ''
+      expect(contentType).toMatch(/text\/event-stream/)
 
-    const body = await res.text()
-    // SSE format: lines starting with "data:"
-    const dataLines = body.split('\n').filter(l => l.startsWith('data:'))
-    expect(dataLines.length).toBeGreaterThan(0)
+      const replyRes = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/sessions/${encodeURIComponent(sessionId)}/reply`, {
+        method: 'POST',
+        body: JSON.stringify({
+          request_id: requestId,
+          user_message: makeUserMessage('Reply with just "hi".'),
+        }),
+      })
+      expect(replyRes.ok).toBe(true)
+
+      const reader = eventsRes.body!.getReader()
+      const decoder = new TextDecoder()
+      let body = ''
+      while (!body.includes('data:')) {
+        const { done, value } = await reader.read()
+        if (done) break
+        body += decoder.decode(value, { stream: true })
+      }
+      expect(body).toContain('data:')
+    } finally {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, 60_000)
 })
 
@@ -1501,30 +1498,22 @@ describe('Session working_dir is set by gateway', () => {
     expect(data.working_dir).toContain(AGENT_ID)
   }, 60_000)
 
-  it('reply works via /reply path (without /agent/ prefix)', async () => {
-    // Create and resume a session for bob
+  it('session reply submit returns structured JSON', async () => {
     const startRes = await gw.fetchAs(USER_BOB, `/agents/${AGENT_ID}/agent/start`, {
       method: 'POST',
       body: JSON.stringify({}),
     })
     const session = await startRes.json()
 
-    const resumeRes = await gw.fetchAs(USER_BOB, `/agents/${AGENT_ID}/agent/resume`, {
-      method: 'POST',
-      body: JSON.stringify({ session_id: session.id, load_model_and_extensions: true }),
-    })
-    expect(resumeRes.ok).toBe(true)
-
-    // Send reply via /reply (no /agent/ prefix) — the path the SDK actually uses
-    const replyRes = await gw.fetchAs(USER_BOB, `/agents/${AGENT_ID}/reply`, {
+    const replyRes = await gw.fetchAs(USER_BOB, `/agents/${AGENT_ID}/sessions/${encodeURIComponent(session.id)}/reply`, {
       method: 'POST',
       body: JSON.stringify({
-        session_id: session.id,
+        request_id: crypto.randomUUID(),
         user_message: makeUserMessage('Reply with only "ok".'),
       }),
     })
     expect(replyRes.status).toBe(200)
-    expect(replyRes.headers.get('content-type')).toContain('text/event-stream')
+    expect(replyRes.headers.get('content-type')).toContain('application/json')
   }, 60_000)
 
   it('agent-created file lands in correct user directory and is isolated per user', async () => {

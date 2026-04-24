@@ -18,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class SessionBridgeService {
@@ -247,6 +249,7 @@ public class SessionBridgeService {
     }
 
     private Flux<Map<String, Object>> streamReply(ManagedInstance instance, String sessionId, String text) {
+        String requestId = UUID.randomUUID().toString();
         String body;
         try {
             Map<String, Object> userMessage = new LinkedHashMap<>();
@@ -256,24 +259,60 @@ public class SessionBridgeService {
             userMessage.put("metadata", Map.of("userVisible", true, "agentVisible", true));
 
             body = MAPPER.writeValueAsString(Map.of(
-                    "session_id", sessionId,
+                    "request_id", requestId,
                     "user_message", userMessage
             ));
         } catch (Exception e) {
             return Flux.error(new IllegalStateException("Failed to build reply payload", e));
         }
 
-        String target = goosedProxy.goosedBaseUrl(instance.getPort()) + "/reply";
-        return webClient.post()
-                .uri(target)
+        Mono<Void> submit = webClient.post()
+                .uri(goosedSessionUrl(instance, sessionId, "reply"))
                 .header("x-secret-key", instance.getSecretKey())
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .bodyValue(body)
                 .retrieve()
+                .bodyToMono(String.class)
+                .then();
+
+        Flux<Map<String, Object>> events = webClient.get()
+                .uri(goosedSessionUrl(instance, sessionId, "events"))
+                .header("x-secret-key", instance.getSecretKey())
+                .accept(MediaType.TEXT_EVENT_STREAM)
+                .retrieve()
                 .bodyToFlux(DataBuffer.class)
                 .transform(this::decodeSseEvents)
                 .timeout(Duration.ofMinutes(5))
-                .map(this::parseEventJson);
+                .map(this::parseEventJson)
+                .filter(event -> belongsToRequest(event, requestId))
+                .takeUntil(event -> {
+                    String type = String.valueOf(event.getOrDefault("type", ""));
+                    return "Finish".equals(type) || "Error".equals(type);
+                });
+
+        return Flux.merge(events, submit.thenMany(Flux.empty()));
+    }
+
+    private String goosedSessionUrl(ManagedInstance instance, String sessionId, String suffix) {
+        return goosedProxy.goosedBaseUrl(instance.getPort())
+                + "/sessions/"
+                + UriUtils.encodePathSegment(sessionId, StandardCharsets.UTF_8)
+                + "/"
+                + suffix;
+    }
+
+    private boolean belongsToRequest(Map<String, Object> event, String requestId) {
+        Object type = event.get("type");
+        if ("ActiveRequests".equals(type) || "Ping".equals(type)) {
+            return false;
+        }
+        Object chatRequestId = event.get("chat_request_id");
+        Object eventRequestId = event.get("request_id");
+        if (chatRequestId == null && eventRequestId == null) {
+            return true;
+        }
+        return requestId.equals(String.valueOf(chatRequestId))
+                || requestId.equals(String.valueOf(eventRequestId));
     }
 
     private Flux<String> decodeSseEvents(Flux<DataBuffer> buffers) {

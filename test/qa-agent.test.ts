@@ -18,7 +18,7 @@ import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import net from 'node:net'
-import { sleep, type GatewayHandle } from './helpers.js'
+import { sendSessionReplyAndWait, sleep, type GatewayHandle } from './helpers.js'
 
 const AGENT_ID = 'qa-agent'
 const USER_SYS = 'admin'
@@ -123,15 +123,6 @@ async function startQaJavaGateway(): Promise<GatewayHandle> {
   }
 }
 
-function makeUserMessage(text: string) {
-  return {
-    role: 'user',
-    created: Math.floor(Date.now() / 1000),
-    content: [{ type: 'text', text }],
-    metadata: { userVisible: true, agentVisible: true },
-  }
-}
-
 function parseSseEvents(body: string): Array<Record<string, any>> {
   return body
     .split('\n\n')
@@ -182,23 +173,8 @@ async function sendReplyAndWait(
   message: string,
   timeoutMs = 120_000,
 ): Promise<string> {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    const res = await handle.fetchAs(userId, `/agents/${agentId}/agent/reply`, {
-      method: 'POST',
-      body: JSON.stringify({
-        session_id: sessionId,
-        user_message: makeUserMessage(message),
-      }),
-      signal: controller.signal,
-    })
-    return await res.text()
-  } catch {
-    return ''
-  } finally {
-    clearTimeout(timer)
-  }
+  const result = await sendSessionReplyAndWait(handle, userId, agentId, sessionId, message, timeoutMs)
+  return result.body
 }
 
 async function createSessionAndChat(

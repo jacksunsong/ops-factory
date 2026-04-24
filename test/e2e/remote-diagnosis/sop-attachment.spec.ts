@@ -30,10 +30,12 @@ const SS_DIR = 'test-results/sop-attachment'
 // ---------------------------------------------------------------------------
 
 async function loginAs(page: Page, username: string) {
-    await page.goto('/login')
-    await page.fill('input[placeholder="Your name"]', username)
-    await page.click('button:has-text("Enter")')
-    await page.waitForURL('/')
+    await page.goto('/#/')
+  await page.evaluate((userId) => {
+    localStorage.setItem('opsfactory:userId', userId)
+  }, username)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
     await page.waitForTimeout(800)
 }
 

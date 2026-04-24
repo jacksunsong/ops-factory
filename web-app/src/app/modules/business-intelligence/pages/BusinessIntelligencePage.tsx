@@ -906,14 +906,21 @@ interface ReportingPeriod {
     endDate?: string
 }
 
+function formatLocalDate(date: Date): string {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
 // Get default reporting period (last 30 days)
 function getDefaultReportingPeriod(): ReportingPeriod {
     const today = new Date()
     const startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
     return {
         preset: 'last30days',
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: today.toISOString().split('T')[0],
+        startDate: formatLocalDate(startDate),
+        endDate: formatLocalDate(today),
     }
 }
 
@@ -1024,8 +1031,8 @@ function ReportingPeriodSelector({
 
         onChange({
             preset,
-            startDate: startDate?.toISOString().split('T')[0],
-            endDate: endDate?.toISOString().split('T')[0],
+            startDate: startDate ? formatLocalDate(startDate) : undefined,
+            endDate: endDate ? formatLocalDate(endDate) : undefined,
         })
     }
 

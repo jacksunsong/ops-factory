@@ -6,6 +6,7 @@ import { resolve, join } from 'node:path'
 import { writeFileSync, unlinkSync, existsSync } from 'node:fs'
 import { stringify } from 'yaml'
 import { tmpdir } from 'node:os'
+import { randomUUID } from 'node:crypto'
 import net from 'node:net'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..')
@@ -413,4 +414,92 @@ export async function startControlCenter(gatewayPort: number, fixedPort?: number
 
 export function sleep(ms: number): Promise<void> {
   return new Promise(r => setTimeout(r, ms))
+}
+
+function makeSessionUserMessage(text: string) {
+  return {
+    role: 'user',
+    created: Math.floor(Date.now() / 1000),
+    content: [{ type: 'text', text }],
+    metadata: { userVisible: true, agentVisible: true },
+  }
+}
+
+export async function sendSessionReplyAndWait(
+  handle: GatewayHandle,
+  userId: string,
+  agentId: string,
+  sessionId: string,
+  message: string,
+  timeoutMs = 120_000,
+): Promise<{ body: string; timedOut: boolean }> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  const requestId = randomUUID()
+
+  try {
+    const eventsRes = await handle.fetchAs(userId, `/agents/${agentId}/sessions/${encodeURIComponent(sessionId)}/events`, {
+      method: 'GET',
+      signal: controller.signal,
+    })
+    if (!eventsRes.ok || !eventsRes.body) {
+      return { body: '', timedOut: false }
+    }
+
+    const submitRes = await handle.fetchAs(userId, `/agents/${agentId}/sessions/${encodeURIComponent(sessionId)}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({
+        request_id: requestId,
+        user_message: makeSessionUserMessage(message),
+      }),
+    })
+    if (!submitRes.ok) {
+      return { body: await submitRes.text(), timedOut: false }
+    }
+
+    const reader = eventsRes.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let body = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      let separatorIndex
+      while ((separatorIndex = buffer.indexOf('\n\n')) >= 0) {
+        const eventBlock = buffer.slice(0, separatorIndex)
+        buffer = buffer.slice(separatorIndex + 2)
+        const data = eventBlock
+          .split('\n')
+          .filter(line => line.startsWith('data:'))
+          .map(line => line.replace(/^data:\s*/, ''))
+          .join('\n')
+        if (!data) continue
+
+        let event: Record<string, any>
+        try {
+          event = JSON.parse(data)
+        } catch {
+          continue
+        }
+
+        const eventRequestId = event.chat_request_id || event.request_id
+        if (eventRequestId && eventRequestId !== requestId) continue
+        if (event.type === 'ActiveRequests' || event.type === 'Ping') continue
+
+        body += `data: ${data}\n\n`
+        if (event.type === 'Finish' || event.type === 'Error') {
+          controller.abort()
+          return { body, timedOut: false }
+        }
+      }
+    }
+
+    return { body, timedOut: false }
+  } catch (err: any) {
+    return { body: '', timedOut: err?.name === 'AbortError' }
+  } finally {
+    clearTimeout(timer)
+  }
 }

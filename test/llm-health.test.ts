@@ -2,13 +2,14 @@
  * LLM service availability tests.
  *
  * 1. Direct API test: reads universal-agent config and calls the LLM endpoint directly.
- * 2. goosed test: spawns a real goosed process, creates a session, sends a message via /reply,
- *    and verifies the LLM responds through the SSE stream.
+ * 2. goosed test: spawns a real goosed process, creates a session, submits a session reply,
+ *    and verifies the LLM responds through the session event stream.
  */
 import { ChildProcess, spawn } from 'node:child_process'
 import { resolve, join } from 'node:path'
 import { readFile, mkdtemp, rm, mkdir, writeFile, cp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
+import { randomUUID } from 'node:crypto'
 import net from 'node:net'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { sleep } from './helpers.js'
@@ -232,7 +233,7 @@ describe('goosed LLM integration', () => {
     expect(res.ok).toBe(true)
   })
 
-  it('goosed replies via LLM through /reply SSE', async () => {
+  it('goosed replies via LLM through session events', async () => {
     // 1. Create a session with provider configured via recipe settings
     //    goosed requires provider_name on the session for new sessions
     const startRes = await fetch(`${baseUrl}/agent/start`, {
@@ -284,41 +285,72 @@ describe('goosed LLM integration', () => {
     // Wait for provider + extensions to initialize
     await sleep(2000)
 
-    // 3. Send a message via /reply (SSE stream)
+    // 3. Subscribe to session events and submit a reply.
     const userMessage = {
       role: 'user',
       created: Math.floor(Date.now() / 1000),
       content: [{ type: 'text', text: 'Reply with exactly one word: hello' }],
       metadata: { userVisible: true, agentVisible: true },
     }
+    const requestId = randomUUID()
+    const eventsController = new AbortController()
 
-    const replyRes = await fetch(`${baseUrl}/reply`, {
+    const eventsRes = await fetch(`${baseUrl}/sessions/${encodeURIComponent(sessionId)}/events`, {
+      method: 'GET',
+      headers: authHeaders,
+      signal: eventsController.signal,
+    })
+    expect(eventsRes.ok).toBe(true)
+    expect(eventsRes.headers.get('content-type')).toContain('text/event-stream')
+
+    const replyRes = await fetch(`${baseUrl}/sessions/${encodeURIComponent(sessionId)}/reply`, {
       method: 'POST',
       headers: authHeaders,
-      body: JSON.stringify({ session_id: sessionId, user_message: userMessage }),
+      body: JSON.stringify({ request_id: requestId, user_message: userMessage }),
       signal: AbortSignal.timeout(60_000),
     })
 
     expect(replyRes.ok).toBe(true)
-    expect(replyRes.headers.get('content-type')).toContain('text/event-stream')
 
-    // 3. Consume SSE stream
-    const body = await replyRes.text()
-    const events = body
-      .split('\n\n')
-      .map(chunk => chunk.trim())
-      .filter(Boolean)
-      .flatMap(chunk => {
-        const data = chunk
-          .split('\n')
-          .filter(line => line.startsWith('data:'))
-          .map(line => line.replace(/^data:\s*/, ''))
-          .join('\n')
-        if (!data) return []
-        try { return [JSON.parse(data)] } catch { return [] }
-      })
+    // 4. Consume SSE stream until this request finishes.
+    const events: Array<Record<string, any>> = []
+    const reader = eventsRes.body!.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    const timeoutAt = Date.now() + 60_000
+    try {
+      while (Date.now() < timeoutAt) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        let separatorIndex
+        while ((separatorIndex = buffer.indexOf('\n\n')) >= 0) {
+          const eventBlock = buffer.slice(0, separatorIndex)
+          buffer = buffer.slice(separatorIndex + 2)
+          const data = eventBlock
+            .split('\n')
+            .filter(line => line.startsWith('data:'))
+            .map(line => line.replace(/^data:\s*/, ''))
+            .join('\n')
+          if (!data) continue
+          let event: Record<string, any>
+          try { event = JSON.parse(data) } catch { continue }
+          const eventRequestId = event.chat_request_id || event.request_id
+          if (eventRequestId && eventRequestId !== requestId) continue
+          if (event.type === 'ActiveRequests' || event.type === 'Ping') continue
+          events.push(event)
+          if (event.type === 'Finish' || event.type === 'Error') {
+            eventsController.abort()
+            break
+          }
+        }
+        if (events.some(event => event.type === 'Finish' || event.type === 'Error')) break
+      }
+    } finally {
+      eventsController.abort()
+    }
 
-    // 4. Extract assistant text from Message events
+    // 5. Extract assistant text from Message events
     const assistantText = events
       .filter(e => e.type === 'Message' && e.message)
       .flatMap(e => (e.message.content || []) as Array<{ type: string; text?: string }>)

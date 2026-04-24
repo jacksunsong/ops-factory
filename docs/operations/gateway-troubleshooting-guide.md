@@ -271,8 +271,8 @@ curl -k -v -H 'x-secret-key: <secret>' https://127.0.0.1:3000/gateway/status
 
 重点看：
 
-- `ReplyController` 的 `[REPLY]` / `[REPLY-PERF]`
-- `SseRelayService` 的 `[SSE-DIAG]`
+- `ReplyController` 的 `[SESSION-REPLY]` / `[SESSION-EVENTS]`
+- `GoosedProxy` 的 session events proxy 日志
 
 例如：
 

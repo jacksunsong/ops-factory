@@ -17,15 +17,17 @@ const REGULAR_USER = 'e2e-scheduler-user'
 const UNIQUE = Date.now()
 
 async function loginAs(page: Page, username: string) {
-  await page.goto('/login')
-  await page.fill('input[placeholder="Your name"]', username)
-  await page.click('button:has-text("Enter")')
-  await page.waitForURL('/')
+  await page.goto('/#/')
+  await page.evaluate((userId) => {
+    localStorage.setItem('opsfactory:userId', userId)
+  }, username)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
   await page.waitForTimeout(500)
 }
 
 async function goToScheduler(page: Page) {
-  await page.goto('/scheduled-actions')
+  await page.goto('/#/scheduler')
   await page.waitForSelector('.page-title', { timeout: 5000 })
   await page.waitForTimeout(1000)
 }
@@ -36,14 +38,14 @@ async function goToScheduler(page: Page) {
 test.describe('Scheduler — access control', () => {
   test('regular user is redirected to /', async ({ page }) => {
     await loginAs(page, REGULAR_USER)
-    await page.goto('/scheduled-actions')
-    await expect(page).toHaveURL('/')
+    await page.goto('/#/scheduler')
+    await expect(page).toHaveURL(/\/#\/?$/)
   })
 
   test('admin can access scheduler page', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/scheduled-actions')
-    await expect(page).toHaveURL('/scheduled-actions')
+    await page.goto('/#/scheduler')
+    await expect(page).toHaveURL(/\/#\/scheduler$/)
     await expect(page.locator('.page-title')).toBeVisible({ timeout: 5000 })
   })
 })
@@ -65,22 +67,19 @@ test.describe('Scheduler — full lifecycle', () => {
 
     // --- Open create modal ---
     await page.locator('.btn-primary:has-text("Create"), .btn-primary:has-text("创建")').first().click()
-    await expect(page.locator('.modal, .scheduled-modal')).toBeVisible({ timeout: 5000 })
+    const modal = page.locator('[role="dialog"]')
+    await expect(modal).toBeVisible({ timeout: 5000 })
 
     // --- Fill form ---
-    // Name
-    await page.locator('.scheduled-input').first().fill(JOB_NAME)
-    // Instruction
-    await page.locator('.scheduled-textarea').fill(JOB_INSTRUCTION)
-    // Cron
-    const cronInput = page.locator('.scheduled-input').last()
-    await cronInput.fill(JOB_CRON)
+    await modal.getByLabel('Name').fill(JOB_NAME)
+    await modal.getByLabel('Instruction').fill(JOB_INSTRUCTION)
+    await modal.getByLabel('Cron').fill(JOB_CRON)
 
     // --- Submit ---
-    await page.locator('.modal .btn-primary, .scheduled-modal .btn-primary').last().click()
+    await modal.getByRole('button', { name: /^Create$|^创建$/ }).click()
 
     // --- Wait for modal to close ---
-    await expect(page.locator('.modal, .scheduled-modal')).not.toBeVisible({ timeout: 10_000 })
+    await expect(modal).not.toBeVisible({ timeout: 10_000 })
     await page.waitForTimeout(2000)
 
     // --- Verify job card appeared ---
@@ -146,20 +145,18 @@ test.describe('Scheduler — form validation', () => {
     await loginAs(page, ADMIN_USER)
     await goToScheduler(page)
     await page.locator('.btn-primary:has-text("Create"), .btn-primary:has-text("创建")').first().click()
-    await expect(page.locator('.modal, .scheduled-modal')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('[role="dialog"]')).toBeVisible({ timeout: 5000 })
   })
 
   test('modal has all required fields', async ({ page }) => {
-    // Name input
-    await expect(page.locator('.scheduled-input').first()).toBeVisible()
-    // Instruction textarea
-    await expect(page.locator('.scheduled-textarea')).toBeVisible()
-    // Cron input
-    await expect(page.locator('.scheduled-input').last()).toBeVisible()
+    const modal = page.locator('[role="dialog"]')
+    await expect(modal.getByLabel('Name')).toBeVisible()
+    await expect(modal.getByLabel('Instruction')).toBeVisible()
+    await expect(modal.getByLabel('Cron')).toBeVisible()
   })
 
   test('cron field has default value', async ({ page }) => {
-    const cronInput = page.locator('.scheduled-input').last()
+    const cronInput = page.locator('[role="dialog"]').getByLabel('Cron')
     const defaultCron = await cronInput.inputValue()
     // Should have a default cron like "0 0 9 * * *"
     expect(defaultCron.length).toBeGreaterThan(0)
@@ -168,11 +165,12 @@ test.describe('Scheduler — form validation', () => {
   test('cancel modal does not create job', async ({ page }) => {
     const cardsBefore = await page.locator('.scheduled-card').count()
 
-    await page.locator('.scheduled-input').first().fill('should-not-exist')
-    await page.locator('.scheduled-textarea').fill('nope')
-    await page.locator('.modal .btn-secondary, .scheduled-modal .btn-secondary').click()
+    const modal = page.locator('[role="dialog"]')
+    await modal.getByLabel('Name').fill('should-not-exist')
+    await modal.getByLabel('Instruction').fill('nope')
+    await page.locator('[role="dialog"]').getByRole('button', { name: /Cancel|取消/ }).click()
 
-    await expect(page.locator('.modal, .scheduled-modal')).not.toBeVisible()
+    await expect(page.locator('[role="dialog"]')).not.toBeVisible()
     const cardsAfter = await page.locator('.scheduled-card').count()
     expect(cardsAfter).toBe(cardsBefore)
   })
@@ -186,7 +184,7 @@ test.describe('Scheduler — agent selector', () => {
     await loginAs(page, ADMIN_USER)
     await goToScheduler(page)
 
-    const selector = page.locator('.scheduled-agent-select')
+    const selector = page.locator('.filter-select').first()
     await expect(selector).toBeVisible({ timeout: 5000 })
 
     const options = selector.locator('option')

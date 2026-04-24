@@ -219,8 +219,8 @@ test.describe('Host Auto Discovery — UI', () => {
 
     test('Auto Discover button visible in host edit modal', async ({ page }) => {
         // ── Navigate ──
-        await page.goto('/')
-        await page.evaluate(() => localStorage.setItem('ops-factory-user', 'admin'))
+        await page.goto('/#/')
+        await page.evaluate(() => localStorage.setItem('opsfactory:userId', 'admin'))
         await navigateToHostResource(page)
         await ss(page, '00-page-loaded')
 

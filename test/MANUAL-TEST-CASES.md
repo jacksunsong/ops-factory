@@ -316,7 +316,7 @@ curl -X OPTIONS -H "Origin: http://localhost:5173" \
 
 ### TC-GW-053 `P1`：Reply Pipeline — Body Limit Hook ❌ 未自动化
 
-- **操作步骤**：构造一个超过 body limit 的请求体（包含超大 base64 图片），发送到 `/reply`
+- **操作步骤**：构造一个超过 body limit 的请求体（包含超大 base64 图片），发送到 `/sessions/{sessionId}/reply`
 - **预期结果**：返回 HTTP 413
 
 ---

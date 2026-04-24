@@ -83,6 +83,24 @@ public class CatchAllProxyEndpointE2ETest extends BaseE2ETest {
                 .expectStatus().isForbidden();
     }
 
+    @Test
+    public void adminAccessToLegacyReply_returns404() {
+        webClient.post().uri("/gateway/agents/test-agent/reply")
+                .header(HEADER_SECRET_KEY, SECRET_KEY)
+                .header(HEADER_USER_ID, "admin")
+                .exchange()
+                .expectStatus().isNotFound();
+    }
+
+    @Test
+    public void adminAccessToLegacyAgentStop_returns404() {
+        webClient.post().uri("/gateway/agents/test-agent/agent/stop")
+                .header(HEADER_SECRET_KEY, SECRET_KEY)
+                .header(HEADER_USER_ID, "admin")
+                .exchange()
+                .expectStatus().isNotFound();
+    }
+
     // ====================== Authentication ======================
 
     @Test

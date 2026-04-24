@@ -13,21 +13,24 @@ import { test, expect, type Page } from '@playwright/test'
 
 const USER = 'e2e-history'
 const UNIQUE = Date.now()
+const USER_STORAGE_KEY = 'opsfactory:userId'
 
 async function loginAs(page: Page, username: string) {
-  await page.goto('/login')
-  await page.fill('input[placeholder="Your name"]', username)
-  await page.click('button:has-text("Enter")')
-  await page.waitForURL('/')
+  await page.goto('/#/')
+  await page.evaluate(([storageKey, userId]) => {
+    localStorage.setItem(storageKey, userId)
+  }, [USER_STORAGE_KEY, username])
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
   await page.waitForTimeout(500)
 }
 
 async function createSession(page: Page, message: string) {
-  // Go to home page and wait for agents/templates to load
-  await page.goto('/')
-  await page.waitForSelector('.prompt-template-card', { timeout: 15_000 })
+  // Go to home page and wait for the current chat entrypoint to load.
+  await page.goto('/#/')
+  await expect(page.locator('.chat-input')).toBeVisible({ timeout: 15_000 })
+  await expect(page.locator('.new-chat-nav')).toBeVisible({ timeout: 15_000 })
 
-  // Use sidebar New Chat button (agents are loaded by now)
   const newChatBtn = page.locator('.new-chat-nav')
   await newChatBtn.click()
   await expect(page).toHaveURL(/\/chat/, { timeout: 15_000 })
@@ -57,7 +60,7 @@ test.describe('History — session tracking', () => {
     await createSession(page, 'Reply with "history-test-ok"')
 
     // Go to history
-    await page.goto('/history')
+    await page.goto('/#/history')
     await page.waitForTimeout(3000)
 
     // Should have at least 1 session
@@ -73,10 +76,10 @@ test.describe('History — session tracking', () => {
 test.describe('History — search', () => {
   test('typing in search filters the session list', async ({ page }) => {
     await loginAs(page, `${USER}-search`)
-    await page.goto('/history')
+    await page.goto('/#/history')
     await page.waitForTimeout(2000)
 
-    const searchInput = page.locator('.search-input')
+    const searchInput = page.locator('.list-search-input')
     await expect(searchInput).toBeVisible({ timeout: 5000 })
 
     // Get initial count
@@ -106,7 +109,7 @@ test.describe('History — search', () => {
 test.describe('History — type filter', () => {
   test('filter buttons change active state and filter list', async ({ page }) => {
     await loginAs(page, USER)
-    await page.goto('/history')
+    await page.goto('/#/history')
     await page.waitForSelector('.seg-filter-btn', { timeout: 5000 })
 
     const filterBtns = page.locator('.seg-filter-btn')
@@ -140,7 +143,7 @@ test.describe('History — delete session', () => {
     // Create a session to ensure we have something to delete
     await createSession(page, 'Reply with "deletable-session"')
 
-    await page.goto('/history')
+    await page.goto('/#/history')
     await page.waitForTimeout(3000)
 
     // Count sessions before
@@ -177,7 +180,7 @@ test.describe('History — resume session', () => {
     await createSession(page, `Reply with exactly "${MARKER}"`)
 
     // Go to history
-    await page.goto('/history')
+    await page.goto('/#/history')
     await page.waitForTimeout(3000)
 
     // Click first session

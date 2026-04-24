@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 public class CatchAllProxyControllerTest {
@@ -207,5 +208,39 @@ public class CatchAllProxyControllerTest {
         } catch (ResponseStatusException ex) {
             assertEquals(HttpStatus.FORBIDDEN, ex.getStatus());
         }
+    }
+
+    @Test
+    public void testRemovedLegacyReplyPath_returns404WithoutProxying() {
+        MockServerHttpRequest request = MockServerHttpRequest.post("/agents/test-agent/reply").build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
+        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin");
+
+        try {
+            controller.catchAll(exchange).block();
+            fail("Expected ResponseStatusException");
+        } catch (ResponseStatusException ex) {
+            assertEquals(HttpStatus.NOT_FOUND, ex.getStatus());
+        }
+
+        verifyNoInteractions(instanceManager, goosedProxy);
+    }
+
+    @Test
+    public void testRemovedLegacyAgentStopPath_returns404WithoutProxying() {
+        MockServerHttpRequest request = MockServerHttpRequest.post("/agents/test-agent/agent/stop").build();
+        MockServerWebExchange exchange = MockServerWebExchange.from(request);
+        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
+        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin");
+
+        try {
+            controller.catchAll(exchange).block();
+            fail("Expected ResponseStatusException");
+        } catch (ResponseStatusException ex) {
+            assertEquals(HttpStatus.NOT_FOUND, ex.getStatus());
+        }
+
+        verifyNoInteractions(instanceManager, goosedProxy);
     }
 }

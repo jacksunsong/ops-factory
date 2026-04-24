@@ -24,10 +24,10 @@ The logs must let us answer the following for any failed sample:
    - `getOrSpawn`
    - `agent/start`
    - `agent/resume`
-   - SSE first-byte
-   - SSE first-content
+   - session events subscribe
+   - first session event
    - SSE completion
-   - `agent/stop`
+   - session cancel
 4. Which `(agentId, userId)` instance handled the request?
 5. Was the instance reused, cold-started, recycled, or respawned?
 6. Was the failure isolated or shared across multiple users?
@@ -142,8 +142,8 @@ Gateway already has useful diagnostics, but they are not yet complete for a 20-u
   - [SessionController.java](/Users/buyangnie/Documents/GitHub/ops-factory/gateway/gateway-service/src/main/java/com/huawei/opsfactory/gateway/controller/SessionController.java)
 - reply stage logs
   - [ReplyController.java](/Users/buyangnie/Documents/GitHub/ops-factory/gateway/gateway-service/src/main/java/com/huawei/opsfactory/gateway/controller/ReplyController.java)
-- SSE relay diagnostics
-  - [SseRelayService.java](/Users/buyangnie/Documents/GitHub/ops-factory/gateway/gateway-service/src/main/java/com/huawei/opsfactory/gateway/proxy/SseRelayService.java)
+- session events proxy diagnostics
+  - [GoosedProxy.java](/Users/buyangnie/Documents/GitHub/ops-factory/gateway/gateway-service/src/main/java/com/huawei/opsfactory/gateway/proxy/GoosedProxy.java)
 - instance spawn/reuse/recycle diagnostics
   - [InstanceManager.java](/Users/buyangnie/Documents/GitHub/ops-factory/gateway/gateway-service/src/main/java/com/huawei/opsfactory/gateway/process/InstanceManager.java)
 
@@ -190,14 +190,14 @@ Required fields:
 
 ### 5.4 Reply Chain Logs
 
-For `/reply`, the following stages must be explicit:
+For session reply/events, the following stages must be explicit:
 
 - request received
 - hooks begin / end
 - file snapshot begin / end
 - `getOrSpawn` begin / end
 - session resume begin / end
-- SSE relay subscribed
+- session events subscribed
 - first chunk
 - first non-Ping content
 - finish
@@ -296,7 +296,7 @@ Do not run the full 20-user scenario until all of the following are true:
 Before full execution, verify:
 
 - one frontend action can be traced from browser log to gateway access log
-- one `/reply` can be traced from request receipt to SSE completion
+- one session reply can be traced from submit receipt to events completion
 - one failed request produces enough information to classify the reason
 - one instance recycle can be tied back to the initiating user/session
 

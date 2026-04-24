@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { I18nextProvider } from 'react-i18next'
 import type { ComponentProps } from 'react'
 import MessageList from '../app/platform/chat/MessageList'
@@ -261,68 +261,6 @@ describe('MessageList tool error rendering', () => {
             // @ts-expect-error test cleanup for configurable property
             delete document.scrollingElement
         }
-    })
-
-    it('derives a recoverable interruption when the last assistant response has no final text', () => {
-        const onContinue = vi.fn()
-        const messages: ChatMessage[] = [
-            {
-                id: 'user-1',
-                role: 'user',
-                content: [{ type: 'text', text: 'Analyze the session' }],
-            },
-            {
-                id: 'assistant-tool-request',
-                role: 'assistant',
-                content: [
-                    {
-                        type: 'toolRequest',
-                        id: 'tool-1',
-                        toolCall: {
-                            status: 'completed',
-                            value: {
-                                name: 'knowledge-cli__search_content',
-                                arguments: { query: '用户标签' },
-                            },
-                        },
-                    },
-                ],
-            },
-        ]
-
-        renderMessageList(messages, { onContinue })
-
-        expect(screen.getByText(i18n.t('chat.recoverableInterruption'))).toBeTruthy()
-        fireEvent.click(screen.getByRole('button', { name: i18n.t('chat.quickContinue') }))
-        expect(onContinue).toHaveBeenCalledTimes(1)
-    })
-
-    it('derives a recoverable interruption for a tool response only tail', () => {
-        const messages: ChatMessage[] = [
-            {
-                id: 'user-1',
-                role: 'user',
-                content: [{ type: 'text', text: 'Analyze the session' }],
-            },
-            {
-                id: 'assistant-tool-response',
-                role: 'assistant',
-                content: [
-                    {
-                        type: 'toolResponse',
-                        id: 'tool-1',
-                        toolResult: {
-                            status: 'success',
-                            value: { content: [{ type: 'text', text: 'Tool output' }] },
-                        },
-                    },
-                ],
-            },
-        ]
-
-        renderMessageList(messages)
-
-        expect(screen.getByText(i18n.t('chat.recoverableInterruption'))).toBeTruthy()
     })
 
 })

@@ -45,10 +45,12 @@ const SOP_NAME = 'MS-Z异常分析'
 // ---------------------------------------------------------------------------
 
 async function loginAs(page: Page, username: string) {
-    await page.goto('/login')
-    await page.fill('input[placeholder="Your name"]', username)
-    await page.click('button:has-text("Enter")')
-    await page.waitForURL('/')
+    await page.goto('/#/')
+  await page.evaluate((userId) => {
+    localStorage.setItem('opsfactory:userId', userId)
+  }, username)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
     await page.waitForTimeout(800)
 }
 
@@ -135,7 +137,7 @@ test.describe('QoS Remote Diagnosis — SOP Execution', () => {
         // PHASE 1: Environment Setup — 故障诊断 page
         // =================================================================
         await loginAs(page, ADMIN_USER)
-        await page.goto('/remote-diagnosis')
+        await page.goto('/#/')
         await page.waitForTimeout(1500)
 
         await expect(page.locator('.page-title')).toBeVisible({ timeout: 10000 })
@@ -241,7 +243,7 @@ test.describe('QoS Remote Diagnosis — SOP Execution', () => {
         // =================================================================
 
         // Navigate to home page
-        await page.goto('/')
+        await page.goto('/#/remote-diagnosis')
         await page.waitForTimeout(2000)
 
         // Wait for agent selector / prompt templates to load
@@ -449,7 +451,7 @@ test.describe('QoS Remote Diagnosis — SOP Execution', () => {
         // =================================================================
         // PHASE 3: Cleanup — Delete test host
         // =================================================================
-        await page.goto('/remote-diagnosis')
+        await page.goto('/#/remote-diagnosis')
         await page.waitForTimeout(1500)
         await expect(page.locator('.page-title')).toBeVisible({ timeout: 10000 })
 

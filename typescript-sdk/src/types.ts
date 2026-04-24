@@ -150,7 +150,7 @@ export interface SystemInfo {
     enabled_extensions: string[];
 }
 
-export type SSEEventType = 'Ping' | 'Message' | 'Finish' | 'Error' | 'ModelChange' | 'Notification' | 'UpdateConversation' | 'OutputFiles';
+export type SSEEventType = 'Ping' | 'Message' | 'Finish' | 'Error' | 'ModelChange' | 'Notification' | 'UpdateConversation' | 'OutputFiles' | 'ActiveRequests';
 
 export interface OutputFile {
     path: string;
@@ -164,13 +164,98 @@ export interface SSEEvent {
     token_state?: TokenState;
     reason?: string;
     error?: string;
+    layer?: SessionErrorLayer;
+    code?: string;
+    severity?: SessionErrorSeverity;
+    message_key?: string;
+    detail?: string;
+    retryable?: boolean;
+    suggested_actions?: SessionSuggestedAction[];
     model?: string;
     mode?: string;
     request_id?: string;
+    chat_request_id?: string;
+    request_ids?: string[];
     conversation?: Record<string, unknown>[];
     // OutputFiles event fields
     sessionId?: string;
     files?: OutputFile[];
+}
+
+export interface SessionReplyRequest {
+    request_id: string;
+    user_message: Message;
+    override_conversation?: Message[];
+}
+
+export interface SessionReplyResponse {
+    request_id: string;
+}
+
+export interface SessionCancelRequest {
+    request_id: string;
+}
+
+export interface SessionEventsOptions {
+    lastEventId?: string;
+    signal?: AbortSignal;
+}
+
+export interface SessionSSEEvent {
+    event: SSEEvent;
+    eventId?: string;
+}
+
+export type SessionErrorLayer = 'frontend' | 'gateway' | 'goosed' | 'provider' | 'tool' | 'mcp' | 'policy';
+
+export type SessionErrorSeverity = 'info' | 'warning' | 'error' | 'fatal';
+
+export type SessionSuggestedAction =
+    | 'reconnect'
+    | 'wait'
+    | 'retry'
+    | 'cancel'
+    | 'continue'
+    | 'new_request'
+    | 'reduce_context'
+    | 'check_tool'
+    | 'login'
+    | 'contact_support';
+
+export interface SessionErrorEnvelope {
+    type: 'Error';
+    layer: SessionErrorLayer;
+    code: string;
+    severity: SessionErrorSeverity;
+    message_key?: string;
+    message: string;
+    detail?: string;
+    retryable: boolean;
+    suggested_actions: SessionSuggestedAction[];
+    session_id?: string;
+    request_id?: string;
+    agent_id?: string;
+    elapsed_ms?: number;
+    http_status?: number;
+    upstream_status?: number;
+    trace_id?: string;
+    raw?: unknown;
+}
+
+export interface SessionErrorContext {
+    layer?: SessionErrorLayer;
+    code?: string;
+    severity?: SessionErrorSeverity;
+    message?: string;
+    detail?: string;
+    retryable?: boolean;
+    suggestedActions?: SessionSuggestedAction[];
+    sessionId?: string;
+    requestId?: string;
+    agentId?: string;
+    httpStatus?: number;
+    upstreamStatus?: number;
+    traceId?: string;
 }
 
 export interface ImageData {

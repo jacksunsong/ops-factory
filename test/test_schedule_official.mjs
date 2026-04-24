@@ -9,17 +9,15 @@ function pass(name) { console.log(`  ✅ PASS: ${name}`); testsPassed++; }
 function fail(name, reason) { console.log(`  ❌ FAIL: ${name} — ${reason}`); testsFailed++; }
 
 try {
-    // Login as admin (admin)
-    console.log('=== Setup: Login as admin ===');
+    console.log('=== Setup: Set runtime user admin ===');
     await page.goto('http://127.0.0.1:5173/');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
-    await page.fill('input[placeholder="Your name"]', 'admin');
-    await page.click('button:has-text("Enter")');
+    await page.evaluate(() => localStorage.setItem('opsfactory:userId', 'admin'));
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
-    await page.goto('http://127.0.0.1:5173/scheduled-actions');
+    await page.goto('http://127.0.0.1:5173/#/scheduler');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 

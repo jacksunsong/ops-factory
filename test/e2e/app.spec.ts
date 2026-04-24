@@ -25,16 +25,21 @@ const REGULAR_USER = 'e2e-test-user'
 const ADMIN_USER = 'admin'
 const USER_STORAGE_KEY = 'opsfactory:userId'
 
-// Helper: seed the current user directly. The dedicated /login route is no longer part of the flow.
+// Helper: seed the current user directly through runtime storage.
 async function loginAs(page: Page, username: string) {
-  await page.goto('/')
+  await page.goto('/#/')
   await page.evaluate(([storageKey, userId]) => {
     localStorage.setItem(storageKey, userId)
   }, [USER_STORAGE_KEY, username])
-  await page.goto('/')
-  await page.waitForURL('/')
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
   // Wait for role to be fetched from /me
   await page.waitForTimeout(500)
+}
+
+async function waitForHomeReady(page: Page) {
+  await expect(page.locator('.chat-input')).toBeVisible({ timeout: 15_000 })
+  await expect(page.locator('.new-chat-nav')).toBeVisible({ timeout: 15_000 })
 }
 
 // Helper: login as regular user (backward compat)
@@ -59,17 +64,17 @@ test.describe('Sidebar navigation — regular user', () => {
 
   for (const item of userNavItems) {
     test(`navigates to ${item.text} (${item.path})`, async ({ page }) => {
-      await page.click(`.sidebar-nav a[href="${item.path}"]`)
-      await expect(page).toHaveURL(item.path)
+      await page.getByRole('link', { name: item.text }).click()
+      await expect(page).toHaveURL(new RegExp(`/#${item.path === '/' ? '/?' : item.path}$`))
     })
   }
 
   test('does NOT show Agents link', async ({ page }) => {
-    await expect(page.locator('.sidebar-nav a[href="/agents"]')).not.toBeVisible()
+    await expect(page.getByRole('link', { name: 'Agents' })).not.toBeVisible()
   })
 
   test('does NOT show Scheduler link', async ({ page }) => {
-    await expect(page.locator('.sidebar-nav a[href="/scheduled-actions"]')).not.toBeVisible()
+    await expect(page.getByRole('link', { name: 'Scheduler' })).not.toBeVisible()
   })
 
 })
@@ -88,15 +93,15 @@ test.describe('Sidebar navigation — admin user', () => {
     { text: 'Files', path: '/files' },
     { text: 'Inbox', path: '/inbox' },
     { text: 'Agents', path: '/agents' },
-    { text: 'Scheduler', path: '/scheduled-actions' },
+    { text: 'Scheduler', path: '/scheduler' },
   ]
 
   for (const item of adminNavItems) {
     test(`shows and navigates to ${item.text} (${item.path})`, async ({ page }) => {
-      const link = page.locator(`.sidebar-nav a[href="${item.path}"]`)
+      const link = page.getByRole('link', { name: item.text })
       await expect(link).toBeVisible()
       await link.click()
-      await expect(page).toHaveURL(item.path)
+      await expect(page).toHaveURL(new RegExp(`/#${item.path === '/' ? '/?' : item.path}$`))
     })
   }
 })
@@ -107,29 +112,29 @@ test.describe('Sidebar navigation — admin user', () => {
 test.describe('RBAC — page access guards', () => {
   test('regular user redirected from /agents/:id/configure', async ({ page }) => {
     await login(page)
-    await page.goto('/agents/universal-agent/configure')
+    await page.goto('/#/agents/universal-agent/configure')
     // AdminRoute should redirect to /
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL(/\/#\/?$/)
   })
 
-  test('regular user redirected from /scheduled-actions', async ({ page }) => {
+  test('regular user redirected from /scheduler', async ({ page }) => {
     await login(page)
-    await page.goto('/scheduled-actions')
-    await expect(page).toHaveURL('/')
+    await page.goto('/#/scheduler')
+    await expect(page).toHaveURL(/\/#\/?$/)
   })
 
   test('admin can access /agents/:id/configure', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/agents/universal-agent/configure')
-    await expect(page).toHaveURL('/agents/universal-agent/configure')
+    await page.goto('/#/agents/universal-agent/configure')
+    await expect(page).toHaveURL(/\/#\/agents\/universal-agent\/configure$/)
     // Should load the configure page content
     await page.waitForSelector('textarea', { timeout: 10_000 })
   })
 
-  test('admin can access /scheduled-actions', async ({ page }) => {
+  test('admin can access /scheduler', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/scheduled-actions')
-    await expect(page).toHaveURL('/scheduled-actions')
+    await page.goto('/#/scheduler')
+    await expect(page).toHaveURL(/\/#\/scheduler$/)
   })
 
 })
@@ -138,42 +143,35 @@ test.describe('RBAC — page access guards', () => {
 // 4. Agents Page — Role-Based Content
 // =====================================================
 test.describe('Agents page', () => {
-  test('regular user can access /agents but has no Configure button', async ({ page }) => {
+  test('regular user is redirected from /agents', async ({ page }) => {
     await login(page)
-    await page.goto('/agents')
-    await page.waitForSelector('.agent-card', { timeout: 10_000 })
-    // Agent cards should be visible
-    await expect(page.locator('.agent-card')).not.toHaveCount(0)
-    // Universal Agent name visible
-    await expect(page.locator('text=Universal Agent').first()).toBeVisible()
-    // Configure button should NOT be visible
-    await expect(page.locator('.agent-skill-button')).not.toBeVisible()
+    await page.goto('/#/agents')
+    await expect(page).toHaveURL(/\/#\/?$/)
   })
 
   test('admin sees Configure button on agent cards', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/agents')
-    await page.waitForSelector('.agent-card', { timeout: 10_000 })
+    await page.goto('/#/agents')
+    await page.waitForSelector('article', { timeout: 10_000 })
     // Configure button should be visible
-    const configBtn = page.locator('.agent-skill-button').first()
+    const configBtn = page.getByRole('button', { name: 'Configure' }).first()
     await expect(configBtn).toBeVisible()
   })
 
   test('admin configure button navigates to agent settings', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/agents')
-    await page.waitForSelector('.agent-card', { timeout: 10_000 })
-    const configBtn = page.locator('.agent-skill-button').first()
+    await page.goto('/#/agents')
+    await page.waitForSelector('article', { timeout: 10_000 })
+    const configBtn = page.getByRole('button', { name: 'Configure' }).first()
     await configBtn.click()
-    await expect(page).toHaveURL(/\/agents\/[^/]+\/configure/)
+    await expect(page).toHaveURL(/\/#\/agents\/[^/]+\/configure/)
   })
 
   test('agent cards show model info', async ({ page }) => {
     await loginAs(page, ADMIN_USER)
-    await page.goto('/agents')
-    await page.waitForSelector('.agent-card', { timeout: 10_000 })
-    const modelLabel = page.locator('.agent-meta-label:has-text("Model")')
-    await expect(modelLabel.first()).toBeVisible()
+    await page.goto('/#/agents')
+    await page.waitForSelector('article', { timeout: 10_000 })
+    await expect(page.locator('article').first()).toContainText(/qwen|GLM|custom/i)
   })
 })
 
@@ -186,7 +184,7 @@ test.describe('Agent configure page', () => {
   })
 
   test('loads agent prompt editor', async ({ page }) => {
-    await page.goto('/agents/universal-agent/configure')
+    await page.goto('/#/agents/universal-agent/configure')
     await page.waitForSelector('textarea', { timeout: 10_000 })
     const textarea = page.locator('textarea')
     await expect(textarea).toBeVisible()
@@ -195,7 +193,7 @@ test.describe('Agent configure page', () => {
   })
 
   test('can edit and save agent prompt', async ({ page }) => {
-    await page.goto('/agents/universal-agent/configure')
+    await page.goto('/#/agents/universal-agent/configure')
     await page.waitForSelector('textarea', { timeout: 10_000 })
 
     const textarea = page.locator('textarea')
@@ -203,7 +201,7 @@ test.describe('Agent configure page', () => {
     const marker = `\n<!-- e2e test ${Date.now()} -->`
     await textarea.fill(original + marker)
 
-    const saveBtn = page.locator('.btn-primary:has-text("Save")')
+    const saveBtn = page.getByRole('button', { name: 'Save Prompt' })
     await saveBtn.click()
     await page.waitForTimeout(1000)
 
@@ -214,7 +212,7 @@ test.describe('Agent configure page', () => {
 
     // Restore original
     await page.locator('textarea').fill(original)
-    await page.locator('.btn-primary:has-text("Save")').click()
+    await page.getByRole('button', { name: 'Save Prompt' }).click()
     await page.waitForTimeout(500)
   })
 })
@@ -228,7 +226,7 @@ test.describe('History page', () => {
   })
 
   test('renders with search and filter controls', async ({ page }) => {
-    await page.goto('/history')
+    await page.goto('/#/history')
     const search = page.locator('input[placeholder*="Search"]').or(page.locator('input[type="search"]')).or(page.locator('input[placeholder*="search"]'))
     await expect(search.first()).toBeVisible({ timeout: 5000 })
   })
@@ -243,7 +241,7 @@ test.describe('Files page', () => {
   })
 
   test('renders with category filters', async ({ page }) => {
-    await page.goto('/files')
+    await page.goto('/#/files')
     await page.waitForSelector('text=All', { timeout: 5000 })
     await expect(page.locator('text=All').first()).toBeVisible()
   })
@@ -258,7 +256,7 @@ test.describe('Chat page', () => {
   })
 
   test('can send a message and receive a streamed response', async ({ page }) => {
-    await page.goto('/chat')
+    await page.goto('/#/chat')
     const chatInput = page.locator('textarea').or(page.locator('[contenteditable]')).or(page.locator('input[type="text"]'))
     await expect(chatInput.first()).toBeVisible({ timeout: 15_000 })
     await chatInput.first().fill('Reply with the single word "pong"')
@@ -279,8 +277,7 @@ test.describe('Chat — session working_dir isolation', () => {
 
   test('regular user creates session and working_dir points to correct user directory', async ({ page }) => {
     await loginAs(page, USER_A)
-    // Wait for agents to load
-    await page.waitForSelector('.prompt-template-card', { timeout: 15_000 })
+    await waitForHomeReady(page)
 
     // Intercept the /agent/start response to verify working_dir
     const startResponsePromise = page.waitForResponse(
@@ -301,8 +298,7 @@ test.describe('Chat — session working_dir isolation', () => {
 
   test('different user gets different working_dir', async ({ page }) => {
     await loginAs(page, USER_B)
-    // Wait for agents to load
-    await page.waitForSelector('.prompt-template-card', { timeout: 15_000 })
+    await waitForHomeReady(page)
 
     const startResponsePromise = page.waitForResponse(
       resp => resp.url().includes('/agent/start') && resp.status() === 200
@@ -327,7 +323,7 @@ test.describe('Chat — session working_dir isolation', () => {
     })
 
     await loginAs(page, USER_A)
-    await page.goto('/chat')
+    await page.goto('/#/chat')
     await page.waitForTimeout(3000) // Wait for system_info and other requests
 
     // No 403 errors should occur
@@ -364,7 +360,7 @@ test.describe('Embed mode', () => {
   const EMBED_USER = 'e2e-embed-user'
 
   test('hides sidebar when embed=true', async ({ page }) => {
-    await page.goto(`/history?embed=true&userId=${EMBED_USER}`)
+    await page.goto(`/#/history?embed=true&userId=${EMBED_USER}`)
     // Sidebar should not be rendered
     await expect(page.locator('.sidebar')).not.toBeVisible()
     // Main content should still render
@@ -372,35 +368,40 @@ test.describe('Embed mode', () => {
   })
 
   test('main-wrapper has embed-mode class', async ({ page }) => {
-    await page.goto(`/history?embed=true&userId=${EMBED_USER}`)
+    await page.goto(`/#/history?embed=true&userId=${EMBED_USER}`)
     await expect(page.locator('.main-wrapper.embed-mode')).toBeVisible()
   })
 
   test('auto-authenticates via userId URL param', async ({ page }) => {
     // Clear any existing auth
-    await page.goto('/')
+    await page.goto('/#/')
     await page.evaluate(() => localStorage.clear())
     // Navigate with embed params — should remain inside the app shell.
-    await page.goto(`/files?embed=true&userId=${EMBED_USER}`)
+    await page.goto(`/#/files?embed=true&userId=${EMBED_USER}`)
     await expect(page.locator('.main-content')).toBeVisible()
   })
 
   test('userId from URL is persisted to localStorage', async ({ page }) => {
-    await page.goto(`/history?embed=true&userId=${EMBED_USER}`)
+    await page.goto(`/#/history?embed=true&userId=${EMBED_USER}`)
+    await page.waitForFunction(
+      (expectedUserId) => localStorage.getItem('opsfactory:userId') === expectedUserId,
+      EMBED_USER,
+      { timeout: 5000 }
+    )
     const storedUserId = await page.evaluate(() => localStorage.getItem('opsfactory:userId'))
     expect(storedUserId).toBe(EMBED_USER)
   })
 
   test('FilePreview is not rendered in embed mode', async ({ page }) => {
-    await page.goto(`/files?embed=true&userId=${EMBED_USER}`)
+    await page.goto(`/#/files?embed=true&userId=${EMBED_USER}`)
     await expect(page.locator('.file-preview')).not.toBeVisible()
   })
 
   test('each page renders correctly in embed mode', async ({ page }) => {
     const pages = [
-      { path: '/history', marker: 'input' },
-      { path: '/files', marker: 'text=All' },
-      { path: '/inbox', marker: '.main-content' },
+      { path: '/#/history', marker: 'input' },
+      { path: '/#/files', marker: 'text=All' },
+      { path: '/#/inbox', marker: '.main-content' },
     ]
     for (const p of pages) {
       await page.goto(`${p.path}?embed=true&userId=${EMBED_USER}`)
@@ -411,7 +412,7 @@ test.describe('Embed mode', () => {
 
   test('non-embed mode still shows sidebar', async ({ page }) => {
     await login(page)
-    await page.goto('/history')
+    await page.goto('/#/history')
     await expect(page.locator('.sidebar')).toBeVisible()
     await expect(page.locator('.main-wrapper.embed-mode')).not.toBeVisible()
   })

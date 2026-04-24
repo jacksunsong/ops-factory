@@ -1,7 +1,7 @@
 package com.huawei.opsfactory.gateway.monitoring;
 
 /**
- * Immutable timing record captured per SSE /reply request.
+ * Immutable timing record captured per proxied agent request.
  */
 public class RequestTiming {
 

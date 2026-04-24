@@ -14,6 +14,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import {
   CONTROL_CENTER_SECRET_KEY,
   freePort,
+  sendSessionReplyAndWait,
   startControlCenter,
   startJavaGateway,
   sleep,
@@ -29,15 +30,6 @@ let gw: GatewayHandle
 let cc: ControlCenterHandle
 
 // ===== Helpers =====
-
-function makeUserMessage(text: string) {
-  return {
-    role: 'user',
-    created: Math.floor(Date.now() / 1000),
-    content: [{ type: 'text', text }],
-    metadata: { userVisible: true, agentVisible: true },
-  }
-}
 
 function parseSseEvents(body: string): Array<Record<string, any>> {
   return body
@@ -103,23 +95,8 @@ async function sendReplyAndWait(
   message: string,
   timeoutMs = 120_000,
 ): Promise<string> {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    const res = await handle.fetchAs(userId, `/agents/${agentId}/agent/reply`, {
-      method: 'POST',
-      body: JSON.stringify({
-        session_id: sessionId,
-        user_message: makeUserMessage(message),
-      }),
-      signal: controller.signal,
-    })
-    return await res.text()
-  } catch {
-    return ''
-  } finally {
-    clearTimeout(timer)
-  }
+  const result = await sendSessionReplyAndWait(handle, userId, agentId, sessionId, message, timeoutMs)
+  return result.body
 }
 
 async function createSessionAndChat(

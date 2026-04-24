@@ -16,15 +16,17 @@ const AGENT_ID = 'universal-agent'
 const UNIQUE = Date.now()
 
 async function loginAsAdmin(page: Page) {
-  await page.goto('/login')
-  await page.fill('input[placeholder="Your name"]', ADMIN_USER)
-  await page.click('button:has-text("Enter")')
-  await page.waitForURL('/')
+  await page.goto('/#/')
+  await page.evaluate((userId) => {
+    localStorage.setItem('opsfactory:userId', userId)
+  }, ADMIN_USER)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
   await page.waitForTimeout(500)
 }
 
 async function goToConfigure(page: Page) {
-  await page.goto(`/agents/${AGENT_ID}/configure`)
+  await page.goto(`/#/agents/${AGENT_ID}/configure`)
   await page.waitForSelector('.config-tab', { timeout: 10_000 })
 }
 

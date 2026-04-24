@@ -79,7 +79,7 @@ Level:
 Typical candidates:
 
 - `ReplyController`
-- `SseRelayService`
+- `GoosedProxy` session events proxy
 - `InstanceManager`
 
 Rules:

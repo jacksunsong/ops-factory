@@ -653,7 +653,7 @@ test.describe('咪咕视频彩铃西南大区生产环境 — Sample Data', () =
 
         // ── Step 9: Navigate and verify UI ──────────────────────────
         await page.goto('/', { timeout: 30000, waitUntil: 'domcontentloaded' })
-        await page.evaluate(() => localStorage.setItem('ops-factory-user', 'admin'))
+        await page.evaluate(() => localStorage.setItem('opsfactory:userId', 'admin'))
         await page.goto('/#/host-resource', { timeout: 30000, waitUntil: 'domcontentloaded' })
         await page.waitForSelector('.host-resource-page', { timeout: 30000 })
         await page.waitForTimeout(2000)

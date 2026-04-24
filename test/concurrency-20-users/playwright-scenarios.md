@@ -52,11 +52,11 @@ This ID must be attached to:
 
 The scenario should reuse selectors already validated by existing E2E coverage.
 
-### Login
+### Runtime User
 
-- route: `/login`
-- username input: `input[placeholder="Your name"]`
-- enter button: `button:has-text("Enter")`
+- route: `/`
+- set localStorage key: `opsfactory:userId`
+- reload the app shell and wait for the sidebar user button
 
 Reference:
 
@@ -74,8 +74,9 @@ Reference:
 
 ### Home
 
-- template card: `.prompt-template-card`
-- category tab: `.home-template-tab`
+- chat input: `.chat-input`
+- selected agent: `.agent-selector-trigger`
+- model info: `.model-info`
 
 Reference:
 
@@ -93,7 +94,7 @@ Reference:
 
 ### History
 
-- search input: `.search-input`
+- search input: `.list-search-input`
 - session item: `.session-item`
 - type filter: `.seg-filter-btn`
 
@@ -109,17 +110,16 @@ The orchestration script should implement these shared helpers.
 
 Steps:
 
-1. open `/login`
-2. fill username
-3. submit
-4. wait for `/`
-5. wait until shell is stable
+1. open `/`
+2. set `localStorage["opsfactory:userId"] = userId`
+3. reload `/`
+4. wait until the shell is stable
 
 ### `waitForHomeReady(page)`
 
 Readiness condition:
 
-- `.prompt-template-card` visible
+- `.chat-input` visible
 
 ### `openNewChat(page)`
 
@@ -156,7 +156,7 @@ Steps:
 
 1. click `.sidebar-nav a[href="/history"]`
 2. wait for `/history`
-3. wait for `.search-input`
+3. wait for `.list-search-input`
 
 ### `openMostRecentHistorySession(page)`
 

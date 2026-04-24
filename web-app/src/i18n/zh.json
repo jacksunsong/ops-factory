@@ -60,11 +60,6 @@
     "expand": "展开侧边栏",
     "hostResource": "系统资源"
   },
-  "login": {
-    "subtitle": "输入你的名字以开始使用",
-    "placeholder": "你的名字",
-    "submit": "进入"
-  },
   "businessIntelligence": {
     "title": "业务智能",
     "subtitle": "面向业务分析与运营洞察的工作台，当前基于固定数据源提供分析结果。",
@@ -533,7 +528,6 @@
     "waitingForResponse": "等待响应...",
     "typePlaceholder": "输入消息...",
     "quickContinue": "继续",
-    "quickContinuePrompt": "继续",
     "sendMessage": "发送消息",
     "stopGeneration": "停止生成",
     "jumpToBottom": "跳到底部",
@@ -568,10 +562,28 @@
     "skillPickerBrowseMarket": "去技能市场",
     "removeSelectedSkill": "移除 {{name}}",
     "emptyAssistantResponse": "模型没有返回有效回复，可能是临时服务异常。",
-    "recoverableInterruption": "回答可能未完成。",
     "agentNoResponse": "智能体未响应，请重试",
     "agentIdleTimeout": "智能体停止响应，请重试",
-    "agentConnectionLost": "智能体连接断开，请重试"
+    "agentConnectionLost": "智能体连接断开，请重试",
+    "sessionErrors": {
+      "frontendEventsDisconnected": "对话连接中断，正在重连；后台任务不会因此被取消。",
+      "userCancelled": "生成已停止。",
+      "gatewaySubmitTimeout": "提交请求超时，系统尚未确认任务是否已被接收。重试前请先确认任务是否仍在运行。",
+      "gatewayUnauthorized": "你没有权限使用该智能体。",
+      "gatewayAgentNotFound": "该智能体或会话不可用。",
+      "gatewayAgentUnavailable": "智能体服务暂时不可用。",
+      "gatewayGoosedUnavailable": "Gateway 无法连接智能体服务。",
+      "gatewayMaxDurationReached": "任务已达到平台时长上限。",
+      "goosedActiveRequestConflict": "该会话中已有任务正在运行。",
+      "providerTimeout": "模型服务响应超时。",
+      "providerRateLimited": "模型服务触发限流，请稍后重试。",
+      "providerAuthOrQuotaFailed": "模型服务配置异常或额度不足。",
+      "toolExecutionFailed": "处理请求时工具调用失败。",
+      "mcpUnavailable": "外部工具服务不可用。",
+      "contextTooLarge": "请求或会话上下文过大。",
+      "unknown": "任务失败。请使用下面的引用信息辅助排障。",
+      "reference": "引用信息：trace {{traceId}}，request {{requestId}}"
+    }
   },
   "newSession": {
     "title": "新建对话",

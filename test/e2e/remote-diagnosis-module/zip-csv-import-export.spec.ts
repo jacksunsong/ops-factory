@@ -243,8 +243,8 @@ test.describe('ZIP Export & CSV Import', () => {
     test.setTimeout(300_000)
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/')
-        await page.evaluate(() => localStorage.setItem('ops-factory-user', 'admin'))
+        await page.goto('/#/')
+        await page.evaluate(() => localStorage.setItem('opsfactory:userId', 'admin'))
         await navigateTo(page)
     })
 

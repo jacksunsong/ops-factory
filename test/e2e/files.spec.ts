@@ -16,10 +16,12 @@ const USER = 'e2e-files'
 const UNIQUE = Date.now()
 
 async function loginAs(page: Page, username: string) {
-  await page.goto('/login')
-  await page.fill('input[placeholder="Your name"]', username)
-  await page.click('button:has-text("Enter")')
-  await page.waitForURL('/')
+  await page.goto('/#/')
+  await page.evaluate((userId) => {
+    localStorage.setItem('opsfactory:userId', userId)
+  }, username)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.waitForURL(/\/#\/?$/)
   await page.waitForTimeout(500)
 }
 
@@ -29,7 +31,7 @@ async function loginAs(page: Page, username: string) {
 test.describe('Files — category tabs', () => {
   test.beforeEach(async ({ page }) => {
     await loginAs(page, USER)
-    await page.goto('/files')
+    await page.goto('/#/files')
     await page.waitForSelector('.seg-filter-btn', { timeout: 5000 })
   })
 
@@ -76,7 +78,7 @@ test.describe('Files — category tabs', () => {
 test.describe('Files — search', () => {
   test('search filters file list and clear restores it', async ({ page }) => {
     await loginAs(page, USER)
-    await page.goto('/files')
+    await page.goto('/#/files')
     await page.waitForTimeout(2000)
 
     const searchInput = page.locator('.search-input')
@@ -102,7 +104,7 @@ test.describe('Files — search', () => {
 test.describe('Files — preview and download', () => {
   test('preview button opens file preview panel', async ({ page }) => {
     await loginAs(page, USER)
-    await page.goto('/files')
+    await page.goto('/#/files')
     await page.waitForTimeout(3000)
 
     const fileItems = page.locator('.file-item')
@@ -120,7 +122,7 @@ test.describe('Files — preview and download', () => {
 
   test('download button has download attribute', async ({ page }) => {
     await loginAs(page, USER)
-    await page.goto('/files')
+    await page.goto('/#/files')
     await page.waitForTimeout(3000)
 
     const fileItems = page.locator('.file-item')
@@ -137,7 +139,7 @@ test.describe('Files — preview and download', () => {
 
   test('file items display name, size, and agent tag', async ({ page }) => {
     await loginAs(page, USER)
-    await page.goto('/files')
+    await page.goto('/#/files')
     await page.waitForTimeout(3000)
 
     const fileItems = page.locator('.file-item')
@@ -160,7 +162,7 @@ test.describe('Files — preview and download', () => {
 test.describe('Files — empty state', () => {
   test('shows file list or empty state', async ({ page }) => {
     await loginAs(page, `${USER}-empty-${UNIQUE}`)
-    await page.goto('/files')
+    await page.goto('/#/files')
     await page.waitForTimeout(3000)
 
     const hasFiles = await page.locator('.file-item').count() > 0
@@ -184,7 +186,7 @@ test.describe('Files — generate and verify', () => {
     await loginAs(page, user)
 
     // Ask agent to create a file
-    await page.goto('/chat')
+    await page.goto('/#/chat')
     const chatInput = page.locator('.chat-input')
     await expect(chatInput).toBeVisible({ timeout: 15_000 })
     await chatInput.fill(`Create a file named "e2e-test-${UNIQUE}.md" with the content "E2E Test File ${UNIQUE}" using the shell tool`)
@@ -201,7 +203,7 @@ test.describe('Files — generate and verify', () => {
     await page.waitForTimeout(2000)
 
     // Go to files page
-    await page.goto('/files')
+    await page.goto('/#/files')
     await page.waitForTimeout(3000)
 
     // Search for our file
