@@ -1084,6 +1084,8 @@
     "showSource": "显示源码",
     "copyContent": "复制内容",
     "copied": "已复制",
+    "enterFullscreen": "全屏预览",
+    "exitFullscreen": "缩回右侧抽屉",
     "closePreview": "关闭预览",
     "loadingPreview": "正在加载文档...",
     "importToKnowledge": "导入知识库",

@@ -60,8 +60,11 @@ interface PreviewContextType {
     previewFile: PreviewFile | null
     isLoading: boolean
     error: string | null
+    isPreviewFullscreen: boolean
     openPreview: (file: PreviewRequest) => Promise<void>
     closePreview: () => void
+    togglePreviewFullscreen: () => void
+    exitPreviewFullscreen: () => void
     isPreviewable: (type: string, name?: string, path?: string) => boolean
 }
 
@@ -72,6 +75,7 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
     const [previewFile, setPreviewFile] = useState<PreviewFile | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [isPreviewFullscreen, setIsPreviewFullscreen] = useState(false)
     const [officePreview, setOfficePreview] = useState<OfficePreviewConfig>({
         enabled: false,
         onlyofficeUrl: '',
@@ -178,6 +182,7 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
             console.error('Failed to load file for preview:', err)
             setError(err instanceof Error ? err.message : 'Failed to load file')
             setPreviewFile(null)
+            setIsPreviewFullscreen(false)
         } finally {
             setIsLoading(false)
         }
@@ -186,6 +191,15 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
     const closePreview = useCallback(() => {
         setPreviewFile(null)
         setError(null)
+        setIsPreviewFullscreen(false)
+    }, [])
+
+    const togglePreviewFullscreen = useCallback(() => {
+        setIsPreviewFullscreen(current => !current)
+    }, [])
+
+    const exitPreviewFullscreen = useCallback(() => {
+        setIsPreviewFullscreen(false)
     }, [])
 
     return (
@@ -193,8 +207,11 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
             previewFile,
             isLoading,
             error,
+            isPreviewFullscreen,
             openPreview,
             closePreview,
+            togglePreviewFullscreen,
+            exitPreviewFullscreen,
             isPreviewable,
         }}>
             {children}

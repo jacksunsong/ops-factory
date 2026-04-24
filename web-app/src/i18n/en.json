@@ -1084,6 +1084,8 @@
     "showSource": "Show source",
     "copyContent": "Copy content",
     "copied": "Copied!",
+    "enterFullscreen": "Fullscreen",
+    "exitFullscreen": "Return to side panel",
     "closePreview": "Close preview",
     "loadingPreview": "Loading document...",
     "importToKnowledge": "Import to Knowledge",

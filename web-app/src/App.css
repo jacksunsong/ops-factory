@@ -393,6 +393,11 @@ textarea {
     max-width: 45%;
 }
 
+.main-wrapper.with-right-panel.panel-preview-fullscreen .main-content {
+    flex: 1;
+    max-width: 100%;
+}
+
 .main-wrapper.with-right-panel.panel-drawer .main-content {
     flex: 0 0 55%;
     max-width: 55%;
@@ -433,6 +438,17 @@ textarea {
 .right-panel-host.open.preview {
     flex: 0 0 55%;
     width: 55%;
+}
+
+.right-panel-host.open.preview.fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 160;
+    flex: none;
+    width: 100vw;
+    height: 100vh;
+    border-left: none;
+    box-shadow: none;
 }
 
 .right-panel-host.open.drawer {
