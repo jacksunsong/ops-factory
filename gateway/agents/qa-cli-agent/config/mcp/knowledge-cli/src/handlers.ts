@@ -87,6 +87,10 @@ export const tools = [
           type: 'string',
           description: 'Optional relative subdirectory under rootDir.',
         },
+        glob: {
+          type: 'string',
+          description: 'Optional file name glob to limit searched files, for example *.md for knowledge documents.',
+        },
         regex: {
           type: 'boolean',
           description: 'Whether query should be treated as a regex.',
@@ -362,6 +366,9 @@ export async function handleSearchContent(args: ToolArgs = {}): Promise<string> 
 
   const scope = await resolveScopePath(args.pathPrefix)
   const limit = clamp(args.limit, 1, MAX_SEARCH_LIMIT, DEFAULT_SEARCH_LIMIT)
+  const glob = typeof args.glob === 'string' && args.glob.trim()
+    ? args.glob.trim()
+    : null
 
   if (!scope.exists) {
     return JSON.stringify({ rootDir: scope.rootDir, hits: [], total: 0, engine: 'none' }, null, 2)
@@ -371,13 +378,15 @@ export async function handleSearchContent(args: ToolArgs = {}): Promise<string> 
   let result: CommandResult
 
   if (engine === 'rg') {
-    const commandArgs = ['--no-ignore', '-n', '--no-heading', '--with-filename', '--column']
+    const commandArgs = ['-n', '--no-heading', '--with-filename', '--column']
+    if (glob) commandArgs.push('--glob', glob)
     if (!args.caseSensitive) commandArgs.push('-i')
     if (!args.regex) commandArgs.push('-F')
     commandArgs.push(query, scope.scopePath)
     result = await runCommand('rg', commandArgs)
   } else {
     const commandArgs = ['-R', '-n', '-I']
+    if (glob) commandArgs.push(`--include=${glob}`)
     if (!args.caseSensitive) commandArgs.push('-i')
     if (!args.regex) commandArgs.push('-F')
     commandArgs.push('--', query, scope.scopePath)

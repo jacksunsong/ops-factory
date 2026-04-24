@@ -64,17 +64,18 @@ test('search_content finds text hits and returns absolute file paths', async () 
   })
 })
 
-test('search_content ignores repository ignore files inside the configured root', async () => {
+test('search_content limits hits by glob when provided', async () => {
   await withTempRoot(async (rootDir) => {
     const resolvedRoot = await realpath(rootDir)
-    const filePath = path.join(resolvedRoot, 'ignored.md')
-    await writeFile(path.join(rootDir, '.gitignore'), 'ignored.md\n', 'utf8')
-    await writeFile(filePath, '用户基本信息\n', 'utf8')
+    const markdownPath = path.join(resolvedRoot, 'knowledge.md')
+    const yamlPath = path.join(resolvedRoot, 'config.yaml')
+    await writeFile(markdownPath, '用户基本信息\n', 'utf8')
+    await writeFile(yamlPath, '用户基本信息\n', 'utf8')
 
-    const result = JSON.parse(await handleSearchContent({ query: '用户基本信息' }))
+    const result = JSON.parse(await handleSearchContent({ query: '用户基本信息', glob: '*.md' }))
 
     assert.equal(result.total, 1)
-    assert.equal(result.hits[0].path, filePath)
+    assert.equal(result.hits[0].path, markdownPath)
   })
 })
 

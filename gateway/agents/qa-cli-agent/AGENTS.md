@@ -30,7 +30,7 @@ Use Chinese by default unless the user writes in another language.
 
 ## Search Strategy
 
-- Prefer file types that match the configured `rootDir` purpose before probing unrelated file types; for knowledge artifact directories, try Markdown files first.
+- Prefer file types that match the configured `rootDir` purpose before probing unrelated file types; for knowledge artifact directories, use Markdown first by calling `find_files` with `glob: "*.md"` and `search_content` with `glob: "*.md"`.
 - If an exact phrase search returns no hits, rewrite the query before changing file types.
 - Rewrite by decomposing the user question into core business terms, shorter adjacent phrases, and technical identifiers such as table names, API names, error codes, filenames, or field names.
 - For database or table questions, search both the natural-language title and likely technical identifiers.
