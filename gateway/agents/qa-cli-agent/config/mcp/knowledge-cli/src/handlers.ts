@@ -138,6 +138,25 @@ function clamp(value: unknown, min: number, max: number, fallback: number): numb
   return Math.max(min, Math.min(max, number))
 }
 
+function normalizeGlob(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) {
+    return null
+  }
+
+  const glob = value.trim()
+  const segments = glob.split(/[\\/]+/)
+  if (
+    glob.includes('\0') ||
+    glob.startsWith('!') ||
+    path.isAbsolute(glob) ||
+    segments.includes('..')
+  ) {
+    throw new Error(`Invalid glob pattern: ${glob}`)
+  }
+
+  return glob
+}
+
 export function extractConfiguredRootDir(content: string): string | null {
   const parsed = YAML.parse(content)
   const rootDir = parsed?.extensions?.['knowledge-cli']?.['x-opsfactory']?.scope?.rootDir
@@ -366,9 +385,7 @@ export async function handleSearchContent(args: ToolArgs = {}): Promise<string> 
 
   const scope = await resolveScopePath(args.pathPrefix)
   const limit = clamp(args.limit, 1, MAX_SEARCH_LIMIT, DEFAULT_SEARCH_LIMIT)
-  const glob = typeof args.glob === 'string' && args.glob.trim()
-    ? args.glob.trim()
-    : null
+  const glob = normalizeGlob(args.glob)
 
   if (!scope.exists) {
     return JSON.stringify({ rootDir: scope.rootDir, hits: [], total: 0, engine: 'none' }, null, 2)

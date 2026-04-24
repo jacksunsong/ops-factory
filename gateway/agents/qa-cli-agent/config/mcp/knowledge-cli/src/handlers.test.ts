@@ -79,6 +79,19 @@ test('search_content limits hits by glob when provided', async () => {
   })
 })
 
+test('search_content rejects unsafe glob patterns', async () => {
+  await withTempRoot(async () => {
+    await assert.rejects(
+      handleSearchContent({ query: '用户基本信息', glob: '../*.md' }),
+      /Invalid glob pattern/,
+    )
+    await assert.rejects(
+      handleSearchContent({ query: '用户基本信息', glob: '!*.md' }),
+      /Invalid glob pattern/,
+    )
+  })
+})
+
 test('read_file returns numbered content for the requested line range', async () => {
   await withTempRoot(async (rootDir) => {
     const resolvedRoot = await realpath(rootDir)
