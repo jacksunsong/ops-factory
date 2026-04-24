@@ -327,6 +327,23 @@ function sanitizeFileName(fileName: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Fuzzy matching helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Fuzzy match: Tier 1 = case-insensitive substring; Tier 2 = all keyword chars present in text.
+ */
+function fuzzyMatch(text: string, keyword: string): boolean {
+  const t = text.toLowerCase()
+  const k = keyword.toLowerCase()
+  if (t.includes(k)) return true
+  for (const ch of k) {
+    if (!t.includes(ch)) return false
+  }
+  return true
+}
+
+// ---------------------------------------------------------------------------
 // Tool handlers
 // ---------------------------------------------------------------------------
 
@@ -343,10 +360,8 @@ export async function handleListSystemResources(params?: { keyword?: string; lim
 
   const filtered = keyword
     ? systems.filter(s => {
-      const name = String(s.name ?? '')
-      const code = String(s.code ?? '')
-      const lower = keyword.toLowerCase()
-      return name.toLowerCase().includes(lower) || code.toLowerCase().includes(lower)
+      const fields = [String(s.name ?? ''), String(s.code ?? ''), String(s.description ?? '')].join(' ')
+      return fuzzyMatch(fields, keyword)
     })
     : systems
 
@@ -428,10 +443,8 @@ function findGroupByName(
   tree: Record<string, unknown>[],
   name: string,
 ): Record<string, unknown> | undefined {
-  const lowerName = name.toLowerCase()
   for (const node of tree) {
-    const nodeName = String(node.name ?? '').toLowerCase()
-    if (nodeName.includes(lowerName)) return node
+    if (fuzzyMatch(String(node.name ?? ''), name)) return node
     const children = node.children as Record<string, unknown>[] | undefined
     if (Array.isArray(children)) {
       const found = findGroupByName(children, name)
@@ -479,11 +492,12 @@ export async function handleQueryHostsByScope(params?: {
     }
   }
 
-  // Resolve clusterId from clusterName and/or clusterType
-  let clusterId: string | undefined
+  // Resolve clusterIds from clusterName and/or clusterType
+  let clusterIds: string[] = []
   if (clusterName || clusterType) {
     const queryParams: Record<string, string> = {}
     if (clusterType) queryParams.type = clusterType
+    if (groupId) queryParams.groupId = groupId
     queryParams.enabledOnly = 'true'
     const clusterData = await gw<{ clusters: Record<string, unknown>[] }>(
       `${API_PREFIX}/clusters`,
@@ -499,32 +513,56 @@ export async function handleQueryHostsByScope(params?: {
       )
     }
 
-    if (clusters.length === 1) {
-      clusterId = String(clusters[0].id)
-    } else if (clusters.length > 1) {
-      // Multiple clusters matched — return them for disambiguation
-      return JSON.stringify({
-        matchCount: clusters.length,
-        message: '匹配到多个集群，请缩小范围',
-        clusters: pickEach(clusters, ['id', 'name', 'type']),
-      }, null, 2)
+    if (clusters.length >= 1) {
+      clusterIds = clusters.map(c => String(c.id))
     }
     // clusters.length === 0: no cluster found, fall through
   }
 
-  // Query hosts using resolved filters
-  // Note: gateway API treats clusterId and groupId as mutually exclusive (first match wins).
-  // We prefer clusterId (more specific) over groupId.
-  const hostParams: Record<string, string> = {}
-  if (clusterId) {
-    hostParams.clusterId = clusterId
-  } else if (groupId) {
-    hostParams.groupId = groupId
+  // Query hosts: multi-cluster aggregation when multiple clusterIds resolved
+  if (clusterIds.length > 0) {
+    const allHosts: Record<string, unknown>[] = []
+    for (let i = 0; i < clusterIds.length; i += MAX_CONCURRENCY) {
+      const chunk = clusterIds.slice(i, i + MAX_CONCURRENCY)
+      const results = await Promise.all(
+        chunk.map(cid =>
+          gw<{ hosts: Record<string, unknown>[] }>(`${API_PREFIX}/hosts`, { clusterId: cid, enabledOnly: 'true' })
+            .then(d => (d.hosts ?? []) as Record<string, unknown>[])
+            .catch(() => [] as Record<string, unknown>[]),
+        ),
+      )
+      for (const batch of results) allHosts.push(...batch)
+    }
+    // Deduplicate by host id
+    const seen = new Set<string>()
+    const uniqueHosts = allHosts.filter(h => {
+      const id = String(h.id ?? '')
+      if (seen.has(id)) return false
+      seen.add(id)
+      return true
+    })
+    return JSON.stringify({
+      success: true,
+      reason,
+      evidence: evidence ?? '',
+      matchedClusters: clusterIds.length,
+      hosts: pickEach(uniqueHosts, HOST_LIST_KEYS).map(({ businessIp, ...rest }) => ({ ...rest, ip: businessIp })),
+    }, null, 2)
   }
 
-  // If we have a clusterType but couldn't resolve a clusterId,
-  // and also have no groupId, we need to get all hosts and filter by cluster type
-  if (!clusterId && !groupId && clusterType) {
+  // Fallback: groupId only (no clusterType/clusterName matched any clusters)
+  if (groupId) {
+    const data = await gw<{ hosts: Record<string, unknown>[] }>(`${API_PREFIX}/hosts`, { groupId, enabledOnly: 'true' })
+    return JSON.stringify({
+      success: true,
+      reason,
+      evidence: evidence ?? '',
+      hosts: pickEach(data.hosts ?? [], HOST_LIST_KEYS).map(({ businessIp, ...rest }) => ({ ...rest, ip: businessIp })),
+    }, null, 2)
+  }
+
+  // clusterType-only fallback (no groupName, no clusters resolved): tag-based filter
+  if (clusterType) {
     const data = await gw<{ hosts: Record<string, unknown>[] }>(`${API_PREFIX}/hosts`, { enabledOnly: 'true' })
     const filtered = (data.hosts ?? []).filter((h: Record<string, unknown>) => {
       const tags = (h.tags ?? []) as string[]
@@ -539,22 +577,13 @@ export async function handleQueryHostsByScope(params?: {
     }, null, 2)
   }
 
-  if (Object.keys(hostParams).length === 0) {
-    return JSON.stringify({
-      success: false,
-      reason: 'scope_not_resolved',
-      message: '未能根据当前范围解析出可查询的主机范围，请先收敛到明确集群、分组或资源类型',
-      inputScope: { groupName: groupName ?? '', clusterName: clusterName ?? '', clusterType: clusterType ?? '' },
-      evidence: evidence ?? '',
-    }, null, 2)
-  }
-
-  const data = await gw<{ hosts: Record<string, unknown>[] }>(`${API_PREFIX}/hosts`, { ...hostParams, enabledOnly: 'true' })
+  // No scope resolved
   return JSON.stringify({
-    success: true,
-    reason,
+    success: false,
+    reason: 'scope_not_resolved',
+    message: '未能根据当前范围解析出可查询的主机范围，请先收敛到明确集群、分组或资源类型',
+    inputScope: { groupName: groupName ?? '', clusterName: clusterName ?? '', clusterType: clusterType ?? '' },
     evidence: evidence ?? '',
-    hosts: pickEach(data.hosts ?? [], HOST_LIST_KEYS).map(({ businessIp, ...rest }) => ({ ...rest, ip: businessIp })),
   }, null, 2)
 }
 
