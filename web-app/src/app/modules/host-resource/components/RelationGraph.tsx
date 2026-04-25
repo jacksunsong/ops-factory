@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
 
-import type { GraphData, GraphNode } from '../../../../types/host'
+import type { GraphData, GraphNode, ClusterGraphData } from '../../../../types/host'
 
 const BS_NODE_COLOR = '#6366f1'    // indigo
 const BS_EDGE_COLOR = '#a5b4fc'    // light indigo
@@ -19,7 +19,7 @@ const CLUSTER_TYPE_COLORS: Record<string, string> = {
 const DEFAULT_COLOR = '#9a60b4'
 
 type Props = {
-    data: GraphData
+    data: GraphData | ClusterGraphData
     focusedHostId?: string | null
     hopFocusId?: string | null
     onNodeClick?: (nodeId: string) => void
@@ -226,8 +226,8 @@ export default function RelationGraph({ data, focusedHostId, hopFocusId, onNodeC
                     const parts = [`<b>${n.name}</b>`]
                     if (n.ip) parts.push(`IP: ${n.ip}`)
                     if (n.clusterType) parts.push(`Type: ${n.clusterType}`)
-                    if (n.clusterName) parts.push(`Cluster: ${n.clusterName}`)
-                    if (n.purpose) parts.push(`Purpose: ${n.purpose}`)
+                    if ('clusterName' in n && n.clusterName) parts.push(`Cluster: ${n.clusterName}`)
+                    if ('purpose' in n && n.purpose) parts.push(`Purpose: ${n.purpose}`)
                     return parts.join('<br/>')
                 },
             },
