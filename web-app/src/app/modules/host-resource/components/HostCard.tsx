@@ -76,6 +76,19 @@ export default function HostCard({ host, cluster, selected, testing, testResult,
                     <div className="hr-host-card-meta-field">
                         <span className="hr-host-card-meta-label">{t('hostResource.clusterName')}</span>
                         <span className="hr-host-card-meta-value">{cluster.name}</span>
+                        {host.role && (
+                            <span className="hr-role-badge" style={{
+                                marginLeft: 6,
+                                fontSize: '0.7rem',
+                                padding: '1px 6px',
+                                borderRadius: 4,
+                                background: host.role === 'primary' ? '#dcfce7' : '#fee2e2',
+                                color: host.role === 'primary' ? '#166534' : '#991b1b',
+                                border: `1px solid ${host.role === 'primary' ? '#bbf7d0' : '#fecaca'}`,
+                            }}>
+                                {host.role === 'primary' ? t('hostResource.hostRolePrimary') : t('hostResource.hostRoleBackup')}
+                            </span>
+                        )}
                     </div>
                 )}
                 {host.purpose && (

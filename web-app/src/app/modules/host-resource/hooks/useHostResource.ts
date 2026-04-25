@@ -47,11 +47,11 @@ export function useHostResource() {
         })
         const data = await res.json()
         if (data.success) {
-            await Promise.all([fetchHosts(), fetchAllHosts()])
+            await fetchAllHosts()
             return data.host
         }
         throw new Error(data.error || 'Failed to create host')
-    }, [userId, fetchHosts, fetchAllHosts])
+    }, [userId, fetchAllHosts])
 
     const updateHost = useCallback(async (id: string, body: Partial<Host>) => {
         const res = await fetch(`${apiBase()}/${id}`, {
@@ -61,11 +61,11 @@ export function useHostResource() {
         })
         const data = await res.json()
         if (data.success) {
-            await Promise.all([fetchHosts(), fetchAllHosts()])
+            await fetchAllHosts()
             return data.host
         }
         throw new Error(data.error || 'Failed to update host')
-    }, [userId, fetchHosts, fetchAllHosts])
+    }, [userId, fetchAllHosts])
 
     const deleteHost = useCallback(async (id: string) => {
         const res = await fetch(`${apiBase()}/${id}`, {
@@ -74,11 +74,11 @@ export function useHostResource() {
         })
         const data = await res.json()
         if (data.success) {
-            await Promise.all([fetchHosts(), fetchAllHosts()])
+            await fetchAllHosts()
             return true
         }
         throw new Error(data.error || 'Failed to delete host')
-    }, [userId, fetchHosts, fetchAllHosts])
+    }, [userId, fetchAllHosts])
 
     const testConnection = useCallback(async (id: string) => {
         const res = await fetch(`${apiBase()}/${id}/test`, {
