@@ -12,7 +12,6 @@ import PageHeader from '../../../platform/ui/primitives/PageHeader'
 import Pagination from '../../../platform/ui/primitives/Pagination'
 import ListCard from '../../../platform/ui/list/ListCard'
 import ListFooter from '../../../platform/ui/list/ListFooter'
-import ListResultsMeta from '../../../platform/ui/list/ListResultsMeta'
 import ListSearchInput from '../../../platform/ui/list/ListSearchInput'
 import ListToolbar from '../../../platform/ui/list/ListToolbar'
 import ListWorkbench from '../../../platform/ui/list/ListWorkbench'
@@ -410,7 +409,6 @@ export default function FilesPage() {
                                 </div>
                             </>
                         )}
-                        secondary={(searchTerm || activeCategory !== 'all') ? <ListResultsMeta>{t('common.resultsFound', { count: filteredFiles.length })}</ListResultsMeta> : undefined}
                     />
                 )}
                 footer={filteredFiles.length > 0 ? (
