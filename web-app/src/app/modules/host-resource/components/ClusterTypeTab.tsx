@@ -21,12 +21,14 @@ type FormData = {
     knowledge: string
     commandPrefix: string
     envVariables: { key: string; value: string }[]
+    mode: 'peer' | 'primary-backup'
 }
 
 const emptyForm: FormData = {
     name: '', code: '', description: '', color: '#10b981', knowledge: '',
     commandPrefix: '',
     envVariables: [],
+    mode: 'peer',
 }
 
 export default function ClusterTypeTab({ clusterTypes, loading, onCreate, onUpdate, onDelete }: Props) {
@@ -59,6 +61,7 @@ export default function ClusterTypeTab({ clusterTypes, loading, onCreate, onUpda
             knowledge: item.knowledge,
             commandPrefix: item.commandPrefix ?? '',
             envVariables: item.envVariables ?? [],
+            mode: item.mode ?? 'peer',
         })
         setShowModal(true)
     }, [])
@@ -199,6 +202,17 @@ export default function ClusterTypeTab({ clusterTypes, loading, onCreate, onUpda
                                     onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
                                     style={{ width: 48, height: 32, padding: 2, cursor: 'pointer' }}
                                 />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">{t('hostResource.clusterMode')}</label>
+                                <select
+                                    className="form-input"
+                                    value={form.mode}
+                                    onChange={e => setForm(f => ({ ...f, mode: e.target.value as 'peer' | 'primary-backup' }))}
+                                >
+                                    <option value="peer">{t('hostResource.clusterModePeer')}</option>
+                                    <option value="primary-backup">{t('hostResource.clusterModePrimaryBackup')}</option>
+                                </select>
                             </div>
                             <div className="form-group">
                                 <label className="form-label">{t('hostResource.knowledge')}</label>

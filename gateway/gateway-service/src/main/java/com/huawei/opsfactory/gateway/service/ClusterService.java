@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -29,9 +31,16 @@ public class ClusterService {
 
     private final GatewayProperties properties;
     private Path clustersDir;
+    private ClusterRelationService clusterRelationService;
 
     public ClusterService(GatewayProperties properties) {
         this.properties = properties;
+    }
+
+    @Lazy
+    @Autowired
+    public void setClusterRelationService(ClusterRelationService clusterRelationService) {
+        this.clusterRelationService = clusterRelationService;
     }
 
     @PostConstruct
@@ -178,6 +187,11 @@ public class ClusterService {
             throw new IllegalStateException("Cannot delete cluster with hosts. Remove hosts first.");
         }
 
+        // Cascade delete cluster relations
+        if (clusterRelationService != null) {
+            clusterRelationService.deleteRelationsByCluster(id);
+        }
+
         Path file = clustersDir.resolve(id + ".json");
         try {
             if (Files.exists(file)) {
@@ -204,6 +218,11 @@ public class ClusterService {
         for (Map<String, Object> host : hosts) {
             hostService.deleteHost((String) host.get("id"));
             log.info("Force-deleted host {} in cluster {}", host.get("id"), id);
+        }
+
+        // Cascade delete cluster relations
+        if (clusterRelationService != null) {
+            clusterRelationService.deleteRelationsByCluster(id);
         }
 
         // Delete the cluster file itself

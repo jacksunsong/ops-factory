@@ -14,6 +14,10 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.*;
 
+/**
+ * @deprecated Use {@link ClusterRelationController} instead. Host-level relations are replaced by cluster-level relations.
+ */
+@Deprecated
 @RestController
 @RequestMapping("/gateway/host-relations")
 public class HostRelationController {

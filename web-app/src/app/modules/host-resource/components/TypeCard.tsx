@@ -7,6 +7,7 @@ type TypeDef = {
     description: string
     color: string
     knowledge: string
+    mode?: 'peer' | 'primary-backup'
     createdAt: string
     updatedAt: string
 }
@@ -24,6 +25,19 @@ export default function TypeCard({ item, onEdit, onDelete }: Props) {
             <div className="hr-type-def-card-header">
                 <span className="hr-type-def-card-color" style={{ background: item.color }} />
                 <span className="hr-type-def-card-name">{item.name}</span>
+                {item.mode === 'primary-backup' && (
+                    <span className="hr-mode-badge" style={{
+                        marginLeft: 6,
+                        fontSize: '0.7rem',
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        background: '#fef3c7',
+                        color: '#92400e',
+                        border: '1px solid #fde68a',
+                    }}>
+                        {t('hostResource.clusterModePrimaryBackup')}
+                    </span>
+                )}
             </div>
             {item.description && (
                 <div className="hr-type-def-card-desc">{item.description}</div>
