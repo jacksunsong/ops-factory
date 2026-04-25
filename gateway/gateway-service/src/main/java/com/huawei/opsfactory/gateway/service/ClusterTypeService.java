@@ -94,6 +94,7 @@ public class ClusterTypeService {
         ct.put("knowledge", body.getOrDefault("knowledge", ""));
         ct.put("commandPrefix", body.getOrDefault("commandPrefix", null));
         ct.put("envVariables", body.getOrDefault("envVariables", null));
+        ct.put("mode", body.getOrDefault("mode", "peer"));
         ct.put("createdAt", now);
         ct.put("updatedAt", now);
 
@@ -129,6 +130,13 @@ public class ClusterTypeService {
         }
         if (body.containsKey("envVariables")) {
             ct.put("envVariables", body.get("envVariables"));
+        }
+        if (body.containsKey("mode")) {
+            String mode = (String) body.get("mode");
+            if (!"peer".equals(mode) && !"primary-backup".equals(mode)) {
+                throw new IllegalArgumentException("Invalid mode: " + mode + ". Must be 'peer' or 'primary-backup'.");
+            }
+            ct.put("mode", mode);
         }
 
         ct.put("updatedAt", Instant.now().toString());

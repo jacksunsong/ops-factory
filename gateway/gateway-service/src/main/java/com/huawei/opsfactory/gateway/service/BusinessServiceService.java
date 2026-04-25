@@ -36,6 +36,7 @@ public class BusinessServiceService {
     private ClusterService clusterService;
     private HostService hostService;
     private HostRelationService hostRelationService;
+    private ClusterRelationService clusterRelationService;
 
     public BusinessServiceService(GatewayProperties properties) {
         this.properties = properties;
@@ -57,6 +58,12 @@ public class BusinessServiceService {
     @Autowired
     public void setHostRelationService(HostRelationService hostRelationService) {
         this.hostRelationService = hostRelationService;
+    }
+
+    @Lazy
+    @Autowired
+    public void setClusterRelationService(ClusterRelationService clusterRelationService) {
+        this.clusterRelationService = clusterRelationService;
     }
 
     @PostConstruct
@@ -197,6 +204,10 @@ public class BusinessServiceService {
         // Cascade delete related HostRelation records
         if (hostRelationService != null) {
             hostRelationService.deleteRelationsByBusinessService(id);
+        }
+        // Cascade delete related ClusterRelation records
+        if (clusterRelationService != null) {
+            clusterRelationService.deleteRelationsByBusinessService(id);
         }
 
         Path file = businessServicesDir.resolve(id + ".json");
@@ -455,6 +466,35 @@ public class BusinessServiceService {
         List<String> newHostIds = rels.stream()
             .map(r -> (String) r.get("targetHostId"))
             .collect(Collectors.toList());
+        bs.put("hostIds", newHostIds);
+        bs.put("updatedAt", Instant.now().toString());
+        writeEntityFile(bsId, bs);
+    }
+
+    /**
+     * Sync hostIds on a business service from its ClusterRelation records.
+     * Derives entry hosts from ClusterRelation where sourceType="business-service" and sourceId=bsId.
+     * Resolves targetId (cluster) -> get cluster's hosts -> populate BS.hostIds.
+     */
+    @SuppressWarnings("unchecked")
+    public void syncHostIdsFromClusterRelations(String bsId) {
+        Map<String, Object> bs = getBusinessService(bsId);
+        List<Map<String, Object>> allClusterRels = clusterRelationService.listRelations(null);
+        List<String> newHostIds = new ArrayList<>();
+        for (Map<String, Object> rel : allClusterRels) {
+            String sourceType = (String) rel.getOrDefault("sourceType", "cluster");
+            String sourceId = (String) rel.get("sourceId");
+            if (!"business-service".equals(sourceType) || !bsId.equals(sourceId)) continue;
+            String targetClusterId = (String) rel.get("targetId");
+            if (targetClusterId == null) continue;
+            List<Map<String, Object>> clusterHosts = hostService.listHostsByCluster(targetClusterId);
+            for (Map<String, Object> h : clusterHosts) {
+                String hid = (String) h.get("id");
+                if (hid != null && !newHostIds.contains(hid)) {
+                    newHostIds.add(hid);
+                }
+            }
+        }
         bs.put("hostIds", newHostIds);
         bs.put("updatedAt", Instant.now().toString());
         writeEntityFile(bsId, bs);

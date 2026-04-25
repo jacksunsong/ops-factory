@@ -22,6 +22,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * @deprecated Use {@link ClusterRelationService} instead. Host-level relations are replaced by cluster-level relations.
+ */
+@Deprecated
 @Service
 public class HostRelationService {
 
