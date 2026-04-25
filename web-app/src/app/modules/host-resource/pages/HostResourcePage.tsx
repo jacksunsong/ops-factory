@@ -19,6 +19,7 @@ import ResourceTree, { type TreeNode, type TreeNodeType } from '../components/Re
 import ResourceFormModal from '../components/ResourceFormModal'
 import HostCard from '../components/HostCard'
 import RelationGraph from '../components/RelationGraph'
+import ClusterInsightPanel from '../components/ClusterInsightPanel'
 import ClusterTypeTab from '../components/ClusterTypeTab'
 import BusinessTypeTab from '../components/BusinessTypeTab'
 import { SopsTab } from '../components/SopsTab'
@@ -48,6 +49,7 @@ export default function HostResourcePage() {
     const [activeTab, setActiveTab] = useState<TabKey>('overview')
     const [selected, setSelected] = useState<SelectedNode | null>(null)
     const [focusedHostId, setFocusedHostId] = useState<string | null>(null)
+    const [selectedTopologyClusterId, setSelectedTopologyClusterId] = useState<string | null>(null)
     const [showModal, setShowModal] = useState(false)
     const [editingItem, setEditingItem] = useState<EditingItem>(null)
     const [currentPage, setCurrentPage] = useState(1)
@@ -135,6 +137,7 @@ export default function HostResourcePage() {
         if (selected?.type === 'cluster') {
             fetchClusterGraph()
             setFocusedHostId(null)
+            setSelectedTopologyClusterId(selected.id)
         } else if (selected?.type === 'business-service') {
             const bs = businessServices.find(b => b.id === selected.id)
             if (bs) {
@@ -144,14 +147,64 @@ export default function HostResourcePage() {
                 fetchClusterGraph()
             }
             setFocusedHostId(selected.id)
+            setSelectedTopologyClusterId(null)
         } else if (selected?.type === 'group' || selected?.type === 'subgroup') {
             fetchClusterGraph(selected.id)
             setFocusedHostId(null)
+            setSelectedTopologyClusterId(null)
         } else {
             fetchClusterGraph()
             setFocusedHostId(null)
+            setSelectedTopologyClusterId(null)
         }
     }, [selected, fetchClusterGraph, businessServices, resolveProvinceGroupId])
+
+    const topologyNodeMap = useMemo(() => {
+        const map = new Map(clusterGraphData.nodes.map(node => [node.id, node]))
+        return map
+    }, [clusterGraphData])
+
+    const selectedTopologyCluster = useMemo(() => {
+        if (!selectedTopologyClusterId) return null
+        const clusterFromList = clusters.find(cluster => cluster.id === selectedTopologyClusterId)
+        if (clusterFromList) return clusterFromList
+
+        const graphNode = topologyNodeMap.get(selectedTopologyClusterId)
+        if (graphNode?.nodeType !== 'cluster') return null
+
+        return {
+            id: graphNode.id,
+            name: graphNode.name,
+            type: graphNode.type ?? graphNode.clusterType ?? '',
+            purpose: '',
+            description: '',
+            groupId: graphNode.groupId ?? null,
+            createdAt: '',
+            updatedAt: '',
+        } satisfies Cluster
+    }, [selectedTopologyClusterId, clusters, topologyNodeMap])
+
+    const selectedTopologyClusterHosts = useMemo(() => {
+        if (!selectedTopologyClusterId) return []
+        return allHosts.filter(host => host.clusterId === selectedTopologyClusterId)
+    }, [allHosts, selectedTopologyClusterId])
+
+    const topologyGraphData = useMemo(() => {
+        const visibleNodeIds = new Set(
+            clusterGraphData.nodes
+                .filter(node => node.nodeType === 'cluster' || node.nodeType === 'business-service')
+                .map(node => node.id),
+        )
+
+        return {
+            nodes: clusterGraphData.nodes.filter(node => visibleNodeIds.has(node.id)),
+            edges: clusterGraphData.edges.filter(edge =>
+                edge.type !== 'constitute'
+                && visibleNodeIds.has(edge.source)
+                && visibleNodeIds.has(edge.target),
+            ),
+        }
+    }, [clusterGraphData])
 
     // Build tree data — recursive, supports arbitrary nesting depth
     const treeData = useMemo((): TreeNode[] => {
@@ -562,16 +615,43 @@ export default function HostResourcePage() {
 
                     {/* Bottom: Topology */}
                     <div className="hr-topology-area">
-                        <RelationGraph
-                            data={clusterGraphData}
-                            focusedHostId={focusedHostId}
-                            onNodeClick={(nodeId) => {
-                                setFocusedHostId(prev => prev === nodeId ? null : nodeId)
-                            }}
-                            onBackgroundClick={() => {
-                                setFocusedHostId(null)
-                            }}
-                        />
+                        <div className="hr-topology-workbench">
+                            <div className="hr-topology-graph-pane">
+                                <div className="hr-topology-pane-header">
+                                    <div>
+                                        <h3 className="hr-topology-pane-title">{t('hostResource.clusterRelationsTitle')}</h3>
+                                        <p className="hr-topology-pane-subtitle">{t('hostResource.clusterRelationsSubtitle')}</p>
+                                    </div>
+                                </div>
+                                <RelationGraph
+                                    data={topologyGraphData}
+                                    focusedHostId={focusedHostId}
+                                    onNodeClick={(nodeId) => {
+                                        const node = topologyNodeMap.get(nodeId)
+                                        if (node?.nodeType === 'cluster') {
+                                            setSelectedTopologyClusterId(prev => prev === nodeId ? null : nodeId)
+                                            setFocusedHostId(null)
+                                            return
+                                        }
+                                        setFocusedHostId(prev => prev === nodeId ? null : nodeId)
+                                    }}
+                                    onBackgroundClick={() => {
+                                        setFocusedHostId(null)
+                                    }}
+                                />
+                            </div>
+                            <ClusterInsightPanel
+                                cluster={selectedTopologyCluster}
+                                hosts={selectedTopologyClusterHosts}
+                                graphData={clusterGraphData}
+                                viewingClusterHosts={selected?.type === 'cluster' && selected.id === selectedTopologyCluster?.id}
+                                onViewClusterHosts={(clusterId) => {
+                                    setSelected({ id: clusterId, type: 'cluster' })
+                                    setFocusedHostId(null)
+                                    setCurrentPage(1)
+                                }}
+                            />
+                        </div>
                     </div>
                 </>
             )}

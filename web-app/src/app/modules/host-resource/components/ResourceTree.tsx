@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { HostGroup, Cluster, BusinessService } from '../../../../types/host'
+import TopologyNodeIcon from './TopologyNodeIcon'
 
 export type TreeNodeType = 'group' | 'subgroup' | 'business-service' | 'cluster'
 
@@ -78,11 +79,7 @@ function TreeNodeItem({ node, depth, selectedId, selectedType, onSelect, onEdit,
         setExpanded(prev => !prev)
     }
 
-    const iconClass = node.type === 'group' || node.type === 'subgroup'
-        ? 'hr-tree-icon-folder'
-        : node.type === 'business-service'
-        ? 'hr-tree-icon-business-service'
-        : 'hr-tree-icon-cluster'
+    const isFolder = node.type === 'group' || node.type === 'subgroup'
 
     return (
         <div className="hr-tree-node-wrapper">
@@ -99,7 +96,15 @@ function TreeNodeItem({ node, depth, selectedId, selectedType, onSelect, onEdit,
                         &#9654;
                     </span>
                 )}
-                <span className={`hr-tree-icon ${iconClass}`} />
+                {isFolder ? (
+                    <span className="hr-tree-icon hr-tree-icon-folder" />
+                ) : (
+                    <TopologyNodeIcon
+                        kind={node.type === 'business-service' ? 'business' : 'cluster'}
+                        size={16}
+                        className={`hr-tree-icon hr-tree-icon-${node.type}`}
+                    />
+                )}
                 <span className="hr-tree-label">{node.name}</span>
                 {node.subtitle && <span className="hr-tree-subtitle">{node.subtitle}</span>}
                 <span className="hr-tree-node-actions" onClick={e => e.stopPropagation()}>

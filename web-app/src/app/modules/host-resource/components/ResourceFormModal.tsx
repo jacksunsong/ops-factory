@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { HostGroup, Cluster, Host, CustomAttribute, HostCreateRequest, BusinessService, ClusterType, BusinessType, ClusterRelation } from '../../../../types/host'
 import { isValidIp } from '../../../../utils/ip-validation'
 import CustomAttributeEditor from './CustomAttributeEditor'
+import TopologyNodeIcon, { type TopologyNodeKind } from './TopologyNodeIcon'
 
 type ResourceType = 'group' | 'cluster' | 'business-service' | 'host'
 
@@ -313,11 +314,11 @@ export default function ResourceFormModal({
         return false
     }
 
-    const typeCards: { type: ResourceType; icon: string; color: string; labelKey: string }[] = [
+    const typeCards: { type: ResourceType; icon: string; color: string; labelKey: string; topologyKind?: TopologyNodeKind }[] = [
         { type: 'group', icon: '📁', color: 'var(--color-warning, #f59e0b)', labelKey: 'hostResource.createGroup' },
-        { type: 'cluster', icon: '🖥️', color: 'var(--color-success, #10b981)', labelKey: 'hostResource.createCluster' },
-        { type: 'business-service', icon: '🏢', color: '#6366f1', labelKey: 'hostResource.createBusinessService' },
-        { type: 'host', icon: '💻', color: 'var(--color-primary, #3b82f6)', labelKey: 'hostResource.createHost' },
+        { type: 'cluster', icon: '🖥️', color: 'var(--color-success, #10b981)', labelKey: 'hostResource.createCluster', topologyKind: 'cluster' },
+        { type: 'business-service', icon: '🏢', color: '#6366f1', labelKey: 'hostResource.createBusinessService', topologyKind: 'business' },
+        { type: 'host', icon: '💻', color: 'var(--color-primary, #3b82f6)', labelKey: 'hostResource.createHost', topologyKind: 'host' },
     ]
 
     return (
@@ -344,7 +345,13 @@ export default function ResourceFormModal({
                                     className="hr-type-card"
                                     onClick={() => setSelectedType(card.type)}
                                 >
-                                    <span className="hr-type-card-icon" style={{ background: card.color }}>{card.icon}</span>
+                                    {card.topologyKind ? (
+                                        <span className={`hr-type-card-icon hr-type-card-icon-svg hr-type-card-icon-svg--${card.topologyKind}`}>
+                                            <TopologyNodeIcon kind={card.topologyKind} size={28} />
+                                        </span>
+                                    ) : (
+                                        <span className="hr-type-card-icon" style={{ background: card.color }}>{card.icon}</span>
+                                    )}
                                     <span className="hr-type-card-label">{t(card.labelKey)}</span>
                                 </div>
                             ))}

@@ -98,10 +98,20 @@ function buildDisplayMessages(messages: ChatMessage[]): ChatMessage[] {
                 continue
             }
 
+            const nextHasDisplayText = hasDisplayTextContent(nextMessage)
             const canMergeAssistant = hasOnlyProcessContent(nextMessage) ||
-                (hasToolRequest(nextMessage) && !hasDisplayTextContent(nextMessage))
+                (hasToolRequest(nextMessage) && !nextHasDisplayText)
 
             if (!canMergeAssistant) {
+                const canMergeFinalAnswer = sawToolRequest &&
+                    nextMessage.role === 'assistant' &&
+                    nextHasDisplayText
+
+                if (canMergeFinalAnswer) {
+                    mergedContent.push(...nextMessage.content)
+                    nextIndex += 1
+                }
+
                 break
             }
 

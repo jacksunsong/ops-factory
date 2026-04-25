@@ -2170,6 +2170,26 @@
     "selectCluster": "选择集群",
     "targetCluster": "目标集群",
     "clusterRelationDesc": "关系描述",
-    "clusterHostCount": "{{count}} 台主机"
+    "clusterHostCount": "{{count}} 台主机",
+    "clusterRelationsTitle": "集群调用关系",
+    "clusterRelationsSubtitle": "主图展示业务与集群的上下游调用路径，点击集群查看关系摘要，并可联动上方主机区",
+    "clusterHostsTitle": "集群主机",
+    "selectClusterToViewHosts": "点击左侧拓扑中的集群节点后，在这里查看该集群包含的主机",
+    "noHostsInCluster": "当前集群下暂无主机",
+    "clusterInsightTitle": "集群观察",
+    "selectClusterToInspect": "点击左侧拓扑中的集群节点后，在这里查看该集群的关系与结构摘要",
+    "viewHostsAbove": "在上方查看主机",
+    "viewingHostsAbove": "上方已显示主机",
+    "clusterSummaryTitle": "集群摘要",
+    "hostRoleDistributionTitle": "主机角色分布",
+    "relatedBusinessTitle": "关联业务",
+    "upstreamClustersTitle": "上游集群",
+    "downstreamClustersTitle": "下游集群",
+    "relatedBusinessCount": "关联业务数",
+    "upstreamClusterCount": "上游集群数",
+    "downstreamClusterCount": "下游集群数",
+    "noRelatedBusiness": "暂无关联业务",
+    "noUpstreamClusters": "暂无上游集群",
+    "noDownstreamClusters": "暂无下游集群"
   }
 }
