@@ -10,7 +10,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -27,6 +27,9 @@ DEFAULT_TIME_PARSE_FORMAT = "%Y/%m/%d %H:%M:%S"
 DEFAULT_TIME_DISPLAY_FORMAT = "YYYY/M/D HH:MM:SS"
 DEFAULT_TIME_EXAMPLE = "2026/4/16 20:00:00"
 TIME_PARSE_FORMAT_ENV = "QOS_TIME_PARSE_FORMAT"
+MAX_LOOKBACK_HOURS = 48
+MAX_TIME_RANGE_MINUTES = 60
+DEFAULT_TIME_RANGE_MINUTES = 15
 
 
 class ToolExecutionError(Exception):
@@ -164,6 +167,50 @@ def normalize_time_ms(value: Any, name: str, time_parse_format: str) -> int:
     return normalize_datetime_string_ms(value, name, time_parse_format)
 
 
+def current_time_ms() -> int:
+    return int(datetime.now(tz=timezone.utc).timestamp() * 1000)
+
+
+def resolve_time_range(args: Dict[str, Any], config: RuntimeConfig) -> tuple[int, int]:
+    start_value = args.get("startTime")
+    end_value = args.get("endTime")
+
+    if start_value is None and end_value is None:
+        end_time_ms = current_time_ms()
+        start_time_ms = end_time_ms - int(timedelta(minutes=DEFAULT_TIME_RANGE_MINUTES).total_seconds() * 1000)
+        return start_time_ms, end_time_ms
+
+    if end_value is None:
+        end_time_ms = current_time_ms()
+    else:
+        end_time_ms = normalize_time_ms(end_value, "endTime", config.time_parse_format)
+
+    if start_value is None:
+        start_time_ms = end_time_ms - int(timedelta(minutes=DEFAULT_TIME_RANGE_MINUTES).total_seconds() * 1000)
+    else:
+        start_time_ms = normalize_time_ms(start_value, "startTime", config.time_parse_format)
+
+    return start_time_ms, end_time_ms
+
+
+def validate_time_range(start_time_ms: int, end_time_ms: int) -> None:
+    earliest_allowed_ms = current_time_ms() - int(timedelta(hours=MAX_LOOKBACK_HOURS).total_seconds() * 1000)
+    if start_time_ms < earliest_allowed_ms:
+        raise ToolExecutionError(
+            f"startTime must not be earlier than {MAX_LOOKBACK_HOURS} hours ago"
+        )
+    if end_time_ms < start_time_ms:
+        raise ToolExecutionError(
+            f"endTime must be greater than or equal to startTime: startTime={start_time_ms} endTime={end_time_ms}"
+        )
+
+    max_range_ms = int(timedelta(minutes=MAX_TIME_RANGE_MINUTES).total_seconds() * 1000)
+    if end_time_ms - start_time_ms > max_range_ms:
+        raise ToolExecutionError(
+            f"time range must not exceed {MAX_TIME_RANGE_MINUTES} minutes"
+        )
+
+
 def require_non_empty_string(value: Any, name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ToolExecutionError(f"{name} must be a non-empty string")
@@ -172,12 +219,8 @@ def require_non_empty_string(value: Any, name: str) -> str:
 
 def build_health_score_payload(args: Dict[str, Any], config: RuntimeConfig) -> Dict[str, Any]:
     env_code = require_non_empty_string(args.get("envCode"), "envCode")
-    start_time_ms = normalize_time_ms(args.get("startTime"), "startTime", config.time_parse_format)
-    end_time_ms = normalize_time_ms(args.get("endTime"), "endTime", config.time_parse_format)
-    if end_time_ms <= start_time_ms:
-        raise ToolExecutionError(
-            f"endTime must be greater than startTime: startTime={start_time_ms} endTime={end_time_ms}"
-        )
+    start_time_ms, end_time_ms = resolve_time_range(args, config)
+    validate_time_range(start_time_ms, end_time_ms)
     payload: Dict[str, Any] = {
         "envCode": env_code,
         "startTime": start_time_ms,
@@ -191,12 +234,8 @@ def build_health_score_payload(args: Dict[str, Any], config: RuntimeConfig) -> D
 
 def build_abnormal_data_payload(args: Dict[str, Any], config: RuntimeConfig) -> Dict[str, Any]:
     env_code = require_non_empty_string(args.get("envCode"), "envCode")
-    start_time_ms = normalize_time_ms(args.get("startTime"), "startTime", config.time_parse_format)
-    end_time_ms = normalize_time_ms(args.get("endTime"), "endTime", config.time_parse_format)
-    if end_time_ms <= start_time_ms:
-        raise ToolExecutionError(
-            f"endTime must be greater than startTime: startTime={start_time_ms} endTime={end_time_ms}"
-        )
+    start_time_ms, end_time_ms = resolve_time_range(args, config)
+    validate_time_range(start_time_ms, end_time_ms)
     return {
         "envCode": env_code,
         "startTime": start_time_ms,
@@ -220,19 +259,21 @@ TOOLS = [
                     "type": ["string", "number"],
                     "description": (
                         f"开始时间（字符串默认格式：{DEFAULT_TIME_DISPLAY_FORMAT}，例如 {DEFAULT_TIME_EXAMPLE}；"
-                        f"可通过环境变量 {TIME_PARSE_FORMAT_ENV} 覆盖解析格式；也支持传入秒/毫秒时间戳）"
+                        f"可通过环境变量 {TIME_PARSE_FORMAT_ENV} 覆盖解析格式；也支持传入秒/毫秒时间戳；"
+                        f"省略时默认取结束时间前 {DEFAULT_TIME_RANGE_MINUTES} 分钟）"
                     ),
                 },
                 "endTime": {
                     "type": ["string", "number"],
                     "description": (
                         f"结束时间（字符串默认格式：{DEFAULT_TIME_DISPLAY_FORMAT}，例如 {DEFAULT_TIME_EXAMPLE}；"
-                        f"可通过环境变量 {TIME_PARSE_FORMAT_ENV} 覆盖解析格式；也支持传入秒/毫秒时间戳）"
+                        f"可通过环境变量 {TIME_PARSE_FORMAT_ENV} 覆盖解析格式；也支持传入秒/毫秒时间戳；"
+                        f"省略时默认取当前时间）"
                     ),
                 },
                 "mode": {"type": "string", "description": "监控模式（默认 real）"},
             },
-            "required": ["envCode", "startTime", "endTime"],
+            "required": ["envCode"],
         },
     },
     {
@@ -246,18 +287,20 @@ TOOLS = [
                     "type": ["string", "number"],
                     "description": (
                         f"开始时间（字符串默认格式：{DEFAULT_TIME_DISPLAY_FORMAT}，例如 {DEFAULT_TIME_EXAMPLE}；"
-                        f"可通过环境变量 {TIME_PARSE_FORMAT_ENV} 覆盖解析格式；也支持传入秒/毫秒时间戳）"
+                        f"可通过环境变量 {TIME_PARSE_FORMAT_ENV} 覆盖解析格式；也支持传入秒/毫秒时间戳；"
+                        f"省略时默认取结束时间前 {DEFAULT_TIME_RANGE_MINUTES} 分钟）"
                     ),
                 },
                 "endTime": {
                     "type": ["string", "number"],
                     "description": (
                         f"结束时间（字符串默认格式：{DEFAULT_TIME_DISPLAY_FORMAT}，例如 {DEFAULT_TIME_EXAMPLE}；"
-                        f"可通过环境变量 {TIME_PARSE_FORMAT_ENV} 覆盖解析格式；也支持传入秒/毫秒时间戳）"
+                        f"可通过环境变量 {TIME_PARSE_FORMAT_ENV} 覆盖解析格式；也支持传入秒/毫秒时间戳；"
+                        f"省略时默认取当前时间）"
                     ),
                 },
             },
-            "required": ["envCode", "startTime", "endTime"],
+            "required": ["envCode"],
         },
     },
     {
