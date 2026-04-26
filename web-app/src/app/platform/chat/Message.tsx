@@ -58,6 +58,20 @@ interface ScrollFadeState {
     hasBottomFade: boolean
 }
 
+function getFileDisplayParts(fileName: string, displayPath?: string, filePath?: string): {
+    name: string
+    fullPath: string
+} {
+    const fullPath = (displayPath || filePath || fileName || '').replace(/\\/g, '/')
+    if (!fullPath) {
+        return { name: fileName || '', fullPath: '' }
+    }
+    const parts = fullPath.split('/').filter(Boolean)
+    const fallbackName = parts[parts.length - 1] || fileName || fullPath
+    const name = fileName && !fileName.includes('/') ? fileName : fallbackName
+    return { name, fullPath }
+}
+
 function ThinkingStatusIcon({ isStreaming, isOpen }: { isStreaming: boolean; isOpen: boolean }) {
     if (isStreaming) {
         return (
@@ -134,7 +148,7 @@ function FileCapsule({ filePath, fileName, fileExt, rootId, displayPath, agentId
     const downloadUrl = `${GATEWAY_URL}/agents/${agentId}/files/${encodeURIComponent(filePath)}?key=${GATEWAY_SECRET_KEY}${rootId ? `&rootId=${encodeURIComponent(rootId)}` : ''}${userId ? `&uid=${encodeURIComponent(userId)}` : ''}`
     const { openPreview, isPreviewable } = usePreview()
     const canPreview = isPreviewable(fileExt, fileName, filePath)
-    const visibleName = displayPath || fileName
+    const { name: visibleName, fullPath } = getFileDisplayParts(fileName, displayPath, filePath)
 
     const handlePreview = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -149,7 +163,7 @@ function FileCapsule({ filePath, fileName, fileExt, rootId, displayPath, agentId
     }
 
     return (
-        <div className="file-capsule">
+        <div className="file-capsule" title={fullPath}>
             <span className="file-capsule-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -159,7 +173,9 @@ function FileCapsule({ filePath, fileName, fileExt, rootId, displayPath, agentId
                     <polyline points="10 9 9 9 8 9" />
                 </svg>
             </span>
-            <span className="file-capsule-name">{visibleName}</span>
+            <span className="file-capsule-details">
+                <span className="file-capsule-name">{visibleName}</span>
+            </span>
             <div className="file-capsule-actions">
                 {canPreview && (
                     <button className="file-capsule-btn" onClick={handlePreview} aria-label={t('files.preview')}>

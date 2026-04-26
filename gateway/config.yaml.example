@@ -67,14 +67,17 @@ gateway:
     allowed-extensions: ["doc", "docx", "xls", "xlsx", "ppt", "pptx", "csv", "txt", "json", "md", "markdown", "html", "htm"]
 
   # Files page scan roots. ${userAgentDir} expands to gateway/users/<userId>/agents/<agentId>.
+  # Recursive scanning lets generated files in subdirectories appear in Files and chat file capsules.
+  # exclude-dirs is additive with built-in skips for runtime/config directories and hidden directories.
   files:
     scan-roots:
       - id: workingDir
         path: "${userAgentDir}"
-        recursive: false
-      - id: output
-        path: "${userAgentDir}/output"
-        recursive: false
+        recursive: true
+        exclude-dirs: ["data", "state", "config", "node_modules", ".goose", ".cache", "__pycache__"]
+        max-depth: 6
+        max-files: 1000
+        scan-timeout-ms: 2000
 
   skill-market:
     base-url: "http://127.0.0.1:8095"

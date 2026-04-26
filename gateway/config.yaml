@@ -20,8 +20,7 @@ gateway:
       html, htm]
   files:
     scan-roots:
-    - {id: workingDir, path: '${userAgentDir}', recursive: false}
-    - {id: output, path: '${userAgentDir}/output', recursive: false}
+    - {id: workingDir, path: '${userAgentDir}', recursive: true, exclude-dirs: [data, state, config, node_modules, .goose, .cache, __pycache__], max-depth: 6, max-files: 1000, scan-timeout-ms: 2000}
   skill-market: {base-url: 'http://127.0.0.1:8095', request-timeout-ms: 10000, max-package-size-mb: 200}
   knowledge: {artifacts-root: ../knowledge-service/data/artifacts}
   credential-encryption-key: changeit-changeit-changeit-32ch
