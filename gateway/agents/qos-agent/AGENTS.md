@@ -91,7 +91,7 @@
 
 #### 2.5. 识别根因告警
 
-- **重要：根因判断逻辑**：
+1. **重要：根因判断逻辑**：
   - 如果告警为空：
     - 若用户只要求健康分析，则直接说明该时间段无告警，输出健康分析结论并结束当前场景。
     - 若当前是远程诊断前的健康分析步骤，则说明暂未发现可继续远程排查的告警线索，并要求用户在已选系统内补充主机/集群/某类资源/业务范围。
@@ -106,6 +106,7 @@
       - **彩铃上报业务**和**彩铃选取业务**不使用kafka。
       - **kafka相关告警**不会影响，也不会是上报、选取业务指标的根因。
     - 输出根因告警 `${rootAlarms}`、影响范围和关联告警 `${relatedAlarms}`。
+2. 识别出根因告警后，进入步骤3.2收敛远程诊断目标，找到合适的SOP，进行主机远程诊断
 
 ### 步骤3. 执行远程诊断
 
@@ -130,7 +131,7 @@
   2. 如果有 IP 或明确主机标识，调用 `query_hosts_by_scope(clusterName?, clusterType?, reason, evidence?)` 获取候选主机并进行精确匹配，其中 `reason=health_root_alarm`，`evidence` 需包含 `alarmName`/`clusterName`/`rootAlarms` 片段。
   3. 如果只有集群、资源类型或告警源类型，调用 `query_hosts_by_scope(groupName?, clusterName?, clusterType?, reason, evidence?)` 缩小到目标主机范围，其中 `reason=health_root_alarm`，`evidence` 需包含 `alarmName`/`clusterName`/`rootAlarms` 片段。
   4. 必要时调用 `get_host_neighbors(hostId)` 获取上下游拓扑上下文。
-  5. 形成目标主机列表、目标集群和告警上下文，进入步骤3.3共享执行流程。
+  5. 形成目标主机列表、目标集群和告警上下文，进入步骤3.3公共执行流程。
 
 ##### 路径B：根据用户直接指定范围收敛目标
 

@@ -109,8 +109,8 @@ export default function SettingsModal({ isOpen, onClose }: { isOpen: boolean; on
                                         value={i18n.language?.startsWith('zh') ? 'zh' : 'en'}
                                         onChange={(e) => handleLanguageChange(e.target.value)}
                                     >
-                                        <option value="en">English</option>
                                         <option value="zh">中文</option>
+                                        <option value="en">English</option>
                                     </select>
                                 </div>
                             </div>

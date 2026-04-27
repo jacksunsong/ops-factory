@@ -17,6 +17,7 @@ interface ModelInfo {
     model: string
 }
 
+const DEFAULT_HOME_AGENT_ID = 'qos-agent'
 const UNIVERSAL_AGENT_ID = 'universal-agent'
 const DIAGNOSIS_GATEWAY_URL = `${window.location.origin || 'http://localhost:3000'}`
 
@@ -64,8 +65,9 @@ export default function HomePage() {
                 setSelectedAgent('qos-agent')
                 void handleDiagnosis(hasScene)
             } else if (!selectedAgent) {
+                const defaultAgent = agents.find((agent) => agent.id === DEFAULT_HOME_AGENT_ID)
                 const universal = agents.find((agent) => agent.id === UNIVERSAL_AGENT_ID)
-                setSelectedAgent(universal ? universal.id : agents[0].id)
+                setSelectedAgent(defaultAgent?.id || universal?.id || agents[0].id)
             }
         }
     }, [agents, selectedAgent, handleDiagnosis])

@@ -16,6 +16,15 @@ const getLanguageFromCookie=(name: string)=> {
     }
     return null
 }
+
+function resolveInitialLanguage(): 'zh' | 'en' {
+    const locale = getLanguageFromCookie('locale')
+    if (locale === 'en_US') {
+        return 'en'
+    }
+    return 'zh'
+}
+
 i18n
     .use(LanguageDetector)
     .use(initReactI18next)
@@ -24,7 +33,7 @@ i18n
             en: { translation: en },
             zh: { translation: zh },
         },
-        lng:getLanguageFromCookie('locale')==='zh_CN' ? 'zh' : 'en',
+        lng: resolveInitialLanguage(),
         fallbackLng: 'zh',
         interpolation: {
             escapeValue: false,

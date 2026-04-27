@@ -1390,7 +1390,7 @@
   },
   "home": {
     "greeting": "Hello, I'm OpsGoose",
-    "description": "Your AI-powered intelligent ops agent. I can help you with fault diagnosis, log analysis, performance optimization, change risk assessment, and more.",
+    "description": "Your AI-powered intelligent ops assistant. I can help you with system health analysis, fault diagnosis, knowledge Q&A, report generation, and more.",
     "creatingSession": "Creating session...",
     "askAnything": "Describe your ops question or scenario...",
     "failedToCreateSession": "Failed to create session: {{error}}",
