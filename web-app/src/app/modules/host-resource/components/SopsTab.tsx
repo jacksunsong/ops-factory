@@ -1022,7 +1022,7 @@ export function SopsTab() {
     }, [sops, searchTerm])
 
     return (
-        <>
+        <div className="hr-type-tab-content">
             <section className="knowledge-section-card sop-workflow-section-card">
                 <div className="knowledge-section-header sop-workflow-section-header">
                     <div>
@@ -1156,6 +1156,6 @@ export function SopsTab() {
                     onSave={handleSaveSop}
                 />
             )}
-        </>
+        </div>
     )
 }

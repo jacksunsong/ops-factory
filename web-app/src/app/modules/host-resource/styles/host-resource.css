@@ -60,7 +60,7 @@
 .hr-cards-area {
     flex: 1;
     min-height: 0;
-    overflow-y: visible;
+    overflow-y: auto;
     padding: var(--spacing-2, 8px);
     display: flex;
     flex-direction: column;
@@ -70,6 +70,7 @@
 .hr-topology-area {
     flex: 1;
     min-height: 0;
+    overflow-y: auto;
     border-top: 1px solid var(--border-color, #e2e8f0);
     position: relative;
 }
