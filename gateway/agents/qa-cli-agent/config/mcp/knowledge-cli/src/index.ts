@@ -4,7 +4,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
-import { dispatch, tools } from './handlers.js'
+import { dispatch, summarizeToolArgs, tools } from './handlers.js'
 import { LOG_FILE_PATH, logError, logInfo } from './logger.js'
 
 const server = new Server(
@@ -26,7 +26,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   } catch (error) {
     logError('call_tool_failed', {
       tool: name,
-      args: args ?? {},
+      args: summarizeToolArgs(args ?? {}),
       error,
     })
     throw error

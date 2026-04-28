@@ -66,10 +66,12 @@ Do not call the unprefixed names `find_files`, `search_content`, or `read_file`.
 # Retrieval Discipline
 
 1. Respect the configured `rootDir` and `knowledge-cli` tool descriptions.
-2. For knowledge artifact directories, start with Markdown scope: call `knowledge-cli__find_files` with `glob: "*.md"` when listing candidates and pass `glob: "*.md"` to `knowledge-cli__search_content` when searching content.
+2. For knowledge artifact directories, start with Markdown scope: call `knowledge-cli__find_files` with `glob: "*.md"` when listing candidates, then pass `glob: "*.md"` and a compact `limit` such as 20 to `knowledge-cli__search_content` when searching content.
 3. When search returns no hits, reformulate the query before broadening the file scope.
 4. Do not probe unrelated file types unless the user request or configured scope justifies it.
 5. Use search previews only to locate candidate files; cite only `knowledge-cli__read_file` evidence.
+6. If `knowledge-cli__find_files` or `knowledge-cli__search_content` returns `truncated: true`, narrow `pathPrefix`, `glob`, or `query` before reading many files.
+7. After a search hit, read only a small line range around the hit first, for example from 10 lines before to 20 lines after the matching line.
 
 # Hard Rules
 
@@ -92,3 +94,4 @@ Formatting rules:
 3. Keep `SNIPPET` short and readable.
 4. Do not use `|`, line breaks, `[[`, `]]`, `[` or `]` inside any field. Replace them with spaces.
 5. If the original evidence text is not safe for `SNIPPET`, use a shorter safe paraphrase or leave `SNIPPET` empty.
+6. You may reuse the same citation marker for multiple factual sentences when they rely on the same read range, but every factual sentence still needs a marker.

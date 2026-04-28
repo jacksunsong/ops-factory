@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import os from 'node:os'
 import path from 'node:path'
-import { mkdtemp, mkdir, writeFile, rm, realpath } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, rm, realpath, symlink } from 'node:fs/promises'
 import { extractConfiguredRootDir, handleFindFiles, handleReadFile, handleSearchContent } from './handlers.js'
 
 async function withTempRoot(run: (rootDir: string) => Promise<void>) {
@@ -48,6 +48,32 @@ test('find_files lists matching files within the configured root', async () => {
   })
 })
 
+test('find_files rejects unsafe glob patterns', async () => {
+  await withTempRoot(async () => {
+    await assert.rejects(
+      handleFindFiles({ glob: '../*.md' }),
+      /Invalid glob pattern/,
+    )
+    await assert.rejects(
+      handleFindFiles({ glob: '!*.md' }),
+      /Invalid glob pattern/,
+    )
+  })
+})
+
+test('find_files reports truncated results when limit is reached', async () => {
+  await withTempRoot(async (rootDir) => {
+    await writeFile(path.join(rootDir, 'a.md'), 'a\n', 'utf8')
+    await writeFile(path.join(rootDir, 'b.md'), 'b\n', 'utf8')
+    await writeFile(path.join(rootDir, 'c.md'), 'c\n', 'utf8')
+
+    const result = JSON.parse(await handleFindFiles({ glob: '*.md', limit: 2 }))
+
+    assert.equal(result.total, 2)
+    assert.equal(result.truncated, true)
+  })
+})
+
 test('search_content finds text hits and returns absolute file paths', async () => {
   await withTempRoot(async (rootDir) => {
     const resolvedRoot = await realpath(rootDir)
@@ -64,6 +90,31 @@ test('search_content finds text hits and returns absolute file paths', async () 
   })
 })
 
+test('search_content handles queries that start with a dash', async () => {
+  await withTempRoot(async (rootDir) => {
+    const resolvedRoot = await realpath(rootDir)
+    const filePath = path.join(resolvedRoot, 'dash.md')
+    await writeFile(filePath, '- starts with dash\nnormal line\n', 'utf8')
+
+    const result = JSON.parse(await handleSearchContent({ query: '- starts', glob: '*.md' }))
+
+    assert.equal(result.total, 1)
+    assert.equal(result.hits[0].path, filePath)
+    assert.equal(result.hits[0].line, 1)
+  })
+})
+
+test('search_content reports truncated results when limit is reached', async () => {
+  await withTempRoot(async (rootDir) => {
+    await writeFile(path.join(rootDir, 'one.md'), 'needle 1\nneedle 2\nneedle 3\n', 'utf8')
+
+    const result = JSON.parse(await handleSearchContent({ query: 'needle', glob: '*.md', limit: 2 }))
+
+    assert.equal(result.total, 2)
+    assert.equal(result.truncated, true)
+  })
+})
+
 test('search_content limits hits by glob when provided', async () => {
   await withTempRoot(async (rootDir) => {
     const resolvedRoot = await realpath(rootDir)
@@ -76,6 +127,22 @@ test('search_content limits hits by glob when provided', async () => {
 
     assert.equal(result.total, 1)
     assert.equal(result.hits[0].path, markdownPath)
+  })
+})
+
+test('search_content searches files hidden by ignore rules', async () => {
+  await withTempRoot(async (rootDir) => {
+    const resolvedRoot = await realpath(rootDir)
+    const artifactDir = path.join(rootDir, 'knowledge-service', 'data', 'artifacts', 'src_1', 'doc_1')
+    await mkdir(artifactDir, { recursive: true })
+    await writeFile(path.join(rootDir, '.gitignore'), 'knowledge-service/data/**\n', 'utf8')
+    const contentPath = path.join(resolvedRoot, 'knowledge-service', 'data', 'artifacts', 'src_1', 'doc_1', 'content.md')
+    await writeFile(contentPath, '## 接口日志信息表(t_staticlog)\n', 'utf8')
+
+    const result = JSON.parse(await handleSearchContent({ query: 't_staticlog', glob: '*.md' }))
+
+    assert.equal(result.total, 1)
+    assert.equal(result.hits[0].path, contentPath)
   })
 })
 
@@ -160,5 +227,20 @@ test('read_file rejects paths outside the configured root', async () => {
     )
 
     await rm(outsideFile, { force: true })
+  })
+})
+
+test('find_files rejects pathPrefix symlink escapes', async () => {
+  await withTempRoot(async (rootDir) => {
+    const outsideDir = await mkdtemp(path.join(os.tmpdir(), 'knowledge-cli-outside-'))
+    await writeFile(path.join(outsideDir, 'outside.md'), 'outside\n', 'utf8')
+    await symlink(outsideDir, path.join(rootDir, 'link-out'))
+
+    await assert.rejects(
+      handleFindFiles({ pathPrefix: 'link-out' }),
+      /escapes configured rootDir/,
+    )
+
+    await rm(outsideDir, { recursive: true, force: true })
   })
 })
