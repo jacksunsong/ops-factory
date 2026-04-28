@@ -31,8 +31,9 @@ import os
 import sys
 import time
 import datetime
+import threading
+import uuid
 from pathlib import Path
-from collections import defaultdict
 
 try:
     import requests
@@ -104,21 +105,17 @@ class GatewayClient:
         resp.raise_for_status()
         return resp.json()
 
-    def stop_session(self, agent_id, session_id):
-        url = f"{self.base_url}/gateway/agents/{agent_id}/stop"
-        try:
-            requests.post(
-                url, headers=self._headers(),
-                json={"session_id": session_id}, timeout=15,
-            )
-        except Exception:
-            pass
+    def stop_session(self, _agent_id, _session_id):
+        # 旧版 stop 端点已移除，当前会话生命周期由 gateway/goosed 自行管理。
+        return
 
     def send_reply(self, agent_id, session_id, message):
-        """发送消息并解析 SSE 响应流，返回 (response_text, metrics)"""
-        url = f"{self.base_url}/gateway/agents/{agent_id}/reply"
+        """按当前 gateway 协议执行 reply: 先订阅 events，再提交消息。"""
+        events_url = f"{self.base_url}/gateway/agents/{agent_id}/sessions/{session_id}/events"
+        reply_url = f"{self.base_url}/gateway/agents/{agent_id}/sessions/{session_id}/reply"
+        request_id = str(uuid.uuid4())
         body = {
-            "session_id": session_id,
+            "request_id": request_id,
             "user_message": {
                 "role": "user",
                 "created": int(time.time()),
@@ -137,16 +134,43 @@ class GatewayClient:
         chunk_count = 0
         event_counts = {}
         tool_calls = []
+        submit_error = None
+        submit_response = None
+        events_response = None
+
+        def _submit_reply():
+            nonlocal submit_error, submit_response, events_response
+            try:
+                resp = requests.post(
+                    reply_url,
+                    headers=self._headers(),
+                    json=body,
+                    timeout=self.timeout,
+                )
+                submit_response = resp
+                resp.raise_for_status()
+            except Exception as e:
+                submit_error = e
+                if events_response is not None:
+                    try:
+                        events_response.close()
+                    except Exception:
+                        pass
 
         try:
-            resp = requests.post(
-                url, headers=self._headers(sse=True),
-                json=body, stream=True, timeout=self.timeout,
+            events_response = requests.get(
+                events_url,
+                headers=self._headers(sse=True),
+                stream=True,
+                timeout=(10, self.timeout),
             )
-            resp.raise_for_status()
-            resp.encoding = "utf-8"
+            events_response.raise_for_status()
+            events_response.encoding = "utf-8"
 
-            for raw_line in resp.iter_lines(decode_unicode=True):
+            submit_thread = threading.Thread(target=_submit_reply, daemon=True)
+            submit_thread.start()
+
+            for raw_line in events_response.iter_lines(decode_unicode=True):
                 if raw_line is None:
                     continue
                 elapsed = time.time() - start_time
@@ -162,7 +186,13 @@ class GatewayClient:
                 except json.JSONDecodeError:
                     continue
 
+                event_request_id = event.get("chat_request_id") or event.get("request_id")
+                if event_request_id and event_request_id != request_id:
+                    continue
+
                 event_type = event.get("type", "")
+                if event_type in ("ActiveRequests", "Ping"):
+                    continue
                 event_counts[event_type] = event_counts.get(event_type, 0) + 1
 
                 if event_type == "Message":
@@ -199,9 +229,19 @@ class GatewayClient:
                     ts = event.get("token_state")
                     if ts:
                         token_state = ts
+                    break
 
                 elif event_type == "Error":
                     error_msg = event.get("error", "Unknown error")
+                    break
+
+            submit_thread.join(timeout=2)
+            if submit_error is not None:
+                if isinstance(submit_error, requests.exceptions.HTTPError) and submit_response is not None:
+                    submit_text = submit_response.text.strip()
+                    error_msg = f"提交失败 ({submit_response.status_code}): {submit_text or submit_response.reason}"
+                else:
+                    error_msg = f"提交失败: {submit_error}"
 
         except requests.exceptions.Timeout:
             error_msg = f"请求超时 ({self.timeout}s)"
@@ -209,6 +249,12 @@ class GatewayClient:
             error_msg = f"连接错误: {e}"
         except Exception as e:
             error_msg = f"异常: {e}"
+        finally:
+            if events_response is not None:
+                try:
+                    events_response.close()
+                except Exception:
+                    pass
 
         total_time = time.time() - start_time
         output_tokens = token_state.get("outputTokens", 0)

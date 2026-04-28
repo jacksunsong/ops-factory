@@ -122,6 +122,7 @@ interface ChatInputProps {
     onUploadFile?: (file: File) => Promise<{ path: string }>
     disabled?: boolean
     isGenerating?: boolean
+    canQuickContinue?: boolean
     placeholder?: string
     autoFocus?: boolean
     selectedAgent?: string
@@ -141,6 +142,7 @@ export default function ChatInput({
     onUploadFile,
     disabled = false,
     isGenerating = false,
+    canQuickContinue = false,
     placeholder = "Type a message...",
     autoFocus = false,
     selectedAgent = '',
@@ -573,10 +575,10 @@ export default function ChatInput({
     const isAnyFileLoading = uploadedFiles.some(f => f.isLoading)
 
     const handleQuickContinue = useCallback(() => {
-        if (disabled || isGenerating || isListening || isAnyFileLoading) return
+        if (!canQuickContinue || disabled || isGenerating || isListening || isAnyFileLoading) return
         onSubmit(t('chat.quickContinue'))
         textareaRef.current?.focus()
-    }, [disabled, isGenerating, isListening, isAnyFileLoading, onSubmit, t])
+    }, [canQuickContinue, disabled, isGenerating, isListening, isAnyFileLoading, onSubmit, t])
 
     return (
         <div
@@ -816,14 +818,14 @@ export default function ChatInput({
 
                 {(() => {
                     const showMic = !hasContent && !isGenerating && !isListening && voiceSupported
-                    const canQuickContinue = !(disabled || isGenerating || isListening || isAnyFileLoading)
+                    const quickContinueEnabled = canQuickContinue && !(disabled || isGenerating || isListening || isAnyFileLoading)
                     return (
                         <div className="chat-send-actions">
                             <button
                                 type="button"
                                 className="chat-quick-continue-btn"
                                 onClick={handleQuickContinue}
-                                disabled={!canQuickContinue}
+                                disabled={!quickContinueEnabled}
                                 aria-label={t('chat.quickContinue')}
                                 title={t('chat.quickContinue')}
                             >

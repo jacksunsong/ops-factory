@@ -147,6 +147,7 @@ export default function HomePage() {
                 <ChatInput
                     onSubmit={handleInputSubmit}
                     disabled={!isConnected || isCreatingSession || !selectedAgent}
+                    canQuickContinue={false}
                     placeholder={isCreatingSession ? t('home.creatingSession') : t('home.askAnything')}
                     autoFocus
                     selectedAgent={selectedAgent}

@@ -864,6 +864,7 @@ export default function Chat() {
                         onUploadFile={handleUploadFile}
                         disabled={locatorState.kind !== 'ready' || isLoading || !isConnected || isCreatingSession}
                         isGenerating={isLoading}
+                        canQuickContinue={messages.length > 0}
                         onStopGeneration={handleStopMessage}
                         placeholder={isCreatingSession ? t('chat.switchingAgent') : isLoading ? t('chat.waitingForResponse') : t('chat.typePlaceholder')}
                         autoFocus
