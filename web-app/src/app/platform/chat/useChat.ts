@@ -481,6 +481,7 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
     const requestListenersRef = useRef<Map<string, Set<SessionEventHandler>>>(new Map())
     const activeRequestUnsubscribeRef = useRef<(() => void) | null>(null)
     const cancelRequestedRef = useRef(false)
+    const locallyCancelledRequestIdsRef = useRef<Set<string>>(new Set())
     const streamErrorRef = useRef<string | null>(null)
     const [outputFilesEvent, setOutputFilesEvent] = useState<OutputFilesEvent | null>(null)
 
@@ -538,6 +539,7 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
         currentRequestIdRef.current = null
         isStreamingRef.current = false
         cancelRequestedRef.current = false
+        locallyCancelledRequestIdsRef.current.clear()
         streamErrorRef.current = null
         submitAbortControllerRef.current = null
         sessionEventsControllerRef.current = null
@@ -713,10 +715,22 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
     }, [addRequestListener, finishLocalRequest, processSessionEvent])
 
     const handleActiveRequests = useCallback((requestIds: string[]) => {
-        if (!requestIds.length) return
+        const locallyCancelledRequestIds = locallyCancelledRequestIdsRef.current
+        if (!requestIds.length) {
+            locallyCancelledRequestIds.clear()
+            return
+        }
         if (currentRequestIdRef.current) return
 
-        const requestId = requestIds[0]
+        for (const requestId of Array.from(locallyCancelledRequestIds)) {
+            if (!requestIds.includes(requestId)) {
+                locallyCancelledRequestIds.delete(requestId)
+            }
+        }
+
+        const requestId = requestIds.find(id => !locallyCancelledRequestIds.has(id))
+        if (!requestId) return
+
         currentRequestIdRef.current = requestId
         isStreamingRef.current = true
         cancelRequestedRef.current = false
@@ -902,35 +916,20 @@ export function useChat({ sessionId, client }: UseChatOptions): UseChatReturn {
 
         if (currentRequestIdRef.current) {
             const requestId = currentRequestIdRef.current
-            cancelRequestedRef.current = true
-            dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Cancelling })
-            submitAbortControllerRef.current?.abort()
-            try {
-                await client.cancelSessionReply(sessionId, requestId)
-                console.info('[chat-stop] session request cancel submitted', { sessionId, requestId })
-                return true
-            } catch (err) {
-                cancelRequestedRef.current = false
-                const sessionError = toChatSessionError(err, {
-                    sessionId,
-                    requestId,
-                    code: 'gateway_goosed_unavailable',
-                    retryable: true,
-                    suggestedActions: ['cancel', 'wait', 'retry'],
+            locallyCancelledRequestIdsRef.current.add(requestId)
+            finishLocalRequest({ cancelled: true })
+            void client.cancelSessionReply(sessionId, requestId)
+                .then(() => {
+                    console.info('[chat-stop] session request cancel submitted', { sessionId, requestId })
                 })
-                console.warn('[chat-stop] session request cancel failed', {
-                    sessionId,
-                    requestId,
-                    error: err instanceof Error ? err.message : String(err),
+                .catch(err => {
+                    console.warn('[chat-stop] session request cancel failed', {
+                        sessionId,
+                        requestId,
+                        error: err instanceof Error ? err.message : String(err),
+                    })
                 })
-                if (isMountedRef.current) {
-                    streamErrorRef.current = sessionError.fallback
-                    dispatch({ type: 'SET_ERROR', payload: sessionError.fallback })
-                    dispatch({ type: 'SET_SESSION_ERROR', payload: sessionError })
-                    dispatch({ type: 'SET_CHAT_STATE', payload: ChatState.Reconnecting })
-                }
-                return false
-            }
+            return true
         }
 
         submitAbortControllerRef.current?.abort()

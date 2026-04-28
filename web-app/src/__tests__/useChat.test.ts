@@ -305,7 +305,7 @@ describe('useChat — session event state machine', () => {
         })
     })
 
-    it('keeps cancellation pending until an event confirms the request ended', async () => {
+    it('clears cancellation locally without waiting for a terminal event', async () => {
         let submittedRequestId = ''
         const client = {
             submitSessionReply: async (_sessionId: string, request: { request_id: string }) => {
@@ -342,7 +342,8 @@ describe('useChat — session event state machine', () => {
         })
 
         await waitFor(() => {
-            expect(result.current.chatState).toBe(ChatState.Cancelling)
+            expect(result.current.chatState).toBe(ChatState.Cancelled)
+            expect(result.current.isLoading).toBe(false)
         })
 
         vi.useFakeTimers()
@@ -351,10 +352,11 @@ describe('useChat — session event state machine', () => {
         })
         vi.useRealTimers()
 
-        expect(result.current.chatState).toBe(ChatState.Cancelling)
+        expect(result.current.chatState).toBe(ChatState.Cancelled)
+        expect(result.current.isLoading).toBe(false)
     })
 
-    it('keeps cancelling when late ActiveRequests still lists the cancelled request', async () => {
+    it('ignores late ActiveRequests that still list the cancelled request', async () => {
         let submittedRequestId = ''
         let cancelSubmitted = false
         const client = {
@@ -400,11 +402,12 @@ describe('useChat — session event state machine', () => {
         })
 
         await waitFor(() => {
-            expect(result.current.chatState).toBe(ChatState.Cancelling)
+            expect(result.current.chatState).toBe(ChatState.Cancelled)
+            expect(result.current.isLoading).toBe(false)
         })
     })
 
-    it('keeps the active request controllable when cancel submission fails', async () => {
+    it('keeps the UI cancelled when cancel submission fails', async () => {
         let submittedRequestId = ''
         let cancelAttempts = 0
         const client = {
@@ -442,23 +445,24 @@ describe('useChat — session event state machine', () => {
 
         await act(async () => {
             const stopped = await result.current.stopMessage()
-            expect(stopped).toBe(false)
+            expect(stopped).toBe(true)
         })
 
         await waitFor(() => {
-            expect(result.current.chatState).toBe(ChatState.Reconnecting)
-            expect(result.current.isLoading).toBe(true)
-            expect(result.current.sessionError?.suggestedActions).toEqual(['cancel', 'wait', 'retry'])
+            expect(result.current.chatState).toBe(ChatState.Cancelled)
+            expect(result.current.isLoading).toBe(false)
+            expect(result.current.sessionError).toBeNull()
         })
 
         await act(async () => {
-            await result.current.stopMessage()
+            const stoppedAgain = await result.current.stopMessage()
+            expect(stoppedAgain).toBe(false)
         })
 
-        expect(cancelAttempts).toBe(2)
+        expect(cancelAttempts).toBe(1)
     })
 
-    it('confirms cancellation when ActiveRequests no longer lists the request', async () => {
+    it('stays cancelled when ActiveRequests later no longer lists the request', async () => {
         let submittedRequestId = ''
         let cancelSubmitted = false
         const client = {
@@ -506,7 +510,7 @@ describe('useChat — session event state machine', () => {
         })
     })
 
-    it('marks a cancelled request as cancelled only after a terminal event', async () => {
+    it('stays cancelled when a terminal event arrives after local cancellation', async () => {
         let submittedRequestId = ''
         let cancelSubmitted = false
         const client = {
