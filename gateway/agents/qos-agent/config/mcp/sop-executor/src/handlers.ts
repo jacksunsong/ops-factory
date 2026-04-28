@@ -11,6 +11,10 @@ const API_PREFIX = '/gateway'
 const OUTPUT_DIR = process.env.OUTPUT_DIR || './output'
 const MAX_OUTPUT_SIZE = 1_000_000 // 1MB
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 // ---------------------------------------------------------------------------
 // Gateway HTTP helper
 // ---------------------------------------------------------------------------
@@ -505,11 +509,11 @@ export async function handleQueryHostsByScope(params?: {
     )
     let clusters = clusterData.clusters ?? []
 
-    // Further filter by clusterName (fuzzy match)
+    // Further filter by clusterName (word-boundary match to avoid prefix conflicts)
     if (clusterName) {
-      const lowerClusterName = clusterName.toLowerCase()
+      const pattern = new RegExp('\\b' + escapeRegex(clusterName) + '\\b', 'i')
       clusters = clusters.filter((c: Record<string, unknown>) =>
-        String(c.name ?? '').toLowerCase().includes(lowerClusterName),
+        pattern.test(String(c.name ?? '')),
       )
     }
 

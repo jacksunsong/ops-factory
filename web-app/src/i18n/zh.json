@@ -2211,7 +2211,7 @@
     "clusterHostsTitle": "集群主机",
     "selectClusterToViewHosts": "点击左侧拓扑中的集群节点后，在这里查看该集群包含的主机",
     "noHostsInCluster": "当前集群下暂无主机",
-    "clusterInsightTitle": "集群观察",
+    "clusterInsightTitle": "集群概览",
     "selectClusterToInspect": "点击左侧拓扑中的集群节点后，在这里查看该集群的关系与结构摘要",
     "viewHostsAbove": "在上方查看主机",
     "viewingHostsAbove": "上方已显示主机",

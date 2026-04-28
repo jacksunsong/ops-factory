@@ -79,10 +79,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 const data = await res.json()
                 setRole(data.role ?? 'user')
             } else {
-                setRole(uid === 'admin' ? 'admin' : 'user')
+                setRole('user')
             }
         } catch {
-            setRole(uid === 'admin' ? 'admin' : 'user')
+            setRole('user')
         }
     }, [])
 

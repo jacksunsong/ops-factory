@@ -37,6 +37,7 @@ public class GatewayProperties {
     private FileBrowser files = new FileBrowser();
     private SkillMarket skillMarket = new SkillMarket();
     private Knowledge knowledge = new Knowledge();
+    private List<String> adminUsers = List.of("admin");
 
     // ---- Getters / Setters ----
 
@@ -194,6 +195,14 @@ public class GatewayProperties {
 
     public void setKnowledge(Knowledge knowledge) {
         this.knowledge = knowledge;
+    }
+
+    public List<String> getAdminUsers() {
+        return adminUsers;
+    }
+
+    public void setAdminUsers(List<String> adminUsers) {
+        this.adminUsers = adminUsers;
     }
 
     public Path getConfigPath() {

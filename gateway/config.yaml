@@ -8,6 +8,7 @@ gateway:
   cors-origin: '*'
   goosed-bin: goosed
   goose-tls: true
+  admin-users: [admin, aiops]
   paths: {project-root: .., agents-dir: agents, users-dir: users}
   idle: {timeout-minutes: 15, check-interval-ms: 60000}
   sse: {first-byte-timeout-sec: 120, idle-timeout-sec: 300, max-duration-sec: 600}

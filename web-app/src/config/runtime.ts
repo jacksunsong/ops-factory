@@ -166,9 +166,8 @@ export async function initializeRuntimeConfig(): Promise<void> {
     setRuntimeConfig(config)
 }
 
-export function isAdminUser(userId: string | null, role: UserRole | null): boolean {
-    if (role === 'admin') return true
-    return userId === 'admin'
+export function isAdminUser(_userId: string | null, role: UserRole | null): boolean {
+    return role === 'admin'
 }
 
 /** Build gateway request headers with secret key and optional user ID. */

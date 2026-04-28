@@ -2211,7 +2211,7 @@
     "clusterHostsTitle": "Cluster Hosts",
     "selectClusterToViewHosts": "Click a cluster node in the topology to inspect the hosts contained in that cluster here.",
     "noHostsInCluster": "No hosts are attached to this cluster yet",
-    "clusterInsightTitle": "Cluster Insight",
+    "clusterInsightTitle": "Cluster Overview",
     "selectClusterToInspect": "Click a cluster node in the topology to inspect its relationship and structure summary here.",
     "viewHostsAbove": "View Hosts Above",
     "viewingHostsAbove": "Hosts Already Shown Above",
