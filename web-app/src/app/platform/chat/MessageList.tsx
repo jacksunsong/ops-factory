@@ -67,6 +67,29 @@ const mergeDetectedFiles = (existing: DetectedFile[], incoming: DetectedFile[]):
     return order.map(key => byKey.get(key)!)
 }
 
+const messageIdentityIds = (message: ChatMessage): string[] => {
+    const ids = new Set<string>()
+    if (message.id) ids.add(message.id)
+    for (const id of message.metadata?.sourceMessageIds ?? []) {
+        if (id) ids.add(id)
+    }
+    return Array.from(ids)
+}
+
+function getMessageOutputFiles(
+    message: ChatMessage,
+    messageOutputFiles: Map<string, DetectedFile[]>
+): DetectedFile[] | undefined {
+    const files: DetectedFile[] = []
+    for (const id of messageIdentityIds(message)) {
+        const matched = messageOutputFiles.get(id)
+        if (matched) {
+            files.push(...matched)
+        }
+    }
+    return files.length > 0 ? mergeDetectedFiles([], files) : undefined
+}
+
 function hasOnlyToolResponse(message: ChatMessage): boolean {
     return message.role === 'user' &&
         message.content.length > 0 &&
@@ -106,6 +129,7 @@ function buildDisplayMessages(messages: ChatMessage[]): ChatMessage[] {
         let nextIndex = i
         let sawToolRequest = false
         const mergedContent = [...message.content]
+        const sourceMessageIds = message.id ? [message.id] : []
 
         if (hasToolRequest(message)) {
             sawToolRequest = true
@@ -115,6 +139,9 @@ function buildDisplayMessages(messages: ChatMessage[]): ChatMessage[] {
             const nextMessage = messages[nextIndex + 1]
 
             if (hasOnlyToolResponse(nextMessage)) {
+                if (nextMessage.id) {
+                    sourceMessageIds.push(nextMessage.id)
+                }
                 nextIndex += 1
                 continue
             }
@@ -129,6 +156,9 @@ function buildDisplayMessages(messages: ChatMessage[]): ChatMessage[] {
                     nextHasDisplayText
 
                 if (canMergeFinalAnswer) {
+                    if (nextMessage.id) {
+                        sourceMessageIds.push(nextMessage.id)
+                    }
                     mergedContent.push(...nextMessage.content)
                     nextIndex += 1
                 }
@@ -140,6 +170,9 @@ function buildDisplayMessages(messages: ChatMessage[]): ChatMessage[] {
                 sawToolRequest = true
             }
 
+            if (nextMessage.id) {
+                sourceMessageIds.push(nextMessage.id)
+            }
             mergedContent.push(...nextMessage.content)
             nextIndex += 1
         }
@@ -149,6 +182,10 @@ function buildDisplayMessages(messages: ChatMessage[]): ChatMessage[] {
                 ...message,
                 id: message.id || `merged-chain-${i}`,
                 content: mergedContent,
+                metadata: {
+                    ...(message.metadata || {}),
+                    sourceMessageIds,
+                },
             })
             i = nextIndex
             continue
@@ -428,6 +465,7 @@ export default function MessageList({
     return (
         <div className="chat-messages" ref={containerRef}>
             {displayMessages.map((message, index) => {
+                const outputFiles = getMessageOutputFiles(message, messageOutputFiles)
                 const isLastAssistant =
                     isLoading &&
                     message.role === 'assistant' &&
@@ -436,7 +474,7 @@ export default function MessageList({
                     message.role === 'assistant' &&
                     !!message.id &&
                     message.id === finalAssistantTextMessageId
-                const hasOutputFiles = !!message.id && messageOutputFiles.has(message.id)
+                const hasOutputFiles = !!outputFiles?.length
                 const isContinuation =
                     message.role === 'assistant' &&
                     index > 0 &&
@@ -465,7 +503,7 @@ export default function MessageList({
                             onCancelRequest={message.role === 'assistant' && index === displayMessages.length - 1 ? onCancelRequest : undefined}
                             sourceDocuments={isFinalAssistantResponse ? sourceDocuments : undefined}
                             fetchedDocuments={isFinalAssistantResponse ? fetchedDocuments : undefined}
-                            outputFiles={message.id ? messageOutputFiles.get(message.id) : undefined}
+                            outputFiles={outputFiles}
                             showFileCapsules={hasOutputFiles}
                             showDateInTimestamp={showDateInTimestamp}
                             isContinuation={isContinuation}

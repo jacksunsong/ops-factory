@@ -488,6 +488,103 @@ describe('MessageList tool error rendering', () => {
         })
     })
 
+    it('restores output file capsules when the persisted id belongs to a merged final answer', async () => {
+        const fetchMock = vi.fn((input: RequestInfo | URL) => {
+            const url = String(input)
+            if (url.includes('/config')) {
+                return Promise.resolve({ ok: false }) as Promise<Response>
+            }
+            if (url.includes('/file-capsules')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: async () => ({
+                        entries: {
+                            'gen-1777386391-Z5uapXjSllauI4F0BQjr': [{
+                                path: 'example.md',
+                                name: 'example.md',
+                                ext: 'md',
+                                rootId: 'workingDir',
+                                displayPath: 'example.md',
+                            }],
+                        },
+                    }),
+                }) as Promise<Response>
+            }
+            return Promise.resolve({ ok: true, json: async () => ({}) }) as Promise<Response>
+        })
+        vi.stubGlobal('fetch', fetchMock)
+
+        const messages: ChatMessage[] = [
+            {
+                id: 'msg_20260428_2_1f25c68c-3454-4d42-aa0a-2c611a8eb1d9',
+                role: 'user',
+                content: [{ type: 'text', text: '随便输出一个 md 文件' }],
+            },
+            {
+                id: 'gen-1777386384-TVNvBJlFddfstgvMjdrn',
+                role: 'assistant',
+                content: [
+                    { type: 'thinking', thinking: '用户要求输出一个 md 文件', signature: '' },
+                    { type: 'text', text: '我来为你创建一个简单的 markdown 文件：' },
+                ],
+            },
+            {
+                id: 'msg_8150af22-1207-4cbe-befd-8458b13c15b4',
+                role: 'assistant',
+                content: [{ type: 'thinking', thinking: '准备写入文件', signature: '' }],
+            },
+            {
+                id: 'msg_67b4c79b-41bf-44eb-ab8d-ddd4e9275bb9',
+                role: 'assistant',
+                content: [
+                    { type: 'thinking', thinking: '调用写文件工具', signature: '' },
+                    {
+                        type: 'toolRequest',
+                        id: 'call_ec5140b3a82046f29905a5e5',
+                        toolCall: {
+                            status: 'success',
+                            value: {
+                                name: 'write',
+                                arguments: { path: 'example.md' },
+                            },
+                        },
+                    },
+                ],
+            },
+            {
+                id: 'msg_3763c20b-8ac6-4148-b3c9-a730f177caff',
+                role: 'user',
+                content: [
+                    {
+                        type: 'toolResponse',
+                        id: 'call_ec5140b3a82046f29905a5e5',
+                        toolResult: {
+                            status: 'success',
+                            value: {
+                                content: [{ type: 'text', text: 'Created example.md' }],
+                            },
+                        },
+                    },
+                ],
+            },
+            {
+                id: 'gen-1777386391-Z5uapXjSllauI4F0BQjr',
+                role: 'assistant',
+                content: [{ type: 'text', text: '已创建示例 Markdown 文件：example.md' }],
+            },
+        ]
+
+        const { container } = renderMessageListWithPreview(messages, {
+            agentId: 'universal-agent',
+            sessionId: '20260428_2',
+        })
+
+        await waitFor(() => {
+            expect(container.querySelector('.file-capsule')).toBeTruthy()
+            expect(screen.getByText('example.md')).toBeTruthy()
+        })
+    })
+
     it('merges live output files with existing persisted capsules for the same message', async () => {
         const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
             const url = String(input)
