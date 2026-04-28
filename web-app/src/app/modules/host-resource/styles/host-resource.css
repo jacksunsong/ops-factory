@@ -7,6 +7,11 @@
     --hr-topology-cluster-accent: #14b8a6;
     --hr-topology-host-accent: #3b82f6;
     --hr-topology-business-accent: #8b5cf6;
+    --hr-font-size-xs: 0.8125rem;
+    --hr-font-size-sm: 0.875rem;
+    --hr-font-size-md: 0.9375rem;
+    --hr-font-size-lg: 1rem;
+    --hr-font-size-xl: 1.125rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -102,14 +107,14 @@
 
 .hr-topology-pane-title {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--hr-font-size-lg);
     font-weight: 600;
     color: var(--text-primary, #0f172a);
 }
 
 .hr-topology-pane-subtitle {
     margin: 4px 0 0;
-    font-size: 12px;
+    font-size: var(--hr-font-size-sm);
     color: var(--text-secondary, #64748b);
 }
 
@@ -144,13 +149,13 @@
 
 .hr-cluster-host-panel-placeholder h3 {
     margin: 0;
-    font-size: 15px;
+    font-size: var(--hr-font-size-xl);
     color: var(--text-primary, #0f172a);
 }
 
 .hr-cluster-host-panel-placeholder p {
     margin: 0;
-    font-size: 12px;
+    font-size: var(--hr-font-size-sm);
 }
 
 .hr-cluster-host-panel-header {
@@ -168,13 +173,13 @@
 }
 
 .hr-cluster-host-panel-eyebrow {
-    font-size: 12px;
+    font-size: var(--hr-font-size-sm);
     color: var(--text-secondary, #64748b);
 }
 
 .hr-cluster-host-panel-title {
     margin: 2px 0 0;
-    font-size: 16px;
+    font-size: var(--hr-font-size-xl);
     font-weight: 600;
     color: var(--text-primary, #0f172a);
 }
@@ -190,7 +195,7 @@
     align-items: center;
     padding: 4px 10px;
     border-radius: 999px;
-    font-size: 12px;
+    font-size: var(--hr-font-size-xs);
     color: var(--text-secondary, #475569);
     background: var(--color-fill-tertiary, #f1f5f9);
 }
@@ -215,12 +220,12 @@
 }
 
 .hr-cluster-host-panel-field span {
-    font-size: 12px;
+    font-size: var(--hr-font-size-xs);
     color: var(--text-secondary, #64748b);
 }
 
 .hr-cluster-host-panel-field strong {
-    font-size: 13px;
+    font-size: var(--hr-font-size-sm);
     color: var(--text-primary, #0f172a);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -242,7 +247,7 @@
     border-radius: 10px;
     padding: var(--spacing-5, 20px);
     text-align: center;
-    font-size: 12px;
+    font-size: var(--hr-font-size-sm);
     color: var(--text-secondary, #64748b);
     background: var(--color-fill-tertiary, #f8fafc);
 }
@@ -570,7 +575,7 @@
     padding: var(--spacing-4);
     color: var(--text-secondary, #64748b);
     text-align: center;
-    font-size: 0.875rem;
+    font-size: var(--hr-font-size-sm);
 }
 
 .hr-tree-node-wrapper {
@@ -583,7 +588,7 @@
     gap: var(--spacing-1);
     padding: 6px 8px;
     cursor: pointer;
-    font-size: 0.8125rem;
+    font-size: var(--hr-font-size-sm);
     color: var(--text-primary, #1e293b);
     border-radius: 4px;
     margin: 1px 4px;
@@ -706,7 +711,7 @@
 }
 
 .hr-tree-subtitle {
-    font-size: 0.75rem;
+    font-size: var(--hr-font-size-xs);
     color: var(--text-secondary, #94a3b8);
     margin-left: auto;
     padding-left: var(--spacing-2);
@@ -743,7 +748,7 @@
     color: var(--text-secondary, #64748b);
     cursor: pointer;
     border-radius: 3px;
-    font-size: 0.75rem;
+    font-size: var(--hr-font-size-xs);
     padding: 0;
     line-height: 1;
 }
@@ -762,8 +767,8 @@
 
 .hr-host-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-1, 4px);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-4, 16px);
 }
 
 .hr-empty {
@@ -775,11 +780,25 @@
 .hr-host-card {
     background: var(--color-bg-secondary, var(--surface-background, #fff));
     border: 1px solid var(--color-border, var(--border-color, #e2e8f0));
-    border-radius: 6px;
-    padding: 8px;
+    border-radius: 10px;
+    padding: 12px;
     cursor: pointer;
-    transition: border-color 0.15s, box-shadow 0.15s;
-
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    font-family: var(
+        --hr-card-font-family,
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        'PingFang SC',
+        'Hiragino Sans GB',
+        'Microsoft YaHei',
+        sans-serif
+    );
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
 }
 
 @media (max-width: 1280px) {
@@ -819,104 +838,240 @@
 
 .hr-host-card:hover {
     border-color: var(--color-primary, #3b82f6);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
 }
 
 .hr-host-card-selected {
     border-color: var(--color-primary, #3b82f6);
-    box-shadow: 0 0 0 1px var(--color-primary, #3b82f6), 0 1px 4px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 1px var(--color-primary, #3b82f6), 0 14px 32px rgba(59, 130, 246, 0.16);
 }
 
 .hr-host-card-header {
-    margin-bottom: 4px;
+    min-width: 0;
 }
 
-.hr-host-card-title-row {
+.hr-host-card-title-block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.hr-host-card-title-line {
     display: flex;
     align-items: baseline;
-    gap: var(--spacing-1, 4px);
+    gap: 8px;
+    min-width: 0;
+}
+
+.hr-host-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.hr-host-card-tag {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    min-height: 20px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--border-color, #cbd5e1) 92%, white);
+    background: var(--color-fill-tertiary, #f8fafc);
+    color: var(--text-secondary, #475569);
+    font-size: var(--hr-font-size-xs);
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hr-host-card-tag-role-primary {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.hr-host-card-tag-role-backup {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #92400e;
 }
 
 .hr-host-card-name {
     margin: 0;
-    font-size: 0.8125rem;
+    font-size: var(--hr-font-size-lg);
     font-weight: 600;
-    color: var(--text-primary, #1e293b);
+    line-height: 1.3;
+    color: var(--text-primary, #0f172a);
+    flex: 0 1 auto;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .hr-host-card-desc {
-    font-size: 0.6875rem;
+    margin: 0;
+    font-size: var(--hr-font-size-xs);
     color: var(--text-secondary, #64748b);
-    line-height: 1.3;
+    line-height: 1.4;
+    flex: 1 1 auto;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* 2-column meta grid */
 .hr-host-card-meta {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1px 6px;
-    margin-bottom: 4px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
 }
 
 .hr-host-card-meta-field {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 2px;
+    min-width: 0;
 }
 
 .hr-host-card-meta-label {
-    font-size: 0.625rem;
+    font-size: var(--hr-font-size-xs);
     color: var(--text-secondary, #64748b);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.hr-host-card-meta-value {
-    font-size: 0.75rem;
-    color: var(--text-primary, #1e293b);
-    word-break: break-all;
+    font-weight: 500;
     line-height: 1.3;
 }
 
+.hr-host-card-meta-value {
+    font-size: var(--hr-font-size-sm);
+    color: var(--text-primary, #0f172a);
+    line-height: 1.35;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}
+
 .hr-host-card-mono {
-    font-family: var(--font-mono, 'SF Mono', 'Cascadia Code', monospace);
-    font-size: 0.75rem;
+    font-family: var(
+        --font-mono,
+        'SFMono-Regular',
+        'SF Mono',
+        'Cascadia Code',
+        'JetBrains Mono',
+        'Consolas',
+        'Liberation Mono',
+        monospace
+    );
+}
+
+.hr-host-card-address-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.hr-host-card-result-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    flex-shrink: 0;
+    padding: 0;
+    cursor: help;
+    background: transparent;
+}
+
+.hr-host-card-result-trigger-ok {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #059669;
+}
+
+.hr-host-card-result-trigger-fail {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #ef4444;
 }
 
 .hr-host-card-footer {
     display: flex;
     align-items: center;
-    gap: var(--spacing-1, 4px);
-    padding-top: 3px;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 8px;
     border-top: 1px solid var(--border-color, #e2e8f0);
 }
 
-/* Trash icon button for host card — matches SOP workflow pattern */
-.hr-host-card-delete-btn {
+.hr-host-card-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 28px;
     height: 28px;
     padding: 0;
-    border: none;
-    background: transparent;
+    border: 1px solid transparent;
+    background: var(--color-fill-tertiary, #f8fafc);
     color: var(--text-secondary, #64748b);
     cursor: pointer;
-    border-radius: 4px;
-    margin-left: auto;
-    transition: color 0.15s, background 0.15s;
+    border-radius: 6px;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
-.hr-host-card-delete-btn:hover {
+.hr-host-card-action:hover:not(:disabled) {
+    color: var(--color-primary, #2563eb);
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    transform: translateY(-1px);
+}
+
+.hr-host-card-action:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.hr-host-card-action-danger:hover:not(:disabled) {
     color: var(--color-error, #ef4444);
-    background: rgba(239, 68, 68, 0.08);
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+.hr-host-card-action-icon-spinning {
+    animation: hr-host-card-icon-spin 1s linear infinite;
+}
+
+@keyframes hr-host-card-icon-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 1200px) {
+    .hr-host-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .hr-host-card {
+        padding: 10px;
+    }
+
+    .hr-host-card-meta {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* ── Topology ───────────────────────────────────────────── */
@@ -956,7 +1111,7 @@
     align-items: center;
     gap: 6px;
     color: var(--text-secondary, #64748b);
-    font-size: 0.75rem;
+    font-size: var(--hr-font-size-xs);
     font-weight: 600;
     white-space: nowrap;
 }
@@ -1075,7 +1230,7 @@
 
 .hr-detail-panel-header h3 {
     margin: 0;
-    font-size: 1rem;
+    font-size: var(--hr-font-size-xl);
 }
 
 .hr-detail-panel-actions {
@@ -1090,7 +1245,7 @@
 }
 
 .hr-attr-group-title {
-    font-size: 0.8125rem;
+    font-size: var(--hr-font-size-xs);
     color: var(--text-secondary, #64748b);
     margin: 0 0 var(--spacing-2) 0;
     text-transform: uppercase;
@@ -1106,7 +1261,7 @@
 .hr-attr-field {
     display: flex;
     justify-content: space-between;
-    font-size: 0.8125rem;
+    font-size: var(--hr-font-size-sm);
     padding: 2px 0;
 }
 
@@ -1157,7 +1312,7 @@
 }
 
 .hr-section-label {
-    font-size: 0.8125rem;
+    font-size: var(--hr-font-size-xs);
     color: var(--text-secondary, #64748b);
     margin: var(--spacing-3) 0 var(--spacing-2) 0;
     padding-bottom: var(--spacing-1);
@@ -1177,7 +1332,7 @@
 
 .host-resource-create-btn {
     padding: 4px 10px;
-    font-size: 0.75rem;
+    font-size: var(--hr-font-size-xs);
 }
 
 /* ── Pagination ────────────────────────────────────────── */
@@ -1193,7 +1348,7 @@
 }
 
 .hr-pagination-info {
-    font-size: 0.75rem;
+    font-size: var(--hr-font-size-xs);
     color: var(--text-secondary, #64748b);
 }
 
@@ -1205,7 +1360,7 @@
 
 .hr-pagination-btn {
     padding: 2px 8px;
-    font-size: 0.75rem;
+    font-size: var(--hr-font-size-xs);
     border: 1px solid var(--border-color, #e2e8f0);
     border-radius: 4px;
     background: var(--surface-background, #fff);
@@ -1224,7 +1379,7 @@
 }
 
 .hr-pagination-page {
-    font-size: 0.75rem;
+    font-size: var(--hr-font-size-xs);
     color: var(--text-secondary, #64748b);
     min-width: 50px;
     text-align: center;
@@ -1281,7 +1436,7 @@
 }
 
 .hr-type-def-card-name {
-    font-size: 0.9375rem;
+    font-size: var(--hr-font-size-lg);
     font-weight: 600;
     color: var(--text-primary, #1e293b);
     white-space: nowrap;
@@ -1290,14 +1445,14 @@
 }
 
 .hr-type-def-card-desc {
-    font-size: 0.8125rem;
+    font-size: var(--hr-font-size-sm);
     color: var(--text-secondary, #64748b);
     line-height: 1.4;
     margin-bottom: var(--spacing-2, 8px);
 }
 
 .hr-type-def-card-knowledge-label {
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     color: var(--text-secondary, #94a3b8);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1307,7 +1462,7 @@
 }
 
 .hr-type-def-card-knowledge {
-    font-size: 0.75rem;
+    font-size: var(--hr-font-size-xs);
     color: var(--text-secondary, #64748b);
     line-height: 1.4;
     display: -webkit-box;
@@ -1353,7 +1508,7 @@
 }
 
 .hr-type-tab-empty-text {
-    font-size: 0.875rem;
+    font-size: var(--hr-font-size-sm);
 }
 
 /* ── Test Connection Badge ─────────────────────────────── */
@@ -1392,6 +1547,51 @@
 .config-tab-active {
     color: var(--color-text-primary);
     border-bottom-color: var(--color-text-primary);
+}
+
+.host-resource-page .config-tab {
+    font-size: var(--hr-font-size-md);
+}
+
+.host-resource-page .knowledge-section-title,
+.host-resource-page .empty-state-title {
+    font-size: 1.25rem;
+}
+
+.host-resource-page .knowledge-section-description,
+.host-resource-page .empty-state-description,
+.host-resource-page .sop-workflow-muted-text,
+.host-resource-page .sop-workflow-filter-label,
+.host-resource-page .sop-workflow-table tbody td {
+    font-size: var(--hr-font-size-sm);
+}
+
+.host-resource-page .sop-workflow-table thead th,
+.host-resource-page .sop-workflow-code-pill,
+.host-resource-page .sop-workflow-count-pill {
+    font-size: var(--hr-font-size-sm);
+}
+
+.host-resource-page .sop-workflow-meta-tag,
+.host-resource-page .sop-workflow-filter-chip,
+.host-resource-page .hr-test-badge {
+    font-size: var(--hr-font-size-xs);
+}
+
+.hr-type-tab-heading {
+    font-size: var(--hr-font-size-md);
+    font-weight: 500;
+    color: var(--text-secondary, #64748b);
+}
+
+.hr-mode-badge {
+    margin-left: 6px;
+    font-size: 0.75rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
 }
 
 /* ── SOP Workflow Styles (migrated from sop-workflow module) ── */

@@ -85,7 +85,7 @@ export default function BusinessTypeTab({ businessTypes, loading, onCreate, onUp
     return (
         <div className="hr-type-tab-content">
             <div className="hr-type-tab-header">
-                <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary, #64748b)' }}>
+                <span className="hr-type-tab-heading">
                     {t('hostResource.tabBusinessTypes')} ({businessTypes.length})
                 </span>
                 <button className="btn btn-primary btn-sm" onClick={openCreate}>
