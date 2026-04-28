@@ -1,13 +1,26 @@
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import YAML from 'yaml'
+import { LOG_FILE_PATH, logError, logInfo } from './logger.js'
+
 const KNOWLEDGE_SERVICE_URL = process.env.KNOWLEDGE_SERVICE_URL || 'http://127.0.0.1:8092'
 const KNOWLEDGE_REQUEST_TIMEOUT_MS = parseInt(process.env.KNOWLEDGE_REQUEST_TIMEOUT_MS || '15000', 10)
 const KNOWLEDGE_FETCH_MAX_NEIGHBOR_WINDOW = 2
 const CONFIG_FILE_PATH = fileURLToPath(new URL('../../../config.yaml', import.meta.url))
-
 const API_PREFIX = '/knowledge'
-import { LOG_FILE_PATH, logError, logInfo } from './logger.js'
+
+type ToolArgs = Record<string, unknown>
+
+interface KnowledgeSettings {
+  sourceId: string | null
+}
+
+interface KnowledgeSearchBody {
+  query: string
+  sourceIds: string[]
+  documentIds: unknown[]
+  topK: unknown
+}
 
 export { LOG_FILE_PATH }
 
@@ -68,7 +81,7 @@ export const tools = [
   },
 ]
 
-async function readSettings() {
+async function readSettings(): Promise<KnowledgeSettings> {
   try {
     const content = await readFile(CONFIG_FILE_PATH, 'utf-8')
     const parsed = YAML.parse(content)
@@ -83,19 +96,19 @@ async function readSettings() {
   }
 }
 
-async function normalizeSourceIds(sourceIds) {
+async function normalizeSourceIds(sourceIds: unknown): Promise<string[]> {
   if (Array.isArray(sourceIds) && sourceIds.length > 0) {
-    return sourceIds.filter(Boolean)
+    return sourceIds.filter((sourceId): sourceId is string => typeof sourceId === 'string' && sourceId.trim().length > 0)
   }
   const settings = await readSettings()
   return settings.sourceId ? [settings.sourceId] : []
 }
 
-function createTimeoutSignal() {
+function createTimeoutSignal(): AbortSignal {
   return AbortSignal.timeout(Number.isFinite(KNOWLEDGE_REQUEST_TIMEOUT_MS) ? KNOWLEDGE_REQUEST_TIMEOUT_MS : 15000)
 }
 
-async function ks(path, init) {
+async function ks(path: string, init?: RequestInit): Promise<unknown> {
   const startedAt = Date.now()
   const method = init?.method || 'GET'
 
@@ -137,8 +150,8 @@ async function ks(path, init) {
   return data
 }
 
-export async function handleSearch(args) {
-  const query = args.query?.trim()
+export async function handleSearch(args: ToolArgs): Promise<string> {
+  const query = typeof args.query === 'string' ? args.query.trim() : ''
   if (!query) {
     throw new Error('search.query is required')
   }
@@ -156,10 +169,10 @@ export async function handleSearch(args) {
     }, null, 2)
   }
 
-  const body = {
+  const body: KnowledgeSearchBody = {
     query,
     sourceIds,
-    documentIds: args.documentIds || [],
+    documentIds: Array.isArray(args.documentIds) ? args.documentIds : [],
     topK: args.topK ?? 8,
   }
 
@@ -171,14 +184,14 @@ export async function handleSearch(args) {
   return JSON.stringify(result, null, 2)
 }
 
-export async function handleFetch(args) {
-  const chunkId = args.chunkId?.trim()
+export async function handleFetch(args: ToolArgs): Promise<string> {
+  const chunkId = typeof args.chunkId === 'string' ? args.chunkId.trim() : ''
   if (!chunkId) {
     throw new Error('fetch.chunkId is required')
   }
 
   const neighborWindow = args.neighborWindow ?? 1
-  if (!Number.isInteger(neighborWindow) || neighborWindow < 1 || neighborWindow > KNOWLEDGE_FETCH_MAX_NEIGHBOR_WINDOW) {
+  if (!Number.isInteger(neighborWindow) || Number(neighborWindow) < 1 || Number(neighborWindow) > KNOWLEDGE_FETCH_MAX_NEIGHBOR_WINDOW) {
     throw new Error(`fetch.neighborWindow must be an integer between 1 and ${KNOWLEDGE_FETCH_MAX_NEIGHBOR_WINDOW}`)
   }
 
@@ -192,7 +205,7 @@ export async function handleFetch(args) {
   return JSON.stringify(result, null, 2)
 }
 
-export async function dispatch(name, args = {}) {
+export async function dispatch(name: string, args: ToolArgs = {}): Promise<string> {
   const startedAt = Date.now()
   logInfo('tool_dispatch_started', {
     tool: name,

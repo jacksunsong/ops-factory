@@ -42,8 +42,12 @@
 
 实现位于：
 
-- `gateway/agents/qa-agent/config/mcp/knowledge-service/src/index.js`
-- `gateway/agents/qa-agent/config/mcp/knowledge-service/src/handlers.js`
+- `gateway/agents/qa-agent/config/mcp/knowledge-service/src/index.ts`
+- `gateway/agents/qa-agent/config/mcp/knowledge-service/src/handlers.ts`
+
+构建产物入口位于：
+
+- `gateway/agents/qa-agent/config/mcp/knowledge-service/dist/index.js`
 
 注册配置位于：
 
@@ -61,7 +65,7 @@
 
 - `type: stdio`
 - `cmd: node`
-- 入口：`config/mcp/knowledge-service/src/index.js`
+- 入口：`config/mcp/knowledge-service/dist/index.js`
 
 这意味着：
 
@@ -86,7 +90,7 @@ qa-agent process
     |
     +-- start stdio extension: knowledge-service
             |
-            +-- node src/index.js
+            +-- node dist/index.js
                     |
                     +-- register tools: search, fetch
 ```

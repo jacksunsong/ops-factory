@@ -188,38 +188,71 @@ build_gateway() {
     log_info "Build complete"
 }
 
-build_knowledge_cli_mcp() {
-    local mcp_dir="${SERVICE_DIR}/agents/qa-cli-agent/config/mcp/knowledge-cli"
-    local entry="${mcp_dir}/dist/index.js"
+build_node_mcp() {
+    local label="$1"
+    local mcp_dir="$2"
+    local entry="$3"
 
     if [ ! -f "${mcp_dir}/package.json" ]; then
         return 0
     fi
 
-    if [ -f "${entry}" ] && [ -d "${mcp_dir}/node_modules" ]; then
+    local has_build_script
+    has_build_script="$(node -e "const fs=require('fs');const pkg=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.stdout.write(pkg.scripts?.build ? 'true' : 'false')" "${mcp_dir}/package.json")"
+
+    local package_stamp="${mcp_dir}/node_modules/.package-lock.json"
+    local needs_install="false"
+    if [ ! -d "${mcp_dir}/node_modules" ]; then
+        needs_install="true"
+    elif [ ! -f "${package_stamp}" ]; then
+        needs_install="true"
+    elif find "${mcp_dir}/package.json" "${mcp_dir}/package-lock.json" -newer "${package_stamp}" 2>/dev/null | grep -q .; then
+        needs_install="true"
+    fi
+
+    if [ "${has_build_script}" != "true" ] && [ "${needs_install}" != "true" ]; then
+        log_info "${label} MCP dependencies are up-to-date, skipping build"
+        return 0
+    fi
+
+    if [ "${has_build_script}" = "true" ] && [ -f "${entry}" ] && [ -d "${mcp_dir}/node_modules" ] && [ "${needs_install}" != "true" ]; then
         local newest_src
         newest_src="$(find "${mcp_dir}/src" "${mcp_dir}/package.json" "${mcp_dir}/package-lock.json" "${mcp_dir}/tsconfig.json" -newer "${entry}" 2>/dev/null | head -1)"
         if [ -z "${newest_src}" ]; then
-            log_info "Knowledge-Cli MCP is up-to-date, skipping build"
+            log_info "${label} MCP is up-to-date, skipping build"
             return 0
         fi
     fi
 
-    log_info "Building Knowledge-Cli MCP..."
+    log_info "Building ${label} MCP..."
     (
         cd "${mcp_dir}"
-        if [ ! -d "node_modules" ]; then
+        if [ "${needs_install}" = "true" ]; then
             npm install || {
-                log_error "Knowledge-Cli MCP npm install failed"
+                log_error "${label} MCP npm install failed"
                 exit 1
             }
         fi
-        npm run build || {
-            log_error "Knowledge-Cli MCP build failed"
-            exit 1
-        }
+        if [ "${has_build_script}" = "true" ]; then
+            npm run build || {
+                log_error "${label} MCP build failed"
+                exit 1
+            }
+        fi
     ) || return 1
-    log_info "Knowledge-Cli MCP build complete"
+    log_info "${label} MCP build complete"
+}
+
+build_knowledge_service_mcp() {
+    build_node_mcp "Knowledge-Service" \
+        "${SERVICE_DIR}/agents/qa-agent/config/mcp/knowledge-service" \
+        "${SERVICE_DIR}/agents/qa-agent/config/mcp/knowledge-service/dist/index.js"
+}
+
+build_knowledge_cli_mcp() {
+    build_node_mcp "Knowledge-Cli" \
+        "${SERVICE_DIR}/agents/qa-cli-agent/config/mcp/knowledge-cli" \
+        "${SERVICE_DIR}/agents/qa-cli-agent/config/mcp/knowledge-cli/dist/index.js"
 }
 
 # --- Agents (goosed) helpers ---
@@ -303,6 +336,7 @@ do_startup() {
     fi
 
     build_gateway
+    build_knowledge_service_mcp
     build_knowledge_cli_mcp
 
     local jar="${SERVICE_DIR}/gateway-service/target/gateway-service.jar"

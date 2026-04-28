@@ -5,9 +5,11 @@ const LOG_ROOT = process.env.GOOSE_PATH_ROOT || process.cwd()
 const LOG_DIR = join(LOG_ROOT, 'logs', 'mcp')
 export const LOG_FILE_PATH = join(LOG_DIR, 'knowledge_service.log')
 
+type LogDetails = Record<string, unknown>
+
 mkdirSync(LOG_DIR, { recursive: true })
 
-function sanitizeValue(value) {
+function sanitizeValue(value: unknown): unknown {
   if (value instanceof Error) {
     return {
       name: value.name,
@@ -25,8 +27,8 @@ function sanitizeValue(value) {
   }
 }
 
-export function log(level, event, details = {}) {
-  const payload = {
+export function log(level: 'INFO' | 'ERROR', event: string, details: LogDetails = {}): void {
+  const payload: LogDetails = {
     ts: new Date().toISOString(),
     level,
     service: 'knowledge_service',
@@ -43,10 +45,10 @@ export function log(level, event, details = {}) {
   appendFileSync(LOG_FILE_PATH, `${line}\n`, 'utf8')
 }
 
-export function logInfo(event, details) {
+export function logInfo(event: string, details?: LogDetails): void {
   log('INFO', event, details)
 }
 
-export function logError(event, details) {
+export function logError(event: string, details?: LogDetails): void {
   log('ERROR', event, details)
 }

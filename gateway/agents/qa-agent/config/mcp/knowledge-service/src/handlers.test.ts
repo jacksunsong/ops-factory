@@ -3,10 +3,12 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import YAML from 'yaml'
 
-let routes = {}
-let originalFetch
+type RouteMap = Record<string, unknown>
 
-function mockFetch(input, init) {
+let routes: RouteMap = {}
+let originalFetch: typeof globalThis.fetch
+
+function mockFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const url = typeof input === 'string' ? new URL(input) : input instanceof URL ? input : new URL(input.url)
   const key = `${init?.method || 'GET'} ${url.pathname}${url.search}`
 
@@ -37,7 +39,7 @@ const {
   dispatch,
 } = await import('./handlers.js')
 
-async function readConfiguredSourceId() {
+async function readConfiguredSourceId(): Promise<string | null> {
   const content = await readFile(new URL('../../../config.yaml', import.meta.url), 'utf-8')
   const parsed = YAML.parse(content)
   return parsed?.extensions?.['knowledge-service']?.['x-opsfactory']?.knowledgeScope?.sourceId ?? null
@@ -61,7 +63,7 @@ describe('handleSearch', () => {
       total: 0,
     }
 
-    let capturedBody
+    let capturedBody: Record<string, unknown> | undefined
     globalThis.fetch = ((input, init) => {
       if (init?.body) {
         capturedBody = JSON.parse(String(init.body))
@@ -82,7 +84,7 @@ describe('handleSearch', () => {
       total: 1,
     }
 
-    let capturedBody
+    let capturedBody: Record<string, unknown> | undefined
     globalThis.fetch = ((input, init) => {
       capturedBody = JSON.parse(String(init?.body))
       return mockFetch(input, init)

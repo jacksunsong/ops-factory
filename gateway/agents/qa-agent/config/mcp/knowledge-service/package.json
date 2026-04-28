@@ -4,11 +4,16 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "node src/index.js",
-    "test": "node --test src/handlers.test.js"
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "test": "npm run build && node --test dist/handlers.test.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
     "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "typescript": "^5.6.0"
   }
 }
