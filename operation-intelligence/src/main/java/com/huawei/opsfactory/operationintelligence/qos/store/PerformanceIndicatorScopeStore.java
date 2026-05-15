@@ -25,11 +25,11 @@ public class PerformanceIndicatorScopeStore {
 
     private final JsonFileStore<PerformanceIndicatorScope> store;
 
-/**
- * Performance Indicator Scope Store.
- *
- * @param properties the properties
- */
+    /**
+     * Performance Indicator Scope Store.
+     *
+     * @param properties the properties
+     */
     public PerformanceIndicatorScopeStore(OperationIntelligenceProperties properties) {
         Path dir = properties.resolveDataRoot().resolve("qos").resolve("config");
         this.store = new JsonFileStore<>(dir, "performance_indicator_scope",
@@ -37,20 +37,20 @@ public class PerformanceIndicatorScopeStore {
         this.store.init();
     }
 
-/**
- * load All.
- *
- * @return the result
- */
+    /**
+     * load All.
+     *
+     * @return the result
+     */
     public List<PerformanceIndicatorScope> loadAll() {
         return store.loadAll();
     }
 
-/**
- * replace All.
- *
- * @param items the items
- */
+    /**
+     * replace All.
+     *
+     * @param items the items
+     */
     public void replaceAll(List<PerformanceIndicatorScope> items) {
         store.replaceAll(items);
     }

@@ -4,15 +4,21 @@
 
 package com.huawei.opsfactory.operationintelligence.qos.dv;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import java.util.List;
-import static org.junit.jupiter.api.Assertions.*;
 
 class DvClientTest {
 
     private DvClient client;
+
     private DvSslContextFactory sslFactory;
+
     private DvAuthService authService;
 
     @BeforeEach
@@ -52,7 +58,8 @@ class DvClientTest {
 
     @Test
     void parsePerformanceResult_validResponse_returnsData() {
-        String json = "{\"result\":{\"datas\":[{\"dn\":\"test-dn\",\"neName\":\"NE1\",\"period\":300,\"values\":{\"key1\":\"val1\"}}]}}";
+        String json =
+            "{\"result\":{\"datas\":[{\"dn\":\"test-dn\",\"neName\":\"NE1\",\"period\":300,\"values\":{\"key1\":\"val1\"}}]}}";
         var result = client.parsePerformanceResult(json);
         assertEquals(1, result.size());
         assertEquals("test-dn", result.get(0).getDn());
@@ -65,7 +72,8 @@ class DvClientTest {
 
     @Test
     void parseAlarms_validResponse_returnsAlarms() {
-        String json = "{\"hits\":[{\"alarmId\":\"ALM001\",\"alarmName\":\"Test Alarm\",\"severity\":\"CRITICAL\",\"nativeMeDn\":\"dn1\",\"count\":1}]}";
+        String json =
+            "{\"hits\":[{\"alarmId\":\"ALM001\",\"alarmName\":\"Test Alarm\",\"severity\":\"CRITICAL\",\"nativeMeDn\":\"dn1\",\"count\":1}]}";
         var result = client.parseAlarms(json);
         assertEquals(1, result.size());
         assertEquals("ALM001", result.get(0).getAlarmId());
@@ -82,10 +90,12 @@ class DvClientTest {
     void executeWithRetry_alwaysFails_throws() {
         DvClient noSleepClient = new DvClient(authService, sslFactory) {
             @Override
-            void sleepBeforeRetry(long delayMs) { /* no-op for testing */ }
+            void sleepBeforeRetry(long delayMs) {
+                /* no-op for testing */ }
         };
-        assertThrows(RuntimeException.class,
-                () -> noSleepClient.executeWithRetry(() -> { throw new RuntimeException("fail"); }, "testOp"));
+        assertThrows(RuntimeException.class, () -> noSleepClient.executeWithRetry(() -> {
+            throw new RuntimeException("fail");
+        }, "testOp"));
     }
 
     @Test

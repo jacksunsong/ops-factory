@@ -4,9 +4,6 @@
 
 package com.huawei.opsfactory.gateway.support;
 
-import java.io.Serializable;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
@@ -16,6 +13,10 @@ import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 
+import java.io.Serializable;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 /**
  * Test appender for capturing log events during assertions.
  *
@@ -24,6 +25,7 @@ import org.apache.logging.log4j.core.layout.PatternLayout;
  */
 public final class TestLogAppender extends AbstractAppender implements AutoCloseable {
     private final Logger logger;
+
     private final List<LogEvent> events = new CopyOnWriteArrayList<>();
 
     private TestLogAppender(String name, Logger logger, Layout<? extends Serializable> layout) {
@@ -39,11 +41,9 @@ public final class TestLogAppender extends AbstractAppender implements AutoClose
      */
     public static TestLogAppender attachTo(Class<?> type) {
         Logger logger = LoggerContext.getContext(false).getLogger(type.getName());
-        TestLogAppender appender = new TestLogAppender(
-            "test-appender-" + type.getSimpleName() + "-" + System.nanoTime(),
-            logger,
-            PatternLayout.createDefaultLayout()
-        );
+        TestLogAppender appender =
+            new TestLogAppender("test-appender-" + type.getSimpleName() + "-" + System.nanoTime(), logger,
+                PatternLayout.createDefaultLayout());
         appender.start();
         logger.addAppender(appender);
         return appender;
@@ -65,9 +65,7 @@ public final class TestLogAppender extends AbstractAppender implements AutoClose
      * @return the result
      */
     public List<String> formattedMessages() {
-        return events.stream()
-            .map(event -> event.getMessage().getFormattedMessage())
-            .toList();
+        return events.stream().map(event -> event.getMessage().getFormattedMessage()).toList();
     }
 
     /**

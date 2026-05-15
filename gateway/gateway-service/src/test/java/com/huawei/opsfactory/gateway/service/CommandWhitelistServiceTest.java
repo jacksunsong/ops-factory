@@ -4,16 +4,23 @@
 
 package com.huawei.opsfactory.gateway.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import java.nio.file.Path;
-import java.util.*;
-
-import static org.junit.Assert.*;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Test coverage for Command Whitelist Service.
@@ -135,9 +142,8 @@ public class CommandWhitelistServiceTest {
         Map<String, Object> whitelist = whitelistService.getWhitelist();
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> commands = (List<Map<String, Object>>) whitelist.get("commands");
-        Map<String, Object> psCmd = commands.stream()
-                .filter(c -> "ps".equals(c.get("pattern")))
-                .findFirst().orElseThrow();
+        Map<String, Object> psCmd =
+            commands.stream().filter(c -> "ps".equals(c.get("pattern"))).findFirst().orElseThrow();
         assertEquals("updated description", psCmd.get("description"));
         assertEquals(false, psCmd.get("enabled"));
     }
@@ -286,8 +292,8 @@ public class CommandWhitelistServiceTest {
      */
     @Test
     public void testValidateCommand_complexPipe() {
-        List<String> rejected = whitelistService.validateCommand(
-                "cd /home/rcpa/logs/stat;tail -n 50 pool.log|grep -v timeout");
+        List<String> rejected =
+            whitelistService.validateCommand("cd /home/rcpa/logs/stat;tail -n 50 pool.log|grep -v timeout");
         assertTrue(rejected.isEmpty());
     }
 
@@ -310,8 +316,8 @@ public class CommandWhitelistServiceTest {
      */
     @Test
     public void testValidateCommand_pipeInsideSingleQuotes() {
-        List<String> rejected = whitelistService.validateCommand(
-                "tail -100 /var/log/syslog | grep -E 'ERROR|WARN|Exception|Timeout' | tail -30");
+        List<String> rejected = whitelistService
+            .validateCommand("tail -100 /var/log/syslog | grep -E 'ERROR|WARN|Exception|Timeout' | tail -30");
         assertTrue(rejected.isEmpty());
     }
 
@@ -320,8 +326,7 @@ public class CommandWhitelistServiceTest {
      */
     @Test
     public void testValidateCommand_pipeInsideDoubleQuotes() {
-        List<String> rejected = whitelistService.validateCommand(
-                "grep \"ERROR|WARN\" /var/log/syslog | tail -20");
+        List<String> rejected = whitelistService.validateCommand("grep \"ERROR|WARN\" /var/log/syslog | tail -20");
         assertTrue(rejected.isEmpty());
     }
 
@@ -330,8 +335,7 @@ public class CommandWhitelistServiceTest {
      */
     @Test
     public void testValidateCommand_escapedPipe() {
-        List<String> rejected = whitelistService.validateCommand(
-                "grep 'a\\|b' /var/log/syslog | tail -20");
+        List<String> rejected = whitelistService.validateCommand("grep 'a\\|b' /var/log/syslog | tail -20");
         assertTrue(rejected.isEmpty());
     }
 
@@ -340,8 +344,7 @@ public class CommandWhitelistServiceTest {
      */
     @Test
     public void testValidateCommand_mixedQuotesAndPipes() {
-        List<String> rejected = whitelistService.validateCommand(
-                "grep -E 'ERROR|WARN' /var/log/syslog | rm -rf /");
+        List<String> rejected = whitelistService.validateCommand("grep -E 'ERROR|WARN' /var/log/syslog | rm -rf /");
         assertEquals(1, rejected.size());
         assertEquals("rm", rejected.get(0));
     }
@@ -353,8 +356,7 @@ public class CommandWhitelistServiceTest {
      */
     @Test
     public void testGetRiskLevel_pipeInsideQuotes() {
-        String risk = whitelistService.getRiskLevel(
-                "tail -100 /var/log/syslog | grep -E 'ERROR|WARN' | tail -30");
+        String risk = whitelistService.getRiskLevel("tail -100 /var/log/syslog | grep -E 'ERROR|WARN' | tail -30");
         assertEquals("low", risk);
     }
 
@@ -365,8 +367,7 @@ public class CommandWhitelistServiceTest {
      */
     @Test
     public void testValidateCommand_logicalOr() {
-        List<String> rejected = whitelistService.validateCommand(
-                "ps -ef || echo \"failed\"");
+        List<String> rejected = whitelistService.validateCommand("ps -ef || echo \"failed\"");
         assertTrue(rejected.isEmpty());
     }
 
@@ -375,8 +376,7 @@ public class CommandWhitelistServiceTest {
      */
     @Test
     public void testValidateCommand_logicalAnd() {
-        List<String> rejected = whitelistService.validateCommand(
-                "cd /home && ls -la");
+        List<String> rejected = whitelistService.validateCommand("cd /home && ls -la");
         assertTrue(rejected.isEmpty());
     }
 
@@ -385,8 +385,7 @@ public class CommandWhitelistServiceTest {
      */
     @Test
     public void testValidateCommand_logicalOrWithRejected() {
-        List<String> rejected = whitelistService.validateCommand(
-                "ps -ef || rm -rf /");
+        List<String> rejected = whitelistService.validateCommand("ps -ef || rm -rf /");
         assertEquals(1, rejected.size());
         assertEquals("rm", rejected.get(0));
     }
@@ -396,8 +395,7 @@ public class CommandWhitelistServiceTest {
      */
     @Test
     public void testValidateCommand_logicalAndWithRejected() {
-        List<String> rejected = whitelistService.validateCommand(
-                "cd /home && rm -rf /");
+        List<String> rejected = whitelistService.validateCommand("cd /home && rm -rf /");
         assertEquals(1, rejected.size());
         assertEquals("rm", rejected.get(0));
     }
@@ -408,8 +406,7 @@ public class CommandWhitelistServiceTest {
     @Test
     public void testValidateCommand_orOrNotSplitAsTwoPipes() {
         // || should split into exactly 2 parts, not 3
-        List<String> rejected = whitelistService.validateCommand(
-                "ps -ef || echo done");
+        List<String> rejected = whitelistService.validateCommand("ps -ef || echo done");
         // If || were split as two |, echo would be in a separate segment but gmstat/echo both pass
         // The key is that || produces exactly 2 subcommands, not 3
         assertTrue(rejected.isEmpty());

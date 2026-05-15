@@ -4,21 +4,25 @@
 
 package com.huawei.opsfactory.gateway.monitoring;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.huawei.opsfactory.gateway.process.InstanceManager;
 import com.huawei.opsfactory.gateway.proxy.GoosedProxy;
+
+import reactor.core.publisher.Mono;
+
 import org.junit.Before;
 import org.junit.Test;
-import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 /**
  * Test coverage for Metrics Collector.
@@ -28,8 +32,11 @@ import static org.mockito.Mockito.*;
  */
 public class MetricsCollectorTest {
     private InstanceManager instanceManager;
+
     private GoosedProxy goosedProxy;
+
     private MetricsBuffer metricsBuffer;
+
     private MetricsCollector collector;
 
     /**
@@ -41,8 +48,8 @@ public class MetricsCollectorTest {
         goosedProxy = mock(GoosedProxy.class);
 
         GatewayProperties props = new GatewayProperties();
-        props.getPaths().setProjectRoot(
-                System.getProperty("java.io.tmpdir") + "/metrics-collector-test-" + System.nanoTime());
+        props.getPaths()
+            .setProjectRoot(System.getProperty("java.io.tmpdir") + "/metrics-collector-test-" + System.nanoTime());
         metricsBuffer = new MetricsBuffer(props);
 
         collector = new MetricsCollector(instanceManager, goosedProxy, metricsBuffer);
@@ -75,9 +82,9 @@ public class MetricsCollectorTest {
         when(instanceManager.getAllInstances()).thenReturn(Arrays.asList(inst1, inst2));
 
         when(goosedProxy.fetchJson(eq(8001), eq("/sessions/insights"), anyString()))
-                .thenReturn(Mono.just("{\"total_tokens\": 100, \"total_sessions\": 2}"));
+            .thenReturn(Mono.just("{\"total_tokens\": 100, \"total_sessions\": 2}"));
         when(goosedProxy.fetchJson(eq(8002), eq("/sessions/insights"), anyString()))
-                .thenReturn(Mono.just("{\"total_tokens\": 200, \"total_sessions\": 3}"));
+            .thenReturn(Mono.just("{\"total_tokens\": 200, \"total_sessions\": 3}"));
 
         collector.collect();
 
@@ -98,7 +105,7 @@ public class MetricsCollectorTest {
         when(instanceManager.getAllInstances()).thenReturn(Collections.singletonList(inst));
 
         when(goosedProxy.fetchJson(eq(8001), eq("/sessions/insights"), anyString()))
-                .thenReturn(Mono.error(new RuntimeException("connection refused")));
+            .thenReturn(Mono.error(new RuntimeException("connection refused")));
 
         collector.collect();
 
@@ -118,12 +125,12 @@ public class MetricsCollectorTest {
 
         // First call: 100 tokens
         when(goosedProxy.fetchJson(eq(8001), eq("/sessions/insights"), anyString()))
-                .thenReturn(Mono.just("{\"total_tokens\": 100, \"total_sessions\": 1}"));
+            .thenReturn(Mono.just("{\"total_tokens\": 100, \"total_sessions\": 1}"));
         collector.collect();
 
         // Second call: 400 tokens (delta = 300, interval = 30s, so 10 tok/s)
         when(goosedProxy.fetchJson(eq(8001), eq("/sessions/insights"), anyString()))
-                .thenReturn(Mono.just("{\"total_tokens\": 400, \"total_sessions\": 2}"));
+            .thenReturn(Mono.just("{\"total_tokens\": 400, \"total_sessions\": 2}"));
         collector.collect();
 
         List<MetricsSnapshot> snapshots = metricsBuffer.getSnapshots(10);
@@ -145,12 +152,12 @@ public class MetricsCollectorTest {
         when(instanceManager.getAllInstances()).thenReturn(Collections.emptyList());
 
         // Add some request timings
-        metricsBuffer.recordTiming(new RequestTiming(
-                System.currentTimeMillis(), 50, 200, 1024, false, "agent1", "user1"));
-        metricsBuffer.recordTiming(new RequestTiming(
-                System.currentTimeMillis(), 100, 400, 2048, false, "agent1", "user2"));
-        metricsBuffer.recordTiming(new RequestTiming(
-                System.currentTimeMillis(), 150, 600, 512, true, "agent1", "user3"));
+        metricsBuffer
+            .recordTiming(new RequestTiming(System.currentTimeMillis(), 50, 200, 1024, false, "agent1", "user1"));
+        metricsBuffer
+            .recordTiming(new RequestTiming(System.currentTimeMillis(), 100, 400, 2048, false, "agent1", "user2"));
+        metricsBuffer
+            .recordTiming(new RequestTiming(System.currentTimeMillis(), 150, 600, 512, true, "agent1", "user3"));
 
         collector.collect();
 
@@ -178,8 +185,8 @@ public class MetricsCollectorTest {
     public void testCollect_withSingleTiming() {
         when(instanceManager.getAllInstances()).thenReturn(Collections.emptyList());
 
-        metricsBuffer.recordTiming(new RequestTiming(
-                System.currentTimeMillis(), 80, 300, 500, false, "agent1", "user1"));
+        metricsBuffer
+            .recordTiming(new RequestTiming(System.currentTimeMillis(), 80, 300, 500, false, "agent1", "user1"));
 
         collector.collect();
 
@@ -206,7 +213,7 @@ public class MetricsCollectorTest {
 
         when(instanceManager.getAllInstances()).thenReturn(Arrays.asList(running, stopped));
         when(goosedProxy.fetchJson(eq(8001), eq("/sessions/insights"), anyString()))
-                .thenReturn(Mono.just("{\"total_tokens\": 50, \"total_sessions\": 1}"));
+            .thenReturn(Mono.just("{\"total_tokens\": 50, \"total_sessions\": 1}"));
 
         collector.collect();
 
@@ -226,7 +233,7 @@ public class MetricsCollectorTest {
         when(instanceManager.getAllInstances()).thenReturn(Collections.singletonList(inst));
 
         when(goosedProxy.fetchJson(eq(8001), eq("/sessions/insights"), anyString()))
-                .thenReturn(Mono.just("not json at all"));
+            .thenReturn(Mono.just("not json at all"));
 
         collector.collect();
 

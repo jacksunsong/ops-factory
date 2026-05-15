@@ -28,9 +28,6 @@ public class WebFluxConfig {
 
     /**
      * Creates the web flux config instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public WebFluxConfig(GatewayProperties properties) {
         this.properties = properties;

@@ -8,6 +8,7 @@ import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.huawei.opsfactory.gateway.filter.AuthWebFilter;
 import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.process.PrewarmService;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,11 +39,14 @@ public class StatusControllerTest {
      */
     @Test
     public void testStatus() {
-        webTestClient.get().uri("/gateway/status")
-                .header("x-secret-key", "test")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(String.class).isEqualTo("ok");
+        webTestClient.get()
+            .uri("/gateway/status")
+            .header("x-secret-key", "test")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody(String.class)
+            .isEqualTo("ok");
     }
 
     /**
@@ -51,13 +55,17 @@ public class StatusControllerTest {
     @Test
     public void testMe_noUserIdHeader_returnsUnknown() {
         // /me is excluded from UserContextFilter, so no user attributes are set.
-        webTestClient.get().uri("/gateway/me")
-                .header("x-secret-key", "test")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.userId").isEqualTo("unknown")
-                .jsonPath("$.role").isEqualTo("user");
+        webTestClient.get()
+            .uri("/gateway/me")
+            .header("x-secret-key", "test")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.userId")
+            .isEqualTo("unknown")
+            .jsonPath("$.role")
+            .isEqualTo("user");
     }
 
     /**
@@ -65,14 +73,18 @@ public class StatusControllerTest {
      */
     @Test
     public void testMe_withUserIdHeader_returnsUser() {
-        webTestClient.get().uri("/gateway/me")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "user123")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.userId").isEqualTo("user123")
-                .jsonPath("$.role").isEqualTo("user");
+        webTestClient.get()
+            .uri("/gateway/me")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "user123")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.userId")
+            .isEqualTo("user123")
+            .jsonPath("$.role")
+            .isEqualTo("user");
     }
 
     /**
@@ -80,12 +92,15 @@ public class StatusControllerTest {
      */
     @Test
     public void testConfig() {
-        webTestClient.get().uri("/gateway/config")
-                .header("x-secret-key", "test")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.officePreview.enabled").isEqualTo(false);
+        webTestClient.get()
+            .uri("/gateway/config")
+            .header("x-secret-key", "test")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.officePreview.enabled")
+            .isEqualTo(false);
     }
 
     /**
@@ -93,8 +108,6 @@ public class StatusControllerTest {
      */
     @Test
     public void testUnauthorized_noKey() {
-        webTestClient.get().uri("/gateway/me")
-                .exchange()
-                .expectStatus().isUnauthorized();
+        webTestClient.get().uri("/gateway/me").exchange().expectStatus().isUnauthorized();
     }
 }

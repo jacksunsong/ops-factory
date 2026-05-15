@@ -4,13 +4,13 @@
 
 package com.huawei.opsfactory.gateway.common.model;
 
-import org.junit.Test;
-
-import java.util.Set;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import org.junit.Test;
+
+import java.util.Set;
 
 /**
  * Test coverage for User Role.

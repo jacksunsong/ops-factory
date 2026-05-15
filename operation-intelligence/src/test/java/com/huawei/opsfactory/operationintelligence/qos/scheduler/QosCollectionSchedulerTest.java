@@ -4,16 +4,19 @@
 
 package com.huawei.opsfactory.operationintelligence.qos.scheduler;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.junit.jupiter.api.Test;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import static org.junit.jupiter.api.Assertions.*;
 
 class QosCollectionSchedulerTest {
 
     @Test
     void interpolateThreshold_valueBelowFirstThreshold_returnsFirstScore() {
-        BigDecimal result = QosCollectionScheduler.interpolateThreshold("0.3:0;0.6:0.3;0.9:0.6;0.95:0.95", new BigDecimal("0.1"));
+        BigDecimal result =
+            QosCollectionScheduler.interpolateThreshold("0.3:0;0.6:0.3;0.9:0.6;0.95:0.95", new BigDecimal("0.1"));
         assertEquals(0, BigDecimal.ZERO.compareTo(result));
     }
 

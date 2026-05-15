@@ -48,9 +48,6 @@ public class SopService {
 
     /**
      * Creates the sop service instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public SopService(GatewayProperties properties, CommandWhitelistService commandWhitelistService) {
         this.properties = properties;
@@ -105,8 +102,8 @@ public class SopService {
     /**
      * Gets an SOP document by its ID.
      *
-     * @param id the id parameter
-     * @return the result
+     * @param id entity identifier
+     * @return an SOP document by its ID
      */
     public Map<String, Object> getSop(String id) {
         Path file = resolveSopFile(id);
@@ -120,7 +117,7 @@ public class SopService {
     /**
      * Creates a new SOP document from the provided field map.
      *
-     * @param body the body parameter
+     * @param body request body
      * @return the result
      */
     public Map<String, Object> createSop(Map<String, Object> body) {
@@ -153,8 +150,8 @@ public class SopService {
     /**
      * Updates an existing SOP document with the provided field map.
      *
-     * @param id the id parameter
-     * @param body the body parameter
+     * @param id an existing SOP document with the provided field map
+     * @param body an existing SOP document with the provided field map
      * @return the result
      */
     public Map<String, Object> updateSop(String id, Map<String, Object> body) {
@@ -212,7 +209,7 @@ public class SopService {
     /**
      * Deletes an SOP document by its ID.
      *
-     * @param id the id parameter
+     * @param id entity identifier
      * @return the result
      */
     public boolean deleteSop(String id) {
@@ -265,7 +262,7 @@ public class SopService {
             }
             List<String> rejected = commandWhitelistService.validateCommand(cmdObj.toString());
             if (!rejected.isEmpty()) {
-                throw new IllegalArgumentException("节点 " + (i + 1) + " 命令包含未白名单授权的命令: " + String.join(", ", rejected));
+                throw new IllegalArgumentException("Node " + (i + 1) + " contains non-whitelisted commands: " + String.join(", ", rejected));
             }
         }
     }

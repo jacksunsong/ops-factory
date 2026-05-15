@@ -27,6 +27,7 @@ GATEWAY_PORT="${GATEWAY_PORT:-$(yaml_path_val server.port)}"
 GATEWAY_PORT="${GATEWAY_PORT:-3000}"
 GATEWAY_SECRET_KEY="${GATEWAY_SECRET_KEY:-$(yaml_path_val gateway.secret-key)}"
 GATEWAY_SECRET_KEY="${GATEWAY_SECRET_KEY:-test}"
+CONTROL_CENTER_SECRET_KEY="${CONTROL_CENTER_SECRET_KEY:-change-me}"
 GOOSED_BIN="${GOOSED_BIN:-$(yaml_path_val gateway.goosed-bin)}"
 GOOSED_BIN="${GOOSED_BIN:-goosed}"
 GOOSE_TLS="${GOOSE_TLS:-$(yaml_path_val gateway.goose-tls)}"
@@ -463,10 +464,16 @@ do_startup() {
     java_opts+=("-DGATEWAY_CONFIG_PATH=${GATEWAY_CONFIG_PATH}")
     java_opts+=("-jar" "${jar}")
 
+    local gateway_env=(
+        "GATEWAY_CONFIG_PATH=${GATEWAY_CONFIG_PATH}"
+        "GATEWAY_SECRET_KEY=${GATEWAY_SECRET_KEY}"
+        "CONTROL_CENTER_SECRET_KEY=${CONTROL_CENTER_SECRET_KEY}"
+    )
+
     if [ "${mode}" = "background" ]; then
         local console_log="${LOG_DIR}/gateway-stdout-stderr.log"
         local app_log="${LOG_DIR}/gateway.log"
-        GATEWAY_PID="$(daemon_start "${PID_FILE}" "${console_log}" env GATEWAY_CONFIG_PATH="${GATEWAY_CONFIG_PATH}" "${java_cmd}" "${java_opts[@]}")"
+        GATEWAY_PID="$(daemon_start "${PID_FILE}" "${console_log}" env "${gateway_env[@]}" "${java_cmd}" "${java_opts[@]}")"
         if ! kill -0 "${GATEWAY_PID}" 2>/dev/null; then
             log_error "Failed to start gateway"
             return 1
@@ -480,7 +487,7 @@ do_startup() {
         log_info "Gateway started (PID: ${GATEWAY_PID}, log: ${app_log})"
         check_agents_configured || true
     else
-        exec env GATEWAY_CONFIG_PATH="${GATEWAY_CONFIG_PATH}" ${java_cmd} "${java_opts[@]}"
+        exec env "${gateway_env[@]}" "${java_cmd}" "${java_opts[@]}"
     fi
 }
 

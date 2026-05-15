@@ -60,12 +60,12 @@ public class DvClient {
 
     private final ConcurrentHashMap<String, ConnectionProvider> providerCache = new ConcurrentHashMap<>();
 
-/**
- * Dv Client.
- *
- * @param authService the authService
- * @param sslFactory the sslFactory
- */
+    /**
+     * Dv Client.
+     *
+     * @param authService the authService
+     * @param sslFactory the sslFactory
+     */
     public DvClient(DvAuthService authService, DvSslContextFactory sslFactory) {
         this.authService = authService;
         this.sslFactory = sslFactory;
@@ -77,13 +77,13 @@ public class DvClient {
         return node.has(field) && !node.get(field).isNull() ? node.get(field).asText() : null;
     }
 
-/**
- * fetch Mos.
- *
- * @param env the env
- * @param dns the dns
- * @return the result
- */
+    /**
+     * fetch Mos.
+     *
+     * @param env the env
+     * @param dns the dns
+     * @return the result
+     */
     public List<String> fetchMos(DvEnvironmentInfo env, List<String> dns) {
         return executeWithRetry(() -> doFetchMos(env, dns), "fetchMos[" + env.getEnvCode() + "]");
     }
@@ -117,17 +117,17 @@ public class DvClient {
         }
     }
 
-/**
- * fetch Performance Data.
- *
- * @param env the env
- * @param moType the moType
- * @param measUnitKey the measUnitKey
- * @param dns the dns
- * @param startTime the startTime
- * @param endTime the endTime
- * @return the result
- */
+    /**
+     * fetch Performance Data.
+     *
+     * @param env the env
+     * @param moType the moType
+     * @param measUnitKey the measUnitKey
+     * @param dns the dns
+     * @param startTime the startTime
+     * @param endTime the endTime
+     * @return the result
+     */
     public List<PerformanceDataResult> fetchPerformanceData(DvEnvironmentInfo env, String moType, String measUnitKey,
         List<String> dns, long startTime, long endTime) {
         return executeWithRetry(() -> doFetchPerformanceData(env, moType, measUnitKey, dns, startTime, endTime),
@@ -180,16 +180,16 @@ public class DvClient {
         }
     }
 
-/**
- * fetch Current Alarms.
- *
- * @param env the env
- * @param startTime the startTime
- * @param endTime the endTime
- * @param severities the severities
- * @param dns the dns
- * @return the result
- */
+    /**
+     * fetch Current Alarms.
+     *
+     * @param env the env
+     * @param startTime the startTime
+     * @param endTime the endTime
+     * @param severities the severities
+     * @param dns the dns
+     * @return the result
+     */
     public List<AlarmInfo> fetchCurrentAlarms(DvEnvironmentInfo env, long startTime, long endTime,
         List<String> severities, List<String> dns) {
         return executeWithRetry(() -> doFetchCurrentAlarms(env, startTime, endTime, severities, dns),
@@ -272,9 +272,9 @@ public class DvClient {
         });
     }
 
-/**
- * shutdown.
- */
+    /**
+     * shutdown.
+     */
     @PreDestroy
     public void shutdown() {
         clientCache.clear();

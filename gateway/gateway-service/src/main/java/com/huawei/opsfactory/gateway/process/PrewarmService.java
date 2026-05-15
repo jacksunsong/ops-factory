@@ -33,8 +33,8 @@ public class PrewarmService {
     /**
      * Creates the prewarm service instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param instanceManager manages goosed process instances
+     * @param properties gateway configuration properties
      */
     public PrewarmService(InstanceManager instanceManager, GatewayProperties properties) {
         this.instanceManager = instanceManager;
@@ -45,7 +45,7 @@ public class PrewarmService {
      * Called on every authenticated request. Triggers a fire-and-forget spawn
      * of the default agent for first-time users in this gateway lifecycle.
      *
-     * @param userId the userId parameter
+     * @param userId user identifier to check for pre-warming
      */
     public void onUserActivity(String userId) {
         if (!properties.getPrewarm().isEnabled()) {
@@ -69,7 +69,7 @@ public class PrewarmService {
     /**
      * Reset pre-warm state for a user (called when all their instances are reaped).
      *
-     * @param userId the userId parameter
+     * @param userId user identifier whose pre-warm state to clear
      */
     public void clearUser(String userId) {
         warmedUsers.remove(userId);

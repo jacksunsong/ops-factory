@@ -37,9 +37,6 @@ public class MetricsSnapshot {
 
     /**
      * Creates the metrics snapshot instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public MetricsSnapshot() {
     }
@@ -47,7 +44,7 @@ public class MetricsSnapshot {
     /**
      * Gets the snapshot timestamp in milliseconds since epoch.
      *
-     * @return the result
+     * @return the snapshot timestamp in milliseconds since epoch
      */
     public long getTimestamp() {
         return timestamp;
@@ -56,7 +53,7 @@ public class MetricsSnapshot {
     /**
      * Sets the snapshot timestamp in milliseconds since epoch.
      *
-     * @param timestamp the timestamp parameter
+     * @param timestamp the snapshot timestamp in milliseconds since epoch
      */
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
@@ -65,7 +62,7 @@ public class MetricsSnapshot {
     /**
      * Gets the number of active goosed instances.
      *
-     * @return the result
+     * @return the number of active goosed instances
      */
     public int getActiveInstances() {
         return activeInstances;
@@ -74,7 +71,7 @@ public class MetricsSnapshot {
     /**
      * Sets the number of active goosed instances.
      *
-     * @param activeInstances the activeInstances parameter
+     * @param activeInstances the number of active goosed instances
      */
     public void setActiveInstances(int activeInstances) {
         this.activeInstances = activeInstances;
@@ -83,7 +80,7 @@ public class MetricsSnapshot {
     /**
      * Gets the total number of tokens consumed across all sessions.
      *
-     * @return the result
+     * @return the total number of tokens consumed across all sessions
      */
     public long getTotalTokens() {
         return totalTokens;
@@ -92,7 +89,7 @@ public class MetricsSnapshot {
     /**
      * Sets the total number of tokens consumed across all sessions.
      *
-     * @param totalTokens the totalTokens parameter
+     * @param totalTokens the total number of tokens consumed across all sessions
      */
     public void setTotalTokens(long totalTokens) {
         this.totalTokens = totalTokens;
@@ -101,7 +98,7 @@ public class MetricsSnapshot {
     /**
      * Gets the total number of sessions across all instances.
      *
-     * @return the result
+     * @return the total number of sessions across all instances
      */
     public long getTotalSessions() {
         return totalSessions;
@@ -110,7 +107,7 @@ public class MetricsSnapshot {
     /**
      * Sets the total number of sessions across all instances.
      *
-     * @param totalSessions the totalSessions parameter
+     * @param totalSessions the total number of sessions across all instances
      */
     public void setTotalSessions(long totalSessions) {
         this.totalSessions = totalSessions;
@@ -119,7 +116,7 @@ public class MetricsSnapshot {
     /**
      * Gets the number of requests in this collection window.
      *
-     * @return the result
+     * @return the number of requests in this collection window
      */
     public int getRequestCount() {
         return requestCount;
@@ -128,7 +125,7 @@ public class MetricsSnapshot {
     /**
      * Sets the number of requests in this collection window.
      *
-     * @param requestCount the requestCount parameter
+     * @param requestCount the number of requests in this collection window
      */
     public void setRequestCount(int requestCount) {
         this.requestCount = requestCount;
@@ -137,7 +134,7 @@ public class MetricsSnapshot {
     /**
      * Gets the average request latency in milliseconds.
      *
-     * @return the result
+     * @return the average request latency in milliseconds
      */
     public double getAvgLatencyMs() {
         return avgLatencyMs;
@@ -146,7 +143,7 @@ public class MetricsSnapshot {
     /**
      * Sets the average request latency in milliseconds.
      *
-     * @param avgLatencyMs the avgLatencyMs parameter
+     * @param avgLatencyMs the average request latency in milliseconds
      */
     public void setAvgLatencyMs(double avgLatencyMs) {
         this.avgLatencyMs = avgLatencyMs;
@@ -155,7 +152,7 @@ public class MetricsSnapshot {
     /**
      * Gets the average time-to-first-token in milliseconds.
      *
-     * @return the result
+     * @return the average time-to-first-token in milliseconds
      */
     public double getAvgTtftMs() {
         return avgTtftMs;
@@ -164,7 +161,7 @@ public class MetricsSnapshot {
     /**
      * Sets the average time-to-first-token in milliseconds.
      *
-     * @param avgTtftMs the avgTtftMs parameter
+     * @param avgTtftMs the average time-to-first-token in milliseconds
      */
     public void setAvgTtftMs(double avgTtftMs) {
         this.avgTtftMs = avgTtftMs;
@@ -173,7 +170,7 @@ public class MetricsSnapshot {
     /**
      * Gets the p95 request latency in milliseconds.
      *
-     * @return the result
+     * @return the p95 request latency in milliseconds
      */
     public double getP95LatencyMs() {
         return p95LatencyMs;
@@ -182,7 +179,7 @@ public class MetricsSnapshot {
     /**
      * Sets the p95 request latency in milliseconds.
      *
-     * @param p95LatencyMs the p95LatencyMs parameter
+     * @param p95LatencyMs the p95 request latency in milliseconds
      */
     public void setP95LatencyMs(double p95LatencyMs) {
         this.p95LatencyMs = p95LatencyMs;
@@ -191,7 +188,7 @@ public class MetricsSnapshot {
     /**
      * Gets the p95 time-to-first-token in milliseconds.
      *
-     * @return the result
+     * @return the p95 time-to-first-token in milliseconds
      */
     public double getP95TtftMs() {
         return p95TtftMs;
@@ -200,7 +197,7 @@ public class MetricsSnapshot {
     /**
      * Sets the p95 time-to-first-token in milliseconds.
      *
-     * @param p95TtftMs the p95TtftMs parameter
+     * @param p95TtftMs the p95 time-to-first-token in milliseconds
      */
     public void setP95TtftMs(double p95TtftMs) {
         this.p95TtftMs = p95TtftMs;
@@ -209,7 +206,7 @@ public class MetricsSnapshot {
     /**
      * Gets the total number of bytes transferred in this window.
      *
-     * @return the result
+     * @return the total number of bytes transferred in this window
      */
     public long getTotalBytes() {
         return totalBytes;
@@ -218,7 +215,7 @@ public class MetricsSnapshot {
     /**
      * Sets the total number of bytes transferred in this window.
      *
-     * @param totalBytes the totalBytes parameter
+     * @param totalBytes the total number of bytes transferred in this window
      */
     public void setTotalBytes(long totalBytes) {
         this.totalBytes = totalBytes;
@@ -227,7 +224,7 @@ public class MetricsSnapshot {
     /**
      * Gets the number of error responses in this window.
      *
-     * @return the result
+     * @return the number of error responses in this window
      */
     public int getErrorCount() {
         return errorCount;
@@ -236,7 +233,7 @@ public class MetricsSnapshot {
     /**
      * Sets the number of error responses in this window.
      *
-     * @param errorCount the errorCount parameter
+     * @param errorCount the number of error responses in this window
      */
     public void setErrorCount(int errorCount) {
         this.errorCount = errorCount;
@@ -245,7 +242,7 @@ public class MetricsSnapshot {
     /**
      * Gets the token throughput rate per second.
      *
-     * @return the result
+     * @return the token throughput rate per second
      */
     public double getTokensPerSec() {
         return tokensPerSec;
@@ -254,7 +251,7 @@ public class MetricsSnapshot {
     /**
      * Sets the token throughput rate per second.
      *
-     * @param tokensPerSec the tokensPerSec parameter
+     * @param tokensPerSec the token throughput rate per second
      */
     public void setTokensPerSec(double tokensPerSec) {
         this.tokensPerSec = tokensPerSec;

@@ -27,8 +27,7 @@ public class BodyLimitHook implements RequestHook {
     /**
      * Creates the body limit hook instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param properties gateway configuration properties providing upload size limit
      */
     public BodyLimitHook(GatewayProperties properties) {
         // Base64 overhead: ~33% larger than raw bytes
@@ -38,8 +37,8 @@ public class BodyLimitHook implements RequestHook {
     /**
      * Rejects request bodies exceeding the configured upload size limit.
      *
-     * @param ctx the ctx parameter
-     * @return the result
+     * @param ctx hook context containing the request body to validate
+     * @return Mono emitting the unchanged context, or an error if the body exceeds the limit
      */
     @Override
     public Mono<HookContext> process(HookContext ctx) {

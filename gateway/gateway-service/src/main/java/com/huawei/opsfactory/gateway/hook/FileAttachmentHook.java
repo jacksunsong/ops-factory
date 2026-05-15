@@ -44,8 +44,7 @@ public class FileAttachmentHook implements RequestHook {
     /**
      * Creates the file attachment hook instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param agentConfigService service for resolving user directory paths
      */
     public FileAttachmentHook(AgentConfigService agentConfigService) {
         this.agentConfigService = agentConfigService;
@@ -54,8 +53,8 @@ public class FileAttachmentHook implements RequestHook {
     /**
      * Validates file paths referenced in user messages against the user's agent directory.
      *
-     * @param ctx the ctx parameter
-     * @return the result
+     * @param ctx hook context containing the request body with user message
+     * @return Mono emitting the unchanged context, or an error if a file path is invalid
      */
     @Override
     public Mono<HookContext> process(HookContext ctx) {

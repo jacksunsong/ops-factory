@@ -4,7 +4,13 @@
 
 package com.huawei.opsfactory.gateway.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -14,9 +20,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
-
-import static org.junit.Assert.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Test coverage for Sop Service.
@@ -29,6 +35,7 @@ public class SopServiceTest {
     public TemporaryFolder tempFolder = new TemporaryFolder();
 
     private SopService sopService;
+
     private Path sopsDir;
 
     /**
@@ -50,8 +57,11 @@ public class SopServiceTest {
         sopService.init();
 
         sopsDir = Path.of(tempFolder.getRoot().getAbsolutePath())
-                .toAbsolutePath().normalize().resolve("gateway")
-                .resolve("data").resolve("sops");
+            .toAbsolutePath()
+            .normalize()
+            .resolve("gateway")
+            .resolve("data")
+            .resolve("sops");
     }
 
     // ── listSops ─────────────────────────────────────────────────
@@ -126,9 +136,7 @@ public class SopServiceTest {
         body.put("description", "RCPA进程异常分析");
         body.put("version", "2.0.0");
         body.put("triggerCondition", "RCPA进程异常");
-        body.put("nodes", List.of(
-                Map.of("id", "node-1", "name", "步骤1", "command", "ps -ef")
-        ));
+        body.put("nodes", List.of(Map.of("id", "node-1", "name", "步骤1", "command", "ps -ef")));
 
         Map<String, Object> result = sopService.createSop(body);
 
@@ -211,10 +219,8 @@ public class SopServiceTest {
         Map<String, Object> created = sopService.createSop(body);
         String id = (String) created.get("id");
 
-        List<Map<String, Object>> newNodes = List.of(
-                Map.of("id", "n1", "name", "Node1"),
-                Map.of("id", "n2", "name", "Node2")
-        );
+        List<Map<String, Object>> newNodes =
+            List.of(Map.of("id", "n1", "name", "Node1"), Map.of("id", "n2", "name", "Node2"));
         Map<String, Object> updates = new LinkedHashMap<>();
         updates.put("nodes", newNodes);
 
@@ -352,8 +358,8 @@ public class SopServiceTest {
 
         try {
             Path file = sopsDir.resolve(id + ".json");
-            String json = new com.fasterxml.jackson.databind.ObjectMapper()
-                    .writerWithDefaultPrettyPrinter().writeValueAsString(sop);
+            String json = new com.fasterxml.jackson.databind.ObjectMapper().writerWithDefaultPrettyPrinter()
+                .writeValueAsString(sop);
             Files.writeString(file, json, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);

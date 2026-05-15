@@ -4,17 +4,18 @@
 
 package com.huawei.opsfactory.gateway.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
 import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for LangfuseService data parsing and aggregation logic:
@@ -48,17 +49,14 @@ public class LangfuseServiceBuildOverviewTest {
      */
     @Test
     public void testBuildOverview_withTracesAndObservations() throws Exception {
-        String tracesJson = "{\"data\":[" +
-                "{\"id\":\"t1\",\"latency\":2.0,\"totalCost\":0.01,\"level\":\"DEFAULT\"," +
-                "\"timestamp\":\"2024-01-15T10:00:00Z\"}," +
-                "{\"id\":\"t2\",\"latency\":5.0,\"totalCost\":0.02,\"level\":\"ERROR\"," +
-                "\"timestamp\":\"2024-01-15T11:00:00Z\"}," +
-                "{\"id\":\"t3\",\"latency\":1.0,\"totalCost\":0.005,\"level\":\"DEFAULT\"," +
-                "\"timestamp\":\"2024-01-16T09:00:00Z\"}" +
-                "]}";
-        String obsJson = "{\"data\":[" +
-                "{\"name\":\"gen\",\"totalCost\":0.03,\"startTime\":\"2024-01-15T10:00:00Z\"}" +
-                "]}";
+        String tracesJson = "{\"data\":[" + "{\"id\":\"t1\",\"latency\":2.0,\"totalCost\":0.01,\"level\":\"DEFAULT\","
+            + "\"timestamp\":\"2024-01-15T10:00:00Z\"},"
+            + "{\"id\":\"t2\",\"latency\":5.0,\"totalCost\":0.02,\"level\":\"ERROR\","
+            + "\"timestamp\":\"2024-01-15T11:00:00Z\"},"
+            + "{\"id\":\"t3\",\"latency\":1.0,\"totalCost\":0.005,\"level\":\"DEFAULT\","
+            + "\"timestamp\":\"2024-01-16T09:00:00Z\"}" + "]}";
+        String obsJson =
+            "{\"data\":[" + "{\"name\":\"gen\",\"totalCost\":0.03,\"startTime\":\"2024-01-15T10:00:00Z\"}" + "]}";
 
         Method buildOverview = LangfuseService.class.getDeclaredMethod("buildOverview", String.class, String.class);
         buildOverview.setAccessible(true);
@@ -118,8 +116,8 @@ public class LangfuseServiceBuildOverviewTest {
     @Test
     public void testBuildOverview_rawArrayFormat() throws Exception {
         // When Langfuse API returns data without "data" wrapper
-        String tracesJson = "[{\"id\":\"t1\",\"latency\":3.0,\"totalCost\":0.01," +
-                "\"level\":\"DEFAULT\",\"timestamp\":\"2024-01-15T10:00:00Z\"}]";
+        String tracesJson = "[{\"id\":\"t1\",\"latency\":3.0,\"totalCost\":0.01,"
+            + "\"level\":\"DEFAULT\",\"timestamp\":\"2024-01-15T10:00:00Z\"}]";
         String obsJson = "[]";
 
         Method buildOverview = LangfuseService.class.getDeclaredMethod("buildOverview", String.class, String.class);
@@ -138,14 +136,12 @@ public class LangfuseServiceBuildOverviewTest {
      */
     @Test
     public void testParseTraces_normalData() throws Exception {
-        String json = "{\"data\":[" +
-                "{\"id\":\"t1\",\"name\":\"chat\",\"timestamp\":\"2024-01-15T10:00:00Z\"," +
-                "\"input\":\"hello\",\"latency\":2.5,\"totalCost\":0.01," +
-                "\"observations\":[{\"id\":\"o1\"},{\"id\":\"o2\"}],\"level\":\"DEFAULT\"}," +
-                "{\"id\":\"t2\",\"name\":\"error-trace\",\"timestamp\":\"2024-01-15T11:00:00Z\"," +
-                "\"input\":{\"msg\":\"complex\"},\"latency\":5.0,\"totalCost\":0.02," +
-                "\"observations\":[],\"level\":\"ERROR\",\"output\":\"timeout error\"}" +
-                "]}";
+        String json = "{\"data\":[" + "{\"id\":\"t1\",\"name\":\"chat\",\"timestamp\":\"2024-01-15T10:00:00Z\","
+            + "\"input\":\"hello\",\"latency\":2.5,\"totalCost\":0.01,"
+            + "\"observations\":[{\"id\":\"o1\"},{\"id\":\"o2\"}],\"level\":\"DEFAULT\"},"
+            + "{\"id\":\"t2\",\"name\":\"error-trace\",\"timestamp\":\"2024-01-15T11:00:00Z\","
+            + "\"input\":{\"msg\":\"complex\"},\"latency\":5.0,\"totalCost\":0.02,"
+            + "\"observations\":[],\"level\":\"ERROR\",\"output\":\"timeout error\"}" + "]}";
 
         Method parseTraces = LangfuseService.class.getDeclaredMethod("parseTraces", String.class);
         parseTraces.setAccessible(true);
@@ -194,8 +190,8 @@ public class LangfuseServiceBuildOverviewTest {
         Method parseTraces = LangfuseService.class.getDeclaredMethod("parseTraces", String.class);
         parseTraces.setAccessible(true);
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> result = (List<Map<String, Object>>) parseTraces.invoke(service,
-                "{\"data\":\"not-array\"}");
+        List<Map<String, Object>> result =
+            (List<Map<String, Object>>) parseTraces.invoke(service, "{\"data\":\"not-array\"}");
 
         assertTrue(result.isEmpty());
     }
@@ -207,11 +203,10 @@ public class LangfuseServiceBuildOverviewTest {
      */
     @Test
     public void testParseObservations_groupedByName() throws Exception {
-        String json = "{\"data\":[" +
-                "{\"name\":\"generation\",\"latency\":2.0,\"totalTokens\":100,\"totalCost\":0.01}," +
-                "{\"name\":\"generation\",\"latency\":4.0,\"totalTokens\":200,\"totalCost\":0.02}," +
-                "{\"name\":\"embedding\",\"latency\":0.5,\"totalTokens\":50,\"totalCost\":0.005}" +
-                "]}";
+        String json =
+            "{\"data\":[" + "{\"name\":\"generation\",\"latency\":2.0,\"totalTokens\":100,\"totalCost\":0.01},"
+                + "{\"name\":\"generation\",\"latency\":4.0,\"totalTokens\":200,\"totalCost\":0.02},"
+                + "{\"name\":\"embedding\",\"latency\":0.5,\"totalTokens\":50,\"totalCost\":0.005}" + "]}";
 
         Method parseObs = LangfuseService.class.getDeclaredMethod("parseObservations", String.class);
         parseObs.setAccessible(true);
@@ -261,9 +256,9 @@ public class LangfuseServiceBuildOverviewTest {
     @Test
     public void testParseObservations_fallbackTokenCount() throws Exception {
         // When totalTokens is missing, falls back to promptTokens + completionTokens
-        String json = "{\"data\":[" +
-                "{\"name\":\"gen\",\"latency\":1.0,\"promptTokens\":50,\"completionTokens\":30,\"totalCost\":0.01}" +
-                "]}";
+        String json = "{\"data\":["
+            + "{\"name\":\"gen\",\"latency\":1.0,\"promptTokens\":50,\"completionTokens\":30,\"totalCost\":0.01}"
+            + "]}";
 
         Method parseObs = LangfuseService.class.getDeclaredMethod("parseObservations", String.class);
         parseObs.setAccessible(true);
@@ -304,8 +299,8 @@ public class LangfuseServiceBuildOverviewTest {
         GatewayProperties props = new GatewayProperties();
         LangfuseService unconfiguredService = new LangfuseService(props);
 
-        List<Map<String, Object>> result = unconfiguredService.getTracesFormatted("2024-01-01",
-                "2024-01-02", 20, false).block();
+        List<Map<String, Object>> result =
+            unconfiguredService.getTracesFormatted("2024-01-01", "2024-01-02", 20, false).block();
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }

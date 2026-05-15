@@ -64,9 +64,6 @@ public class SessionTraceService implements DisposableBean {
 
     /**
      * Creates the session trace service instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public SessionTraceService() {
         this.repoRoot = resolveRepoRoot();
@@ -79,10 +76,10 @@ public class SessionTraceService implements DisposableBean {
     /**
      * Starts a background trace collection job for the given session.
      *
-     * @param userId the userId parameter
-     * @param agentId the agentId parameter
-     * @param sessionId the sessionId parameter
-     * @return the result
+     * @param userId user identifier
+     * @param agentId agent identifier
+     * @param sessionId session identifier
+     * @return the starts a background trace collection job for the given session
      */
     public synchronized TraceJobSnapshot startTrace(String userId, String agentId, String sessionId) {
         validateId("userId", userId);
@@ -114,8 +111,8 @@ public class SessionTraceService implements DisposableBean {
     /**
      * Gets the current status snapshot of a trace collection job.
      *
-     * @param jobId the jobId parameter
-     * @return the result
+     * @param jobId job id
+     * @return the current status snapshot of a trace collection job
      */
     public TraceJobSnapshot getJob(String jobId) {
         cleanupExpiredJobs();
@@ -129,8 +126,8 @@ public class SessionTraceService implements DisposableBean {
     /**
      * Returns the path to the collected trace archive for a completed job.
      *
-     * @param jobId the jobId parameter
-     * @return the result
+     * @param jobId returns the path to the collected trace archive for a completed job
+     * @return the path to the collected trace archive for a completed job
      */
     public Path getArchive(String jobId) {
         TraceJob job = jobs.get(jobId);
@@ -149,7 +146,7 @@ public class SessionTraceService implements DisposableBean {
     /**
      * Deletes a trace job and its associated files.
      *
-     * @param jobId the jobId parameter
+     * @param jobId job id
      */
     public void deleteJob(String jobId) {
         TraceJob job = jobs.remove(jobId);

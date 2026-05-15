@@ -44,8 +44,7 @@ public class SopController {
     /**
      * Creates the sop controller instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param sopService service handling SOP persistence and business logic
      */
     public SopController(SopService sopService) {
         this.sopService = sopService;
@@ -54,8 +53,8 @@ public class SopController {
     /**
      * Lists all SOP definitions.
      *
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param exchange the current server web exchange, used for admin role verification
+     * @return a mono wrapping a map containing the list of all SOP definitions under the {@code sops} key
      */
     @GetMapping({"", "/"})
     public Mono<Map<String, Object>> listSops(ServerWebExchange exchange) {
@@ -71,9 +70,9 @@ public class SopController {
     /**
      * Gets an SOP by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id the unique identifier of the SOP to retrieve
+     * @param exchange the current server web exchange, used for admin role verification
+     * @return a mono wrapping a response entity with the SOP details, or 404 if not found
      */
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getSop(@PathVariable("id") String id, ServerWebExchange exchange) {
@@ -96,9 +95,10 @@ public class SopController {
     /**
      * Creates a new SOP definition.
      *
-     * @param request the request parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param request the SOP definition fields to create, provided as a JSON request body
+     * @param exchange the current server web exchange, used for admin role verification
+     * @return a mono wrapping a response entity with the created SOP and 201 status,
+     *         or 409 if a duplicate name already exists
      */
     @PostMapping({"", "/"})
     public Mono<ResponseEntity<Map<String, Object>>> createSop(@RequestBody Map<String, Object> request,
@@ -124,10 +124,11 @@ public class SopController {
     /**
      * Updates an SOP by ID.
      *
-     * @param id the id parameter
-     * @param request the request parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id the unique identifier of the SOP to update
+     * @param request the SOP fields to modify, provided as a JSON request body
+     * @param exchange the current server web exchange, used for admin role verification
+     * @return a mono wrapping a response entity with the updated SOP, 404 if not found,
+     *         or 409 if the update causes a name conflict
      */
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateSop(@PathVariable("id") String id,
@@ -159,9 +160,9 @@ public class SopController {
     /**
      * Deletes an SOP by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id the unique identifier of the SOP to delete
+     * @param exchange the current server web exchange, used for admin role verification
+     * @return a mono wrapping a response entity with a success flag, or 404 if the SOP does not exist
      */
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteSop(@PathVariable("id") String id, ServerWebExchange exchange) {

@@ -37,6 +37,8 @@ import jakarta.annotation.PostConstruct;
  */
 @Service
 public class ClusterRelationService {
+    private static final String MEMBERSHIP_RELATION = "包含";
+
     private static final Logger log = LoggerFactory.getLogger(ClusterRelationService.class);
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -55,9 +57,6 @@ public class ClusterRelationService {
 
     /**
      * Creates the cluster relation service instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public ClusterRelationService(GatewayProperties properties) {
         this.properties = properties;
@@ -66,7 +65,7 @@ public class ClusterRelationService {
     /**
      * Sets the host service via lazy injection.
      *
-     * @param hostService the hostService parameter
+     * @param hostService the host service via lazy injection
      */
     @Lazy
     @Autowired
@@ -77,7 +76,7 @@ public class ClusterRelationService {
     /**
      * Sets the cluster service via lazy injection.
      *
-     * @param clusterService the clusterService parameter
+     * @param clusterService the cluster service via lazy injection
      */
     @Lazy
     @Autowired
@@ -88,7 +87,7 @@ public class ClusterRelationService {
     /**
      * Sets the cluster type service via lazy injection.
      *
-     * @param clusterTypeService the clusterTypeService parameter
+     * @param clusterTypeService the cluster type service via lazy injection
      */
     @Lazy
     @Autowired
@@ -99,7 +98,7 @@ public class ClusterRelationService {
     /**
      * Sets the business service service via lazy injection.
      *
-     * @param businessServiceService the businessServiceService parameter
+     * @param businessServiceService the business service service via lazy injection
      */
     @Lazy
     @Autowired
@@ -127,7 +126,7 @@ public class ClusterRelationService {
     /**
      * Lists cluster relations optionally filtered by cluster ID.
      *
-     * @param clusterId the clusterId parameter
+     * @param clusterId cluster identifier
      * @return the result
      */
     public List<Map<String, Object>> listRelations(String clusterId) {
@@ -165,7 +164,7 @@ public class ClusterRelationService {
     /**
      * Creates a new cluster relation from the provided field map.
      *
-     * @param body the body parameter
+     * @param body request body
      * @return the result
      */
     public Map<String, Object> createRelation(Map<String, Object> body) {
@@ -229,8 +228,8 @@ public class ClusterRelationService {
     /**
      * Updates an existing cluster relation with the provided field map.
      *
-     * @param id the id parameter
-     * @param body the body parameter
+     * @param id an existing cluster relation with the provided field map
+     * @param body an existing cluster relation with the provided field map
      * @return the result
      */
     public Map<String, Object> updateRelation(String id, Map<String, Object> body) {
@@ -287,7 +286,7 @@ public class ClusterRelationService {
     /**
      * Deletes a cluster relation by its ID.
      *
-     * @param id the id parameter
+     * @param id entity identifier
      * @return the result
      */
     public boolean deleteRelation(String id) {
@@ -316,7 +315,7 @@ public class ClusterRelationService {
     /**
      * Delete all relations involving a specific cluster (cascade delete).
      *
-     * @param clusterId the clusterId parameter
+     * @param clusterId cluster identifier
      */
     public void deleteRelationsByCluster(String clusterId) {
         List<Map<String, Object>> all = listRelations(null);
@@ -339,7 +338,7 @@ public class ClusterRelationService {
     /**
      * Delete all relations where source is a specific business service (cascade delete).
      *
-     * @param bsId the bsId parameter
+     * @param bsId bs id
      */
     public void deleteRelationsByBusinessService(String bsId) {
         List<Map<String, Object>> all = listRelations(null);
@@ -357,17 +356,17 @@ public class ClusterRelationService {
         }
     }
 
-    // ── Cluster→Host 包含 Relation ─────────────────────────────
+    // ── Cluster→Host membership relation ─────────────────────────────
 
     /**
-     * Sync the 包含 relation for a host (cluster contains host).
+     * Sync the membership relation for a host (cluster contains host).
      * - If no relation exists and clusterId is non-null → create one.
      * - If relation exists and clusterId changed → update sourceId (the cluster).
      * - If relation exists and clusterId cleared → delete relation.
      * - If relation exists and same clusterId → no-op.
      *
-     * @param hostId the hostId parameter
-     * @param clusterId the clusterId parameter
+     * @param hostId host identifier
+     * @param clusterId cluster identifier
      */
     public void syncHostClusterRelation(String hostId, String clusterId) {
         List<Map<String, Object>> all = listRelations(null);
@@ -376,7 +375,7 @@ public class ClusterRelationService {
             String st = (String) rel.getOrDefault("sourceType", "cluster");
             String tid = (String) rel.get("targetId");
             String desc = (String) rel.getOrDefault("description", "");
-            if ("cluster".equals(st) && hostId.equals(tid) && "包含".equals(desc)) {
+            if ("cluster".equals(st) && hostId.equals(tid) && MEMBERSHIP_RELATION.equals(desc)) {
                 existing = rel;
                 break;
             }
@@ -385,7 +384,7 @@ public class ClusterRelationService {
         boolean clusterIdEmpty = clusterId == null || clusterId.isEmpty();
 
         if (existing == null && !clusterIdEmpty) {
-            // Create new 包含 relation: cluster → host
+            // Create new membership relation: cluster → host
             String id = UUID.randomUUID().toString();
             String now = Instant.now().toString();
             Map<String, Object> relation = new LinkedHashMap<>();
@@ -393,15 +392,15 @@ public class ClusterRelationService {
             relation.put("sourceType", "cluster");
             relation.put("sourceId", clusterId);
             relation.put("targetId", hostId);
-            relation.put("description", "包含");
+            relation.put("description", MEMBERSHIP_RELATION);
             relation.put("createdAt", now);
             relation.put("updatedAt", now);
             writeEntityFile(id, relation);
-            log.info("Created 包含 relation: cluster={} -> host={}", clusterId, hostId);
+            log.info("Created membership relation: cluster={} -> host={}", clusterId, hostId);
         } else if (existing != null && clusterIdEmpty) {
             // Delete relation
             deleteRelation((String) existing.get("id"));
-            log.info("Deleted 包含 relation for host={} (clusterId cleared)", hostId);
+            log.info("Deleted membership relation for host={} (clusterId cleared)", hostId);
         } else if (existing != null && !clusterIdEmpty) {
             String currentSource = (String) existing.get("sourceId");
             if (!clusterId.equals(currentSource)) {
@@ -409,16 +408,16 @@ public class ClusterRelationService {
                 existing.put("sourceId", clusterId);
                 existing.put("updatedAt", Instant.now().toString());
                 writeEntityFile((String) existing.get("id"), existing);
-                log.info("Updated 包含 relation: cluster={} -> host={} (was cluster={})", clusterId, hostId,
+                log.info("Updated membership relation: cluster={} -> host={} (was cluster={})", clusterId, hostId,
                     currentSource);
             }
         }
     }
 
     /**
-     * Delete the 包含 relation for a host (used on host delete).
+     * Delete the membership relation for a host (used on host delete).
      *
-     * @param hostId the hostId parameter
+     * @param hostId host identifier
      */
     public void deleteConstituteRelationByHost(String hostId) {
         List<Map<String, Object>> all = listRelations(null);
@@ -426,9 +425,9 @@ public class ClusterRelationService {
             String st = (String) rel.getOrDefault("sourceType", "cluster");
             String tid = (String) rel.get("targetId");
             String desc = (String) rel.getOrDefault("description", "");
-            if ("cluster".equals(st) && hostId.equals(tid) && "包含".equals(desc)) {
+            if ("cluster".equals(st) && hostId.equals(tid) && MEMBERSHIP_RELATION.equals(desc)) {
                 deleteRelation((String) rel.get("id"));
-                log.info("Deleted 包含 relation for host={} on host delete", hostId);
+                log.info("Deleted membership relation for host={} on host delete", hostId);
                 return;
             }
         }
@@ -439,8 +438,8 @@ public class ClusterRelationService {
     /**
      * Build cluster-level graph data for a given group.
      *
-     * @param groupId the groupId parameter
-     * @return the result
+     * @param groupId group identifier
+     * @return cluster-level graph data for the group
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getGraphData(String groupId) {
@@ -509,10 +508,10 @@ public class ClusterRelationService {
                 matchedEdges.add(rel);
             }
 
-            // Track cluster→host 包含 relations for topology
+            // Track cluster→host membership relations for topology
             if ("cluster".equals(sourceType)) {
                 String desc = (String) rel.getOrDefault("description", "");
-                if ("包含".equals(desc) && clusterMap.containsKey(sourceId)) {
+                if (MEMBERSHIP_RELATION.equals(desc) && clusterMap.containsKey(sourceId)) {
                     matchedEdges.add(rel);
                     if (!hostNodes.containsKey(targetId)) {
                         try {
@@ -596,7 +595,7 @@ public class ClusterRelationService {
             edge.put("target", rel.get("targetId"));
             edge.put("description", rel.get("description"));
             String desc = (String) rel.getOrDefault("description", "");
-            if ("包含".equals(desc)) {
+            if (MEMBERSHIP_RELATION.equals(desc)) {
                 edge.put("type", "constitute");
             } else {
                 edge.put("type", "business-service".equals(sourceType) ? "business-entry" : "cluster-relation");
@@ -615,8 +614,8 @@ public class ClusterRelationService {
     /**
      * Get 1-hop neighbors (upstream + downstream) for a given cluster.
      *
-     * @param clusterId the clusterId parameter
-     * @return the result
+     * @param clusterId cluster identifier
+     * @return 1-hop neighbors (upstream + downstream) for a given cluster
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getClusterNeighbors(String clusterId) {
@@ -695,8 +694,10 @@ public class ClusterRelationService {
     /**
      * Get host neighbors via cluster relations: resolve host -> cluster -> cluster neighbors -> flatten to host list.
      *
-     * @param hostId the hostId parameter
-     * @return the result
+     * @param hostId host identifier
+     *        to host list
+     * @return host neighbors via cluster relations: resolve host -> cluster -> cluster neighbors -> flatten to host
+     *         list
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getHostNeighborsByCluster(String hostId) {

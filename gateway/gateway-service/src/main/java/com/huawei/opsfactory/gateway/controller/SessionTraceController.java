@@ -43,8 +43,7 @@ public class SessionTraceController {
     /**
      * Creates the session trace controller.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param traceService service handling trace collection jobs
      */
     public SessionTraceController(SessionTraceService traceService) {
         this.traceService = traceService;
@@ -53,19 +52,12 @@ public class SessionTraceController {
     /**
      * Starts a trace collection job for a session.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param agentId agent instance identifier
+     * @param sessionId session identifier to trace
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting a snapshot of the created trace job
      */
     @PostMapping(value = "/agents/{agentId}/sessions/{sessionId}/trace", produces = MediaType.APPLICATION_JSON_VALUE)
-
-    /**
-     * Executes the start trace operation.
-     *
-     * @param agentId the agentId parameter
-     * @param sessionId the sessionId parameter
-     * @param exchange the exchange parameter
-     * @return the result
-     */
     public Mono<TraceJobSnapshot> startTrace(@PathVariable("agentId") String agentId,
         @PathVariable("sessionId") String sessionId, ServerWebExchange exchange) {
         UserContextFilter.requireAdmin(exchange);
@@ -76,18 +68,11 @@ public class SessionTraceController {
     /**
      * Gets the status of a trace collection job.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param jobId trace job identifier
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting a snapshot of the requested trace job
      */
     @GetMapping(value = "/session-traces/{jobId}", produces = MediaType.APPLICATION_JSON_VALUE)
-
-    /**
-     * Returns the trace.
-     *
-     * @param jobId the jobId parameter
-     * @param exchange the exchange parameter
-     * @return the result
-     */
     public Mono<TraceJobSnapshot> getTrace(@PathVariable("jobId") String jobId, ServerWebExchange exchange) {
         UserContextFilter.requireAdmin(exchange);
         return Mono.fromSupplier(() -> traceService.getJob(jobId));
@@ -96,9 +81,8 @@ public class SessionTraceController {
     /**
      * Downloads the trace archive for a completed trace job.
      *
-     * @param jobId the jobId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param jobId trace job identifier whose archive to download
+     * @param exchange current HTTP exchange for writing the response
      */
     @GetMapping("/session-traces/{jobId}/download")
     public Mono<Void> downloadTrace(@PathVariable("jobId") String jobId, ServerWebExchange exchange) {

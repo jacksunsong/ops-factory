@@ -4,23 +4,30 @@
 
 package com.huawei.opsfactory.operationintelligence.security;
 
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
+
 import com.huawei.opsfactory.operationintelligence.config.OperationIntelligenceProperties;
+
+import reactor.core.publisher.Mono;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
+import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilterChain;
-import reactor.core.publisher.Mono;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class AuthWebFilterTest {
 
     private AuthWebFilter filter;
+
     private WebFilterChain chain;
 
     @BeforeEach
@@ -34,10 +41,8 @@ class AuthWebFilterTest {
 
     @Test
     void validSecretKeyHeader_passes() {
-        ServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.get("/test")
-                        .header("x-secret-key", "test-secret")
-                        .build());
+        ServerWebExchange exchange = MockServerWebExchange
+            .from(MockServerHttpRequest.get("/test").header("x-secret-key", "test-secret").build());
 
         filter.filter(exchange, chain).block();
         verify(chain).filter(exchange);
@@ -45,8 +50,8 @@ class AuthWebFilterTest {
 
     @Test
     void validSecretKeyQueryParam_passes() {
-        ServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.get("/test?key=test-secret").build());
+        ServerWebExchange exchange =
+            MockServerWebExchange.from(MockServerHttpRequest.get("/test?key=test-secret").build());
 
         filter.filter(exchange, chain).block();
         verify(chain).filter(exchange);
@@ -54,8 +59,7 @@ class AuthWebFilterTest {
 
     @Test
     void missingSecretKey_returns401() {
-        ServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.get("/test").build());
+        ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/test").build());
 
         filter.filter(exchange, chain).block();
         assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
@@ -64,10 +68,8 @@ class AuthWebFilterTest {
 
     @Test
     void invalidSecretKey_returns401() {
-        ServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.get("/test")
-                        .header("x-secret-key", "wrong")
-                        .build());
+        ServerWebExchange exchange =
+            MockServerWebExchange.from(MockServerHttpRequest.get("/test").header("x-secret-key", "wrong").build());
 
         filter.filter(exchange, chain).block();
         assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
@@ -76,8 +78,8 @@ class AuthWebFilterTest {
 
     @Test
     void optionsRequest_passesWithoutAuth() {
-        ServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.method(HttpMethod.OPTIONS, "/test").build());
+        ServerWebExchange exchange =
+            MockServerWebExchange.from(MockServerHttpRequest.method(HttpMethod.OPTIONS, "/test").build());
 
         filter.filter(exchange, chain).block();
         verify(chain).filter(exchange);
@@ -85,8 +87,7 @@ class AuthWebFilterTest {
 
     @Test
     void healthCheck_passesWithoutAuth() {
-        ServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.get("/actuator/health").build());
+        ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/actuator/health").build());
 
         filter.filter(exchange, chain).block();
         verify(chain).filter(exchange);
@@ -94,10 +95,8 @@ class AuthWebFilterTest {
 
     @Test
     void blankSecretKeyHeader_treatedAsMissing() {
-        ServerWebExchange exchange = MockServerWebExchange.from(
-                MockServerHttpRequest.get("/test")
-                        .header("x-secret-key", "   ")
-                        .build());
+        ServerWebExchange exchange =
+            MockServerWebExchange.from(MockServerHttpRequest.get("/test").header("x-secret-key", "   ").build());
 
         filter.filter(exchange, chain).block();
         assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());

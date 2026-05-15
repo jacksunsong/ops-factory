@@ -4,7 +4,13 @@
 
 package com.huawei.opsfactory.gateway.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -14,9 +20,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
-
-import static org.junit.Assert.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Test coverage for Host Group Service.
@@ -29,7 +35,9 @@ public class HostGroupServiceTest {
     public TemporaryFolder tempFolder = new TemporaryFolder();
 
     private HostGroupService hostGroupService;
+
     private GatewayProperties properties;
+
     private Path groupsDir;
 
     /**
@@ -48,7 +56,11 @@ public class HostGroupServiceTest {
         hostGroupService.init();
 
         groupsDir = Path.of(tempFolder.getRoot().getAbsolutePath())
-                .toAbsolutePath().normalize().resolve("gateway").resolve("data").resolve("host-groups");
+            .toAbsolutePath()
+            .normalize()
+            .resolve("gateway")
+            .resolve("data")
+            .resolve("host-groups");
     }
 
     // ── createGroup ──────────────────────────────────────────────
@@ -327,8 +339,8 @@ public class HostGroupServiceTest {
 
         try {
             Path file = groupsDir.resolve(id + ".json");
-            String json = new com.fasterxml.jackson.databind.ObjectMapper()
-                    .writerWithDefaultPrettyPrinter().writeValueAsString(group);
+            String json = new com.fasterxml.jackson.databind.ObjectMapper().writerWithDefaultPrettyPrinter()
+                .writeValueAsString(group);
             Files.writeString(file, json, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);

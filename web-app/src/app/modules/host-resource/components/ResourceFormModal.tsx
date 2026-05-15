@@ -64,7 +64,17 @@ export default function ResourceFormModal({
 
     // ── Cluster form state ──
     const [clusterName, setClusterName] = useState(editingItem?.type === 'cluster' ? editingItem.data.name : '')
-    const [clusterType, setClusterType] = useState(editingItem?.type === 'cluster' ? editingItem.data.type : '')
+    const resolveClusterTypeName = (stored: string): string => {
+        if (!stored) return ''
+        if (clusterTypes.some(ct => ct.name === stored)) return stored
+        return clusterTypes.find(ct => ct.code === stored)?.name ?? stored
+    }
+    const [clusterType, setClusterType] = useState(editingItem?.type === 'cluster' ? resolveClusterTypeName(editingItem.data.type) : '')
+    useEffect(() => {
+        if (editingItem?.type === 'cluster' && editingItem.data.type) {
+            setClusterType(resolveClusterTypeName(editingItem.data.type))
+        }
+    }, [clusterTypes, editingItem])
     const [clusterTypeIsCustom, setClusterTypeIsCustom] = useState(false)
     const [clusterPurpose, setClusterPurpose] = useState(editingItem?.type === 'cluster' ? editingItem.data.purpose : '')
     const [clusterGroupId, setClusterGroupId] = useState(editingItem?.type === 'cluster' ? (editingItem.data.groupId ?? '') : (defaultGroupId ?? ''))

@@ -4,15 +4,16 @@
 
 package com.huawei.opsfactory.gateway.hook;
 
-import org.junit.Test;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import static org.junit.Assert.assertEquals;
+
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import java.util.List;
+import org.junit.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
-import static org.junit.Assert.assertEquals;
+import java.util.List;
 
 /**
  * Test coverage for Hook Pipeline.
@@ -30,9 +31,7 @@ public class HookPipelineTest {
         HookPipeline pipeline = new HookPipeline(List.of());
         HookContext ctx = new HookContext("{\"test\": true}", "agent1", "user1");
 
-        StepVerifier.create(pipeline.executeRequest(ctx))
-                .expectNext("{\"test\": true}")
-                .verifyComplete();
+        StepVerifier.create(pipeline.executeRequest(ctx)).expectNext("{\"test\": true}").verifyComplete();
     }
 
     /**
@@ -44,9 +43,7 @@ public class HookPipelineTest {
         HookPipeline pipeline = new HookPipeline(List.of(hook));
         HookContext ctx = new HookContext("body", "agent1", "user1");
 
-        StepVerifier.create(pipeline.executeRequest(ctx))
-                .expectNext("body")
-                .verifyComplete();
+        StepVerifier.create(pipeline.executeRequest(ctx)).expectNext("body").verifyComplete();
     }
 
     /**
@@ -66,9 +63,7 @@ public class HookPipelineTest {
         HookPipeline pipeline = new HookPipeline(List.of(hook1, hook2));
         HookContext ctx = new HookContext("start", "agent1", "user1");
 
-        StepVerifier.create(pipeline.executeRequest(ctx))
-                .expectNext("start-hook1-hook2")
-                .verifyComplete();
+        StepVerifier.create(pipeline.executeRequest(ctx)).expectNext("start-hook1-hook2").verifyComplete();
     }
 
     /**
@@ -76,8 +71,7 @@ public class HookPipelineTest {
      */
     @Test
     public void testHookError_shortCircuits() {
-        RequestHook hook1 = c -> Mono.error(
-                new ResponseStatusException(HttpStatus.BAD_REQUEST, "rejected"));
+        RequestHook hook1 = c -> Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "rejected"));
         RequestHook hook2 = c -> {
             c.setBody("should-not-reach");
             return Mono.just(c);
@@ -86,9 +80,7 @@ public class HookPipelineTest {
         HookPipeline pipeline = new HookPipeline(List.of(hook1, hook2));
         HookContext ctx = new HookContext("body", "agent1", "user1");
 
-        StepVerifier.create(pipeline.executeRequest(ctx))
-                .expectError(ResponseStatusException.class)
-                .verify();
+        StepVerifier.create(pipeline.executeRequest(ctx)).expectError(ResponseStatusException.class).verify();
 
         // Verify hook2 was never called
         assertEquals("body", ctx.getBody());

@@ -66,7 +66,7 @@ function TreeNodeItem({ node, depth, selectedId, selectedType, onSelect, onEdit,
 }) {
     const isSelected = selectedId === node.id && selectedType === node.type
     const hasChildren = node.children && node.children.length > 0
-    const [expanded, setExpanded] = useState(true)
+    const [expanded, setExpanded] = useState(false)
 
     const isDisabled = inheritedDisabled === true
 

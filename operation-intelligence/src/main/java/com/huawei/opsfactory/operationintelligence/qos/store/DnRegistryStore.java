@@ -25,31 +25,31 @@ public class DnRegistryStore {
 
     private final JsonFileStore<DnRegistry> store;
 
-/**
- * Dn Registry Store.
- *
- * @param properties the properties
- */
+    /**
+     * Dn Registry Store.
+     *
+     * @param properties the properties
+     */
     public DnRegistryStore(OperationIntelligenceProperties properties) {
         Path dir = properties.resolveDataRoot().resolve("qos").resolve("config");
         this.store = new JsonFileStore<>(dir, "dn_registry", new TypeReference<List<DnRegistry>>() {}, false, 0, 0);
         this.store.init();
     }
 
-/**
- * load All.
- *
- * @return the result
- */
+    /**
+     * load All.
+     *
+     * @return the result
+     */
     public List<DnRegistry> loadAll() {
         return store.loadAll();
     }
 
-/**
- * replace All.
- *
- * @param items the items
- */
+    /**
+     * replace All.
+     *
+     * @param items the items
+     */
     public void replaceAll(List<DnRegistry> items) {
         store.replaceAll(items);
     }

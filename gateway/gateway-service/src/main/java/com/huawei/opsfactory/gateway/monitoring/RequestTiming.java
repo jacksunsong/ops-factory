@@ -27,9 +27,6 @@ public class RequestTiming {
 
     /**
      * Creates the request timing instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public RequestTiming(long startTime, long ttftMs, long totalMs, long totalBytes, boolean error, String agentId,
         String userId) {
@@ -45,7 +42,7 @@ public class RequestTiming {
     /**
      * Gets the request start time in milliseconds since epoch.
      *
-     * @return the result
+     * @return the request start time in milliseconds since epoch
      */
     public long getStartTime() {
         return startTime;
@@ -54,7 +51,7 @@ public class RequestTiming {
     /**
      * Gets the time-to-first-token in milliseconds.
      *
-     * @return the result
+     * @return the time-to-first-token in milliseconds
      */
     public long getTtftMs() {
         return ttftMs;
@@ -63,7 +60,7 @@ public class RequestTiming {
     /**
      * Gets the total request duration in milliseconds.
      *
-     * @return the result
+     * @return the total request duration in milliseconds
      */
     public long getTotalMs() {
         return totalMs;
@@ -72,7 +69,7 @@ public class RequestTiming {
     /**
      * Gets the total number of bytes transferred.
      *
-     * @return the result
+     * @return the total number of bytes transferred
      */
     public long getTotalBytes() {
         return totalBytes;
@@ -81,7 +78,7 @@ public class RequestTiming {
     /**
      * Checks whether the request resulted in an error.
      *
-     * @return the result
+     * @return true if the request resulted in an error
      */
     public boolean isError() {
         return error;
@@ -90,7 +87,7 @@ public class RequestTiming {
     /**
      * Gets the agent identifier associated with this request.
      *
-     * @return the result
+     * @return the agent identifier associated with this request
      */
     public String getAgentId() {
         return agentId;
@@ -99,7 +96,7 @@ public class RequestTiming {
     /**
      * Gets the user identifier associated with this request.
      *
-     * @return the result
+     * @return the user identifier associated with this request
      */
     public String getUserId() {
         return userId;

@@ -31,8 +31,8 @@ public class SessionCacheService {
     /**
      * Returns cached sessions for the given user ID if still within the TTL.
      *
-     * @param userId the userId parameter
-     * @return the result
+     * @param userId user identifier whose cached sessions to retrieve
+     * @return cached session list, or null if expired or absent
      */
     public List<Map<String, Object>> get(String userId) {
         CacheEntry entry = cache.get(userId);
@@ -46,9 +46,9 @@ public class SessionCacheService {
      * Atomically cache the supplied data or return already-cached data from a concurrent request.
      * Prevents concurrent cache misses from duplicating the expensive fetch.
      *
-     * @param userId the userId parameter
-     * @param loader the loader parameter
-     * @return the result
+     * @param userId user identifier to cache sessions for
+     * @param loader supplier that fetches sessions when the cache is empty or expired
+     * @return the cached or freshly loaded session list
      */
     public List<Map<String, Object>> getOrFetch(String userId, Supplier<List<Map<String, Object>>> loader) {
         CacheEntry existing = cache.get(userId);
@@ -73,7 +73,7 @@ public class SessionCacheService {
     /**
      * Invalidates the cached sessions for the given user ID.
      *
-     * @param userId the userId parameter
+     * @param userId user identifier whose cache entry to remove
      */
     public void invalidate(String userId) {
         cache.remove(userId);

@@ -45,9 +45,6 @@ public class ClusterTypeService {
 
     /**
      * Creates the cluster type service instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public ClusterTypeService(GatewayProperties properties) {
         this.properties = properties;
@@ -99,8 +96,8 @@ public class ClusterTypeService {
     /**
      * Gets a cluster type by its ID.
      *
-     * @param id the id parameter
-     * @return the result
+     * @param id entity identifier
+     * @return a cluster type by its ID
      */
     public Map<String, Object> getClusterType(String id) {
         Path file = clusterTypesDir.resolve(id + ".json");
@@ -114,7 +111,7 @@ public class ClusterTypeService {
     /**
      * Creates a new cluster type from the provided field map.
      *
-     * @param body the body parameter
+     * @param body request body
      * @return the result
      */
     public Map<String, Object> createClusterType(Map<String, Object> body) {
@@ -142,8 +139,8 @@ public class ClusterTypeService {
     /**
      * Updates an existing cluster type with the provided field map.
      *
-     * @param id the id parameter
-     * @param body the body parameter
+     * @param id an existing cluster type with the provided field map
+     * @param body an existing cluster type with the provided field map
      * @return the result
      */
     public Map<String, Object> updateClusterType(String id, Map<String, Object> body) {
@@ -191,7 +188,7 @@ public class ClusterTypeService {
     /**
      * Deletes a cluster type by its ID.
      *
-     * @param id the id parameter
+     * @param id entity identifier
      * @return the result
      */
     public boolean deleteClusterType(String id) {

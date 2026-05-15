@@ -80,8 +80,11 @@ public class SessionController {
     /**
      * Creates the session controller instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param instanceManager agent instance lifecycle manager
+     * @param sessionService session query service backed by goosed instances
+     * @param goosedProxy HTTP proxy for forwarding requests to goosed processes
+     * @param agentConfigService agent configuration and directory resolver
+     * @param sessionCacheService in-memory session list cache
      */
     public SessionController(InstanceManager instanceManager, SessionService sessionService, GoosedProxy goosedProxy,
         AgentConfigService agentConfigService, SessionCacheService sessionCacheService) {
@@ -95,10 +98,10 @@ public class SessionController {
     /**
      * Starts a new agent session and loads model and extensions.
      *
-     * @param agentId the agentId parameter
-     * @param body the body parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId agent identifier from the URL path
+     * @param body JSON request body containing session configuration
+     * @param exchange current server web exchange carrying user context attributes
+     * @return Mono emitting the goosed start-session response as a JSON string
      */
     @PostMapping(value = "/agents/{agentId}/agent/start", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<String> startSession(@PathVariable("agentId") String agentId, @RequestBody String body,
@@ -175,13 +178,13 @@ public class SessionController {
     /**
      * Lists all sessions for the current user across all agents with pagination and filtering.
      *
-     * @param pageIndex the pageIndex parameter
-     * @param pageSize the pageSize parameter
-     * @param search the search parameter
-     * @param agentId the agentId parameter
-     * @param type the type parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param pageIndex 1-based page number (defaults to 1)
+     * @param pageSize number of items per page (defaults to 20, max 200)
+     * @param search optional case-insensitive substring filter on session name
+     * @param agentId optional filter to return only sessions for this agent
+     * @param type optional session type filter: "user" or "scheduled"
+     * @param exchange current server web exchange carrying user context attributes
+     * @return Mono emitting a paginated JSON object with sessions, total, pageIndex, and pageSize
      */
     @GetMapping(value = "/sessions", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<String> listAllSessions(@RequestParam(value = "pageIndex", defaultValue = "1") int pageIndex,
@@ -326,11 +329,11 @@ public class SessionController {
     }
 
     /**
-     * Lists all sessions for a specific agent, proxied from goosed.
+     * Lists all sessions for a specific agent by proxying the request to the goosed instance.
      *
-     * @param agentId the agentId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId agent identifier from the URL path
+     * @param exchange current server web exchange carrying user context attributes
+     * @return Mono that completes when the proxied response has been written back
      */
     @GetMapping("/agents/{agentId}/sessions")
     public Mono<Void> listAgentSessions(@PathVariable("agentId") String agentId, ServerWebExchange exchange) {
@@ -343,10 +346,10 @@ public class SessionController {
     /**
      * Gets a session by agent ID and session ID.
      *
-     * @param agentId the agentId parameter
-     * @param sessionId the sessionId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId agent identifier from the URL path
+     * @param sessionId session identifier from the URL path
+     * @param exchange current server web exchange carrying user context attributes
+     * @return Mono emitting the session detail as a JSON string with agentId injected
      */
     @GetMapping(value = "/agents/{agentId}/sessions/{sessionId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<String> getSession(@PathVariable("agentId") String agentId, @PathVariable("sessionId") String sessionId,
@@ -371,12 +374,12 @@ public class SessionController {
     }
 
     /**
-     * Global session detail: GET /sessions/{sessionId}?agentId=X
+     * Global session detail: GET /sessions/{sessionId}?agentId=X.
      *
-     * @param sessionId the sessionId parameter
-     * @param agentId the agentId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param sessionId session identifier from the URL path
+     * @param agentId agent identifier passed as a required query parameter
+     * @param exchange current server web exchange carrying user context attributes
+     * @return Mono emitting the session detail as a JSON string with agentId injected
      */
     @GetMapping(value = "/sessions/{sessionId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<String> getSessionGlobal(@PathVariable("sessionId") String sessionId, @RequestParam("agentId") String agentId,
@@ -401,12 +404,12 @@ public class SessionController {
     }
 
     /**
-     * Deletes a session by agent ID and session ID.
+     * Deletes a session by agent ID and session ID, also cleaning up associated uploads.
      *
-     * @param agentId the agentId parameter
-     * @param sessionId the sessionId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId agent identifier from the URL path
+     * @param sessionId session identifier from the URL path
+     * @param exchange current server web exchange carrying user context attributes
+     * @return Mono that completes when the delete has been proxied
      */
     @DeleteMapping("/agents/{agentId}/sessions/{sessionId}")
     public Mono<Void> deleteSession(@PathVariable("agentId") String agentId, @PathVariable("sessionId") String sessionId,
@@ -432,10 +435,10 @@ public class SessionController {
     /**
      * Deletes a session globally by session ID with an agent ID query parameter.
      *
-     * @param sessionId the sessionId parameter
-     * @param agentId the agentId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param sessionId session identifier from the URL path
+     * @param agentId agent identifier passed as a required query parameter
+     * @param exchange current server web exchange carrying user context attributes
+     * @return Mono that completes when the delete has been proxied
      */
     @DeleteMapping("/sessions/{sessionId}")
     public Mono<Void> deleteSessionGlobal(@PathVariable("sessionId") String sessionId, @RequestParam("agentId") String agentId,
@@ -461,8 +464,10 @@ public class SessionController {
     /**
      * Cleans up an empty session if it has no conversation or messages.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param agentId agent identifier from the URL path
+     * @param sessionId session identifier from the URL path
+     * @param exchange current server web exchange carrying user context attributes
+     * @return Mono emitting a map with "deleted" (boolean) and "reason" (string) keys
      */
     @PostMapping(value = "/agents/{agentId}/sessions/{sessionId}/cleanup-empty",
         produces = MediaType.APPLICATION_JSON_VALUE)
@@ -504,12 +509,6 @@ public class SessionController {
             });
     }
 
-    /**
-     * Inject agentId into a session JSON response.
-     *
-     * @author x00000000
-     * @since 2026-05-09
-     */
     private String injectAgentId(String json, String agentId) {
         try {
             java.util.Map<String, Object> map =
@@ -522,12 +521,6 @@ public class SessionController {
         }
     }
 
-    /**
-     * Clean up uploaded files for a deleted session.
-     *
-     * @author x00000000
-     * @since 2026-05-09
-     */
     private void cleanupUploads(String userId, String agentId, String sessionId) {
         try {
             Path uploadsDir = agentConfigService.getUserAgentDir(userId, agentId).resolve("uploads").resolve(sessionId);
@@ -596,17 +589,14 @@ public class SessionController {
         return value.isBlank() ? null : value;
     }
 
-    private record EmptySessionDecision(boolean delete, String reason) {
-    }
-
     /**
-     * Rename session: PUT /agents/{agentId}/sessions/{sessionId}/name
+     * Rename session: PUT /agents/{agentId}/sessions/{sessionId}/name.
      *
-     * @param agentId the agentId parameter
-     * @param sessionId the sessionId parameter
-     * @param body the body parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId agent identifier from the URL path
+     * @param sessionId session identifier from the URL path
+     * @param body JSON body containing the new session name
+     * @param exchange current server web exchange carrying user context attributes
+     * @return Mono that completes when the rename has been proxied
      */
     @PutMapping("/agents/{agentId}/sessions/{sessionId}/name")
     public Mono<Void> renameSession(@PathVariable("agentId") String agentId, @PathVariable("sessionId") String sessionId,
@@ -625,5 +615,8 @@ public class SessionController {
                     () -> log.info("[SESSION-RENAME] complete agentId={} " + "userId={} sessionId={}", agentId, userId,
                         sessionId));
             });
+    }
+
+    private record EmptySessionDecision(boolean delete, String reason) {
     }
 }

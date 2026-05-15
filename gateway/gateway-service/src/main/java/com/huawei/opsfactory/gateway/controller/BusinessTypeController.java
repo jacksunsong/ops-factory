@@ -40,8 +40,7 @@ public class BusinessTypeController {
     /**
      * Creates the business type controller instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param businessTypeService service handling business type CRUD operations
      */
     public BusinessTypeController(BusinessTypeService businessTypeService) {
         this.businessTypeService = businessTypeService;
@@ -50,8 +49,8 @@ public class BusinessTypeController {
     /**
      * Lists all business type definitions.
      *
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting a map with "businessTypes" list
      */
     @GetMapping
     public Mono<Map<String, Object>> listBusinessTypes(ServerWebExchange exchange) {
@@ -67,9 +66,9 @@ public class BusinessTypeController {
     /**
      * Gets a business type by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id business type identifier
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity containing the business type or 404
      */
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getBusinessType(@PathVariable("id") String id,
@@ -94,9 +93,9 @@ public class BusinessTypeController {
     /**
      * Creates a new business type.
      *
-     * @param request the request parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param request request body containing business type fields
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with created business type or 400
      */
     @PostMapping
     public Mono<ResponseEntity<Map<String, Object>>> createBusinessType(@RequestBody Map<String, Object> request,
@@ -121,10 +120,10 @@ public class BusinessTypeController {
     /**
      * Updates a business type by ID.
      *
-     * @param id the id parameter
-     * @param request the request parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id business type identifier
+     * @param request request body containing updated fields
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with updated business type or 404
      */
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateBusinessType(@PathVariable("id") String id,
@@ -149,9 +148,9 @@ public class BusinessTypeController {
     /**
      * Deletes a business type by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id business type identifier
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with success status or 404
      */
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteBusinessType(@PathVariable("id") String id,

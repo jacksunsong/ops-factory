@@ -36,8 +36,7 @@ public class SystemUserMigrationService {
     /**
      * Creates the system user migration service instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param properties gateway configuration properties
      */
     public SystemUserMigrationService(GatewayProperties properties) {
         this.properties = properties;
@@ -45,12 +44,14 @@ public class SystemUserMigrationService {
 
     /**
      * Performs the legacy system user directory migration if needed on startup.
-     *
-     * @throws IOException if the operation fails
      */
     @PostConstruct
-    public void migrateIfNeeded() throws IOException {
-        migrateLegacySystemUser();
+    public void migrateIfNeeded() {
+        try {
+            migrateLegacySystemUser();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to migrate legacy system user directory", e);
+        }
     }
 
     void migrateLegacySystemUser() throws IOException {

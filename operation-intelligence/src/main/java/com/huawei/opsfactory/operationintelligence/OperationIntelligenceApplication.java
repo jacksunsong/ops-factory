@@ -22,11 +22,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class OperationIntelligenceApplication {
 
-/**
- * main.
- *
- * @param args the args
- */
+    /**
+     * main.
+     *
+     * @param args the args
+     */
     public static void main(String[] args) {
         SpringApplication.run(OperationIntelligenceApplication.class, args);
     }

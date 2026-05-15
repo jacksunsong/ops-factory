@@ -25,11 +25,11 @@ public class IndicatorNormalizeDataStore {
 
     private final JsonFileStore<IndicatorNormalizeData> store;
 
-/**
- * Indicator Normalize Data Store.
- *
- * @param properties the properties
- */
+    /**
+     * Indicator Normalize Data Store.
+     *
+     * @param properties the properties
+     */
     public IndicatorNormalizeDataStore(OperationIntelligenceProperties properties) {
         Path dir = properties.resolveDataRoot().resolve("qos").resolve("normalize");
         long rotationMs = properties.getQos().getRotationIntervalMs();
@@ -39,38 +39,38 @@ public class IndicatorNormalizeDataStore {
         this.store.init();
     }
 
-/**
- * load Range.
- *
- * @param startMs the startMs
- * @param endMs the endMs
- * @return the result
- */
+    /**
+     * load Range.
+     *
+     * @param startMs the startMs
+     * @param endMs the endMs
+     * @return the result
+     */
     public List<IndicatorNormalizeData> loadRange(long startMs, long endMs) {
         return store.loadRange(startMs, endMs);
     }
 
-/**
- * append.
- *
- * @param item the item
- */
+    /**
+     * append.
+     *
+     * @param item the item
+     */
     public void append(IndicatorNormalizeData item) {
         store.append(item);
     }
 
-/**
- * append All.
- *
- * @param items the items
- */
+    /**
+     * append All.
+     *
+     * @param items the items
+     */
     public void appendAll(List<IndicatorNormalizeData> items) {
         store.appendAll(items);
     }
 
-/**
- * cleanup.
- */
+    /**
+     * cleanup.
+     */
     public void cleanup() {
         store.cleanup();
     }

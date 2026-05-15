@@ -32,9 +32,6 @@ public class GlobalExceptionHandler {
 
     /**
      * Creates a global exception handler with default gateway properties.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public GlobalExceptionHandler() {
         this(new GatewayProperties());
@@ -42,9 +39,6 @@ public class GlobalExceptionHandler {
 
     /**
      * Creates a global exception handler with the given gateway properties.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public GlobalExceptionHandler(GatewayProperties properties) {
         this.properties = properties;
@@ -53,8 +47,8 @@ public class GlobalExceptionHandler {
     /**
      * Handles request input errors such as invalid JSON body.
      *
-     * @param ex the ex parameter
-     * @return the result
+     * @param ex ex
+     * @return the handles request input errors such as invalid JSON body
      */
     @ExceptionHandler(ServerWebInputException.class)
     public ResponseEntity<Map<String, Object>> handleInputException(ServerWebInputException ex) {
@@ -72,8 +66,8 @@ public class GlobalExceptionHandler {
     /**
      * Handles response status exceptions and returns a normalized error body.
      *
-     * @param ex the ex parameter
-     * @return the result
+     * @param ex ex
+     * @return the handles response status exceptions and returns a normalized error body
      */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, Object>> handleResponseStatus(ResponseStatusException ex) {
@@ -88,8 +82,8 @@ public class GlobalExceptionHandler {
      * Catch-all for goosed HTTP errors that controllers didn't handle.
      * Forwards the upstream status code with a sanitized error message.
      *
-     * @param ex the ex parameter
-     * @return the result
+     * @param ex catch-all for goosed HTTP errors that controllers didn't handle
+     * @return the catch-all for goosed HTTP errors that controllers didn't handle
      */
     @ExceptionHandler(WebClientResponseException.class)
     public ResponseEntity<Map<String, Object>> handleWebClientResponse(WebClientResponseException ex) {
@@ -126,8 +120,8 @@ public class GlobalExceptionHandler {
      * Last-resort catch-all for any unhandled exception.
      * Returns 500 with a generic message and never leaks internal details.
      *
-     * @param ex the ex parameter
-     * @return the result
+     * @param ex last-resort catch-all for any unhandled exception
+     * @return the last-resort catch-all for any unhandled exception
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleUnexpected(Exception ex) {

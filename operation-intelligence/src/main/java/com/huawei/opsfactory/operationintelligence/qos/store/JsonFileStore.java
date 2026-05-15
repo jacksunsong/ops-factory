@@ -51,16 +51,16 @@ public class JsonFileStore<T> {
 
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
-/**
- * Json File Store.
- *
- * @param directory the directory
- * @param basename the basename
- * @param typeRef the typeRef
- * @param rotating the rotating
- * @param rotationIntervalMs the rotationIntervalMs
- * @param retentionMs the retentionMs
- */
+    /**
+     * Json File Store.
+     *
+     * @param directory the directory
+     * @param basename the basename
+     * @param typeRef the typeRef
+     * @param rotating the rotating
+     * @param rotationIntervalMs the rotationIntervalMs
+     * @param retentionMs the retentionMs
+     */
     public JsonFileStore(Path directory, String basename, TypeReference<List<T>> typeRef, boolean rotating,
         long rotationIntervalMs, long retentionMs) {
         this.directory = directory;
@@ -86,9 +86,9 @@ public class JsonFileStore<T> {
         }
     }
 
-/**
- * init.
- */
+    /**
+     * init.
+     */
     public void init() {
         try {
             Files.createDirectories(directory);
@@ -107,11 +107,11 @@ public class JsonFileStore<T> {
         }
     }
 
-/**
- * load All.
- *
- * @return the result
- */
+    /**
+     * load All.
+     *
+     * @return the result
+     */
     public List<T> loadAll() {
         rwLock.readLock().lock();
         try {
@@ -130,13 +130,13 @@ public class JsonFileStore<T> {
         }
     }
 
-/**
- * load Range.
- *
- * @param startMs the startMs
- * @param endMs the endMs
- * @return the result
- */
+    /**
+     * load Range.
+     *
+     * @param startMs the startMs
+     * @param endMs the endMs
+     * @return the result
+     */
     public List<T> loadRange(long startMs, long endMs) {
         rwLock.readLock().lock();
         try {
@@ -160,11 +160,11 @@ public class JsonFileStore<T> {
         }
     }
 
-/**
- * append.
- *
- * @param item the item
- */
+    /**
+     * append.
+     *
+     * @param item the item
+     */
     public void append(T item) {
         rwLock.writeLock().lock();
         try {
@@ -181,11 +181,11 @@ public class JsonFileStore<T> {
         }
     }
 
-/**
- * append All.
- *
- * @param newItems the newItems
- */
+    /**
+     * append All.
+     *
+     * @param newItems the newItems
+     */
     public void appendAll(List<T> newItems) {
         if (newItems == null || newItems.isEmpty())
             return;
@@ -204,11 +204,11 @@ public class JsonFileStore<T> {
         }
     }
 
-/**
- * replace All.
- *
- * @param items the items
- */
+    /**
+     * replace All.
+     *
+     * @param items the items
+     */
     public void replaceAll(List<T> items) {
         rwLock.writeLock().lock();
         try {
@@ -219,9 +219,9 @@ public class JsonFileStore<T> {
         }
     }
 
-/**
- * rotate If Needed.
- */
+    /**
+     * rotate If Needed.
+     */
     public void rotateIfNeeded() {
         if (!rotating)
             return;
@@ -239,9 +239,9 @@ public class JsonFileStore<T> {
         }
     }
 
-/**
- * cleanup.
- */
+    /**
+     * cleanup.
+     */
     public void cleanup() {
         if (!rotating || retentionMs <= 0)
             return;

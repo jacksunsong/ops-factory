@@ -4,6 +4,9 @@
 
 package com.huawei.opsfactory.gateway.common.util;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -12,9 +15,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.nio.file.Path;
 import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test coverage for Yaml Loader.

@@ -4,7 +4,13 @@
 
 package com.huawei.opsfactory.gateway.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -14,9 +20,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
-
-import static org.junit.Assert.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Test coverage for Host Service.
@@ -29,7 +35,9 @@ public class HostServiceTest {
     public TemporaryFolder tempFolder = new TemporaryFolder();
 
     private HostService hostService;
+
     private GatewayProperties properties;
+
     private Path hostsDir;
 
     /**
@@ -49,7 +57,11 @@ public class HostServiceTest {
         hostService.init();
 
         hostsDir = Path.of(tempFolder.getRoot().getAbsolutePath())
-                .toAbsolutePath().normalize().resolve("gateway").resolve("data").resolve("hosts");
+            .toAbsolutePath()
+            .normalize()
+            .resolve("gateway")
+            .resolve("data")
+            .resolve("hosts");
     }
 
     // ── listHosts ──────────────────────────────────────────────────
@@ -96,7 +108,7 @@ public class HostServiceTest {
         createHost("host-2", "Server2", "10.0.0.2", List.of("GMDB"));
         createHost("host-3", "Server3", "10.0.0.3", List.of("RCPA", "ALL"));
 
-        List<Map<String, Object>> hosts = hostService.listHosts(new String[]{"RCPA"});
+        List<Map<String, Object>> hosts = hostService.listHosts(new String[] {"RCPA"});
         assertEquals(2, hosts.size());
     }
 
@@ -107,7 +119,7 @@ public class HostServiceTest {
     public void testListHosts_filterByTagNoMatch() {
         createHost("host-1", "Server1", "10.0.0.1", List.of("RCPA"));
 
-        List<Map<String, Object>> hosts = hostService.listHosts(new String[]{"NONEXISTENT"});
+        List<Map<String, Object>> hosts = hostService.listHosts(new String[] {"NONEXISTENT"});
         assertTrue(hosts.isEmpty());
     }
 
@@ -118,7 +130,7 @@ public class HostServiceTest {
     public void testListHosts_emptyTagsArray() {
         createHost("host-1", "Server1", "10.0.0.1", List.of());
 
-        List<Map<String, Object>> hosts = hostService.listHosts(new String[]{});
+        List<Map<String, Object>> hosts = hostService.listHosts(new String[] {});
         assertEquals(1, hosts.size());
     }
 
@@ -511,8 +523,8 @@ public class HostServiceTest {
 
         try {
             Path file = hostsDir.resolve(id + ".json");
-            String json = new com.fasterxml.jackson.databind.ObjectMapper()
-                    .writerWithDefaultPrettyPrinter().writeValueAsString(host);
+            String json = new com.fasterxml.jackson.databind.ObjectMapper().writerWithDefaultPrettyPrinter()
+                .writeValueAsString(host);
             Files.writeString(file, json, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);

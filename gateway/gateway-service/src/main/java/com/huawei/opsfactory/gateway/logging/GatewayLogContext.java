@@ -21,9 +21,9 @@ public final class GatewayLogContext {
     /**
      * Runs an action with the given request and user context set in the MDC.
      *
-     * @param requestId the requestId parameter
-     * @param userId the userId parameter
-     * @param action the action parameter
+     * @param requestId runs an action with the given request and user context set in the MDC
+     * @param userId runs an action with the given request and user context set in the MDC
+     * @param action runs an action with the given request and user context set in the MDC
      */
     public static void run(String requestId, String userId, Runnable action) {
         run(requestId, userId, null, action);
@@ -32,10 +32,10 @@ public final class GatewayLogContext {
     /**
      * Runs an action with the given request, user, and session context set in the MDC.
      *
-     * @param requestId the requestId parameter
-     * @param userId the userId parameter
-     * @param sessionId the sessionId parameter
-     * @param action the action parameter
+     * @param requestId runs an action with the given request, user, and session context set in the MDC
+     * @param userId runs an action with the given request, user, and session context set in the MDC
+     * @param sessionId runs an action with the given request, user, and session context set in the MDC
+     * @param action runs an action with the given request, user, and session context set in the MDC
      */
     public static void run(String requestId, String userId, String sessionId, Runnable action) {
         String previousRequestId = ThreadContext.get("requestId");
@@ -56,10 +56,10 @@ public final class GatewayLogContext {
     /**
      * Calls a supplier with the given request and user context set in the MDC.
      *
-     * @param requestId the requestId parameter
-     * @param userId the userId parameter
-     * @param action the action parameter
-     * @return the result
+     * @param requestId calls a supplier with the given request and user context set in the MDC
+     * @param userId calls a supplier with the given request and user context set in the MDC
+     * @param action calls a supplier with the given request and user context set in the MDC
+     * @return the calls a supplier with the given request and user context set in the MDC
      */
     public static <T> T call(String requestId, String userId, Supplier<T> action) {
         return call(requestId, userId, null, action);
@@ -68,11 +68,11 @@ public final class GatewayLogContext {
     /**
      * Calls a supplier with the given request, user, and session context set in the MDC.
      *
-     * @param requestId the requestId parameter
-     * @param userId the userId parameter
-     * @param sessionId the sessionId parameter
-     * @param action the action parameter
-     * @return the result
+     * @param requestId calls a supplier with the given request, user, and session context set in the MDC
+     * @param userId calls a supplier with the given request, user, and session context set in the MDC
+     * @param sessionId calls a supplier with the given request, user, and session context set in the MDC
+     * @param action calls a supplier with the given request, user, and session context set in the MDC
+     * @return the calls a supplier with the given request, user, and session context set in the MDC
      */
     public static <T> T call(String requestId, String userId, String sessionId, Supplier<T> action) {
         String previousRequestId = ThreadContext.get("requestId");

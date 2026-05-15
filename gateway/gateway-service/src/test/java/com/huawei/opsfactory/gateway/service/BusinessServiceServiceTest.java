@@ -4,7 +4,14 @@
 
 package com.huawei.opsfactory.gateway.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -14,9 +21,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
-
-import static org.junit.Assert.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Test coverage for Business Service Service.
@@ -29,7 +37,9 @@ public class BusinessServiceServiceTest {
     public TemporaryFolder tempFolder = new TemporaryFolder();
 
     private BusinessServiceService businessServiceService;
+
     private GatewayProperties properties;
+
     private Path businessServicesDir;
 
     /**
@@ -48,7 +58,11 @@ public class BusinessServiceServiceTest {
         businessServiceService.init();
 
         businessServicesDir = Path.of(tempFolder.getRoot().getAbsolutePath())
-                .toAbsolutePath().normalize().resolve("gateway").resolve("data").resolve("business-services");
+            .toAbsolutePath()
+            .normalize()
+            .resolve("gateway")
+            .resolve("data")
+            .resolve("business-services");
     }
 
     // ── createBusinessService ──────────────────────────────────────
@@ -306,14 +320,8 @@ public class BusinessServiceServiceTest {
         createBs(id, name, code, groupId, hostIds, List.of());
     }
 
-    private void createBs(
-            String id,
-            String name,
-            String code,
-            String groupId,
-            List<String> hostIds,
-            List<String> tags
-    ) {
+    private void createBs(String id, String name, String code, String groupId, List<String> hostIds,
+        List<String> tags) {
         Map<String, Object> bs = new LinkedHashMap<>();
         bs.put("id", id);
         bs.put("name", name);
@@ -329,8 +337,8 @@ public class BusinessServiceServiceTest {
 
         try {
             Path file = businessServicesDir.resolve(id + ".json");
-            String json = new com.fasterxml.jackson.databind.ObjectMapper()
-                    .writerWithDefaultPrettyPrinter().writeValueAsString(bs);
+            String json = new com.fasterxml.jackson.databind.ObjectMapper().writerWithDefaultPrettyPrinter()
+                .writeValueAsString(bs);
             Files.writeString(file, json, StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);

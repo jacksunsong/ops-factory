@@ -4,6 +4,12 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.huawei.opsfactory.gateway.filter.AuthWebFilter;
 import com.huawei.opsfactory.gateway.filter.UserContextFilter;
@@ -19,6 +25,9 @@ import com.huawei.opsfactory.gateway.service.channel.model.ChannelConnectivityRe
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelDetail;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelLoginState;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelVerificationResult;
+
+import reactor.core.publisher.Mono;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -29,15 +38,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import reactor.core.publisher.Mono;
 
 import java.util.List;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * Test coverage for Channel Admin Controller.
@@ -76,19 +78,21 @@ public class ChannelAdminControllerTest {
     @Test
     public void testGetLoginStateDispatchesToWeChatService() {
         when(channelConfigService.getChannel("wechat-main", "admin")).thenReturn(channelDetail("wechat"));
-        when(weChatLoginService.getLoginState("wechat-main", "admin")).thenReturn(
-                new ChannelLoginState("wechat-main", "connected", "WeChat session connected", "auth",
-                        "wxid_123", "", "", "", null)
-        );
+        when(weChatLoginService.getLoginState("wechat-main", "admin")).thenReturn(new ChannelLoginState("wechat-main",
+            "connected", "WeChat session connected", "auth", "wxid_123", "", "", "", null));
 
-        webTestClient.get().uri("/gateway/channels/wechat-main/login-state")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.state.status").isEqualTo("connected")
-                .jsonPath("$.state.message").isEqualTo("WeChat session connected");
+        webTestClient.get()
+            .uri("/gateway/channels/wechat-main/login-state")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.state.status")
+            .isEqualTo("connected")
+            .jsonPath("$.state.message")
+            .isEqualTo("WeChat session connected");
 
         verify(weChatLoginService).getLoginState("wechat-main", "admin");
         verify(whatsAppWebLoginService, never()).getLoginState(Mockito.anyString(), Mockito.anyString());
@@ -100,19 +104,21 @@ public class ChannelAdminControllerTest {
     @Test
     public void testStartLoginDispatchesToWeChatService() {
         when(channelConfigService.getChannel("wechat-main", "admin")).thenReturn(channelDetail("wechat"));
-        when(weChatLoginService.startLogin("wechat-main", "admin")).thenReturn(
-                new ChannelLoginState("wechat-main", "pending", "WeChat QR login is pending", "auth",
-                        "wxid_123", "", "", "", "https://example.com/qr.png")
-        );
+        when(weChatLoginService.startLogin("wechat-main", "admin")).thenReturn(new ChannelLoginState("wechat-main",
+            "pending", "WeChat QR login is pending", "auth", "wxid_123", "", "", "", "https://example.com/qr.png"));
 
-        webTestClient.post().uri("/gateway/channels/wechat-main/login")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.state.status").isEqualTo("pending");
+        webTestClient.post()
+            .uri("/gateway/channels/wechat-main/login")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.state.status")
+            .isEqualTo("pending");
 
         verify(weChatLoginService).startLogin("wechat-main", "admin");
         verify(whatsAppWebLoginService, never()).startLogin(eq("wechat-main"), eq("admin"));
@@ -126,18 +132,21 @@ public class ChannelAdminControllerTest {
         ChannelAdapter adapter = Mockito.mock(ChannelAdapter.class);
         when(channelConfigService.getChannel("wechat-main", "admin")).thenReturn(channelDetail("wechat"));
         when(channelAdapterRegistry.require("wechat")).thenReturn(adapter);
-        when(adapter.testConnectivity("wechat-main", "admin")).thenReturn(
-                Mono.just(new ChannelConnectivityResult(true, "connected"))
-        );
+        when(adapter.testConnectivity("wechat-main", "admin"))
+            .thenReturn(Mono.just(new ChannelConnectivityResult(true, "connected")));
 
-        webTestClient.post().uri("/gateway/channels/wechat-main/probe")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.connectivity.ok").isEqualTo(true);
+        webTestClient.post()
+            .uri("/gateway/channels/wechat-main/probe")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.connectivity.ok")
+            .isEqualTo(true);
 
         verify(adapter).testConnectivity("wechat-main", "admin");
     }
@@ -147,29 +156,32 @@ public class ChannelAdminControllerTest {
      */
     @Test
     public void testCreateChannel_unexpectedFailureIsSanitized() {
-        when(channelConfigService.createChannel(any(), eq("admin")))
-                .thenThrow(new IllegalStateException("disk full"));
+        when(channelConfigService.createChannel(any(), eq("admin"))).thenThrow(new IllegalStateException("disk full"));
 
-        webTestClient.post().uri("/gateway/channels")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("""
-                        {
-                          "id": "wechat-main",
-                          "name": "WeChat Main",
-                          "type": "wechat",
-                          "defaultAgentId": "fo-copilot",
-                          "config": {
-                            "authStateDir": "auth"
-                          }
-                        }
-                        """)
-                .exchange()
-                .expectStatus().is5xxServerError()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error").isEqualTo("Internal server error");
+        webTestClient.post()
+            .uri("/gateway/channels")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("""
+                {
+                  "id": "wechat-main",
+                  "name": "WeChat Main",
+                  "type": "wechat",
+                  "defaultAgentId": "fo-copilot",
+                  "config": {
+                    "authStateDir": "auth"
+                  }
+                }
+                """)
+            .exchange()
+            .expectStatus()
+            .is5xxServerError()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false)
+            .jsonPath("$.error")
+            .isEqualTo("Internal server error");
     }
 
     /**
@@ -180,34 +192,28 @@ public class ChannelAdminControllerTest {
         when(channelConfigService.getChannel("wechat-main", "admin")).thenReturn(channelDetail("wechat"));
         when(channelConfigService.resetChannelRuntimeState("wechat-main", "admin")).thenReturn(channelDetail("wechat"));
         when(weChatLoginService.logout("wechat-main", "admin"))
-                .thenThrow(new IllegalStateException("helper process still running"));
+            .thenThrow(new IllegalStateException("helper process still running"));
 
-        webTestClient.post().uri("/gateway/channels/wechat-main/logout")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.state.status").isEqualTo("disconnected")
-                .jsonPath("$.state.message").isEqualTo("WeChat login required");
+        webTestClient.post()
+            .uri("/gateway/channels/wechat-main/logout")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.state.status")
+            .isEqualTo("disconnected")
+            .jsonPath("$.state.message")
+            .isEqualTo("WeChat login required");
     }
 
     private ChannelDetail channelDetail(String type) {
-        return new ChannelDetail(
-                "wechat-main",
-                "WeChat Main",
-                type,
-                true,
-                "fo-copilot",
-                "admin",
-                "2026-04-15T00:00:00Z",
-                "2026-04-15T00:00:00Z",
-                "",
-                new ChannelConnectionConfig("disconnected", "auth", "", "", "", "", "", ""),
-                new ChannelVerificationResult(true, List.of()),
-                List.of(),
-                List.of()
-        );
+        return new ChannelDetail("wechat-main", "WeChat Main", type, true, "fo-copilot", "admin",
+            "2026-04-15T00:00:00Z", "2026-04-15T00:00:00Z", "",
+            new ChannelConnectionConfig("disconnected", "auth", "", "", "", "", "", ""),
+            new ChannelVerificationResult(true, List.of()), List.of(), List.of());
     }
 }

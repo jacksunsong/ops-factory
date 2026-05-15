@@ -22,56 +22,56 @@ public class AlarmWeight {
 
     private BigDecimal weight;
 
-/**
- * Gets the agent solution type.
- *
- * @return the result
- */
+    /**
+     * Gets the agent solution type.
+     *
+     * @return the result
+     */
     public String getAgentSolutionType() {
         return agentSolutionType;
     }
 
-/**
- * Sets the agent solution type.
- *
- * @param agentSolutionType the agentSolutionType
- */
+    /**
+     * Sets the agent solution type.
+     *
+     * @param agentSolutionType the agentSolutionType
+     */
     public void setAgentSolutionType(String agentSolutionType) {
         this.agentSolutionType = agentSolutionType;
     }
 
-/**
- * Gets the alarm id.
- *
- * @return the result
- */
+    /**
+     * Gets the alarm id.
+     *
+     * @return the result
+     */
     public String getAlarmId() {
         return alarmId;
     }
 
-/**
- * Sets the alarm id.
- *
- * @param alarmId the alarmId
- */
+    /**
+     * Sets the alarm id.
+     *
+     * @param alarmId the alarmId
+     */
     public void setAlarmId(String alarmId) {
         this.alarmId = alarmId;
     }
 
-/**
- * Gets the weight.
- *
- * @return the result
- */
+    /**
+     * Gets the weight.
+     *
+     * @return the result
+     */
     public BigDecimal getWeight() {
         return weight;
     }
 
-/**
- * Sets the weight.
- *
- * @param weight the weight
- */
+    /**
+     * Sets the weight.
+     *
+     * @param weight the weight
+     */
     public void setWeight(BigDecimal weight) {
         this.weight = weight;
     }

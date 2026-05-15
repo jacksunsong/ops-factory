@@ -71,6 +71,12 @@
     color: var(--color-text-primary);
 }
 
+.agent-configure-name {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
 .agent-configure-id {
     font-size: var(--font-size-sm);
     color: var(--color-text-muted);
@@ -108,6 +114,12 @@
     padding: var(--spacing-6);
 }
 
+.agent-configure-subsection + .agent-configure-subsection {
+    margin-top: var(--spacing-8);
+    padding-top: var(--spacing-8);
+    border-top: 1px solid var(--color-border);
+}
+
 .agent-configure-section-header {
     display: flex;
     align-items: flex-start;
@@ -122,10 +134,10 @@
 }
 
 .agent-configure-section-title {
+    margin: 0 0 var(--spacing-2);
     font-size: var(--font-size-lg);
     font-weight: 700;
     color: var(--color-text-primary);
-    margin-bottom: var(--spacing-2);
 }
 
 .agent-configure-section-desc {
@@ -165,6 +177,137 @@
 
 .agent-prompt-editor textarea:focus {
     border-color: var(--color-border-hover);
+    outline: none;
+}
+
+.agent-basic-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-5);
+}
+
+.agent-basic-info .agent-configure-section {
+    padding: var(--spacing-5);
+}
+
+.agent-basic-info .agent-configure-section-header {
+    margin-bottom: var(--spacing-3);
+}
+
+.agent-basic-info .agent-configure-section-title {
+    margin-bottom: 0;
+}
+
+.agent-info-grid,
+.agent-model-primary-grid,
+.agent-model-param-grid,
+.agent-provider-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-4);
+}
+
+.agent-info-field {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.agent-info-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--color-text-muted);
+}
+
+.agent-info-value {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--color-text-primary);
+    word-break: break-word;
+}
+
+.agent-info-value.is-empty {
+    color: var(--color-text-muted);
+}
+
+.agent-model-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-5);
+}
+
+.agent-model-empty {
+    padding: var(--spacing-8);
+    text-align: center;
+    color: var(--color-text-muted);
+    background: var(--color-bg-primary);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+}
+
+.agent-model-empty p {
+    margin: 0;
+}
+
+.agent-provider-summary {
+    padding: var(--spacing-4);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    word-break: break-word;
+}
+
+.agent-provider-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--spacing-4);
+}
+
+.agent-provider-summary-item {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.agent-provider-summary-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--color-text-muted);
+}
+
+.agent-provider-summary-value {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+    line-height: 1.5;
+}
+
+.agent-provider-summary-value.is-empty {
+    color: var(--color-text-muted);
+}
+
+.agent-model-warning {
+    margin: var(--spacing-4) 0 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-warning);
+}
+
+.agent-provider-form-wide {
+    grid-column: 1 / -1;
+}
+
+.form-input.agent-provider-readonly-input,
+.form-input.agent-provider-readonly-input:focus,
+.form-input.agent-provider-readonly-input:focus-visible {
+    color: var(--color-text-secondary);
+    background: var(--color-bg-secondary);
+    border-color: var(--color-border);
+    cursor: default;
+    box-shadow: none;
     outline: none;
 }
 
@@ -210,5 +353,17 @@
 
     .agent-configure-actions-top {
         justify-content: flex-end;
+    }
+
+    .agent-info-grid,
+    .agent-model-primary-grid,
+    .agent-model-param-grid,
+    .agent-provider-form-grid,
+    .agent-provider-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .agent-configure-title-section {
+        flex-wrap: wrap;
     }
 }

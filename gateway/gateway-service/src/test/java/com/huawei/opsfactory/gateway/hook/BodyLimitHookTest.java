@@ -5,10 +5,12 @@
 package com.huawei.opsfactory.gateway.hook;
 
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
+import reactor.test.StepVerifier;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.web.server.ResponseStatusException;
-import reactor.test.StepVerifier;
 
 /**
  * Test coverage for Body Limit Hook.
@@ -36,9 +38,7 @@ public class BodyLimitHookTest {
     @Test
     public void testSmallBody_passes() {
         HookContext ctx = new HookContext("{\"message\": \"hello\"}", "agent1", "user1");
-        StepVerifier.create(hook.process(ctx))
-                .expectNext(ctx)
-                .verifyComplete();
+        StepVerifier.create(hook.process(ctx)).expectNext(ctx).verifyComplete();
     }
 
     /**
@@ -53,9 +53,7 @@ public class BodyLimitHookTest {
         }
         HookContext ctx = new HookContext(sb.toString(), "agent1", "user1");
 
-        StepVerifier.create(hook.process(ctx))
-                .expectError(ResponseStatusException.class)
-                .verify();
+        StepVerifier.create(hook.process(ctx)).expectError(ResponseStatusException.class).verify();
     }
 
     /**
@@ -64,8 +62,6 @@ public class BodyLimitHookTest {
     @Test
     public void testNullBody_passes() {
         HookContext ctx = new HookContext(null, "agent1", "user1");
-        StepVerifier.create(hook.process(ctx))
-                .expectNext(ctx)
-                .verifyComplete();
+        StepVerifier.create(hook.process(ctx)).expectNext(ctx).verifyComplete();
     }
 }

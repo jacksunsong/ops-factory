@@ -25,11 +25,11 @@ public class ProductConfigRuleStore {
 
     private final JsonFileStore<ProductConfigRule> store;
 
-/**
- * Product Config Rule Store.
- *
- * @param properties the properties
- */
+    /**
+     * Product Config Rule Store.
+     *
+     * @param properties the properties
+     */
     public ProductConfigRuleStore(OperationIntelligenceProperties properties) {
         Path dir = properties.resolveDataRoot().resolve("qos").resolve("config");
         this.store = new JsonFileStore<>(dir, "product_config_rule", new TypeReference<List<ProductConfigRule>>() {},
@@ -37,20 +37,20 @@ public class ProductConfigRuleStore {
         this.store.init();
     }
 
-/**
- * load All.
- *
- * @return the result
- */
+    /**
+     * load All.
+     *
+     * @return the result
+     */
     public List<ProductConfigRule> loadAll() {
         return store.loadAll();
     }
 
-/**
- * replace All.
- *
- * @param items the items
- */
+    /**
+     * replace All.
+     *
+     * @param items the items
+     */
     public void replaceAll(List<ProductConfigRule> items) {
         store.replaceAll(items);
     }

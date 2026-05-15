@@ -4,17 +4,19 @@
 
 package com.huawei.opsfactory.gateway.filter;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.WebFilterChain;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 
 /**
  * Test coverage for Request Context Filter.
@@ -43,8 +45,7 @@ public class RequestContextFilterTest {
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         WebFilterChain chain = ex -> Mono.empty();
-        StepVerifier.create(filter.filter(exchange, chain))
-            .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         String requestId = exchange.getAttribute(RequestContextFilter.REQUEST_ID_ATTR);
         assertNotNull(requestId);
@@ -62,8 +63,7 @@ public class RequestContextFilterTest {
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         WebFilterChain chain = ex -> Mono.empty();
-        StepVerifier.create(filter.filter(exchange, chain))
-            .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         assertEquals("req-123", exchange.getAttribute(RequestContextFilter.REQUEST_ID_ATTR));
         assertEquals("req-123", exchange.getResponse().getHeaders().getFirst(RequestContextFilter.REQUEST_ID_HEADER));

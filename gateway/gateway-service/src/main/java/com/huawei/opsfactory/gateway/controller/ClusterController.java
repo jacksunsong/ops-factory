@@ -47,9 +47,6 @@ public class ClusterController {
 
     /**
      * Creates the cluster controller instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public ClusterController(ClusterService clusterService, HostService hostService,
         HostGroupService hostGroupService) {
@@ -61,10 +58,10 @@ public class ClusterController {
     /**
      * Lists clusters, optionally filtered by group, type, or enabled status.
      *
-     * @param groupId the groupId parameter
-     * @param type the type parameter
-     * @param enabledOnly the enabledOnly parameter
-     * @param exchange the exchange parameter
+     * @param groupId group identifier
+     * @param type type filter
+     * @param enabledOnly enabled-only filter flag
+     * @param exchange server web exchange
      * @return the result
      */
     @GetMapping
@@ -90,9 +87,9 @@ public class ClusterController {
     /**
      * Gets a cluster by ID with its associated hosts.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id entity identifier
+     * @param exchange server web exchange
+     * @return a cluster by ID with its associated hosts
      */
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getCluster(@PathVariable("id") String id,
@@ -120,8 +117,8 @@ public class ClusterController {
     /**
      * Returns all distinct cluster types.
      *
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param exchange returns all distinct cluster types
+     * @return all distinct cluster types
      */
     @GetMapping("/types")
     public Mono<Map<String, Object>> getClusterTypes(ServerWebExchange exchange) {
@@ -137,8 +134,8 @@ public class ClusterController {
     /**
      * Lists all hosts belonging to a cluster.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
+     * @param id entity identifier
+     * @param exchange server web exchange
      * @return the result
      */
     @GetMapping("/{id}/hosts")
@@ -155,8 +152,8 @@ public class ClusterController {
     /**
      * Creates a new cluster.
      *
-     * @param request the request parameter
-     * @param exchange the exchange parameter
+     * @param request HTTP request
+     * @param exchange server web exchange
      * @return the result
      */
     @PostMapping
@@ -182,9 +179,9 @@ public class ClusterController {
     /**
      * Updates a cluster by ID.
      *
-     * @param id the id parameter
-     * @param request the request parameter
-     * @param exchange the exchange parameter
+     * @param id a cluster by ID
+     * @param request a cluster by ID
+     * @param exchange a cluster by ID
      * @return the result
      */
     @PutMapping("/{id}")
@@ -210,9 +207,9 @@ public class ClusterController {
     /**
      * Deletes a cluster by ID, optionally forcing deletion of associated hosts.
      *
-     * @param id the id parameter
-     * @param force the force parameter
-     * @param exchange the exchange parameter
+     * @param id entity identifier
+     * @param force whether to force the operation
+     * @param exchange server web exchange
      * @return the result
      */
     @DeleteMapping("/{id}")

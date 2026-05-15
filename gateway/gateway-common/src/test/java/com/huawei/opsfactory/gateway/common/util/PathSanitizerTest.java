@@ -4,13 +4,13 @@
 
 package com.huawei.opsfactory.gateway.common.util;
 
-import org.junit.Test;
-
-import java.nio.file.Path;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import org.junit.Test;
+
+import java.nio.file.Path;
 
 /**
  * Test coverage for Path Sanitizer.

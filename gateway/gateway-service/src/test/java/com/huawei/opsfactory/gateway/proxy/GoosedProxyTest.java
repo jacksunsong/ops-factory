@@ -4,12 +4,13 @@
 
 package com.huawei.opsfactory.gateway.proxy;
 
-import com.huawei.opsfactory.gateway.config.GatewayProperties;
-import org.junit.Before;
-import org.junit.Test;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+
+import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test coverage for Goosed Proxy.
@@ -19,6 +20,7 @@ import static org.junit.Assert.assertNotNull;
  */
 public class GoosedProxyTest {
     private GoosedProxy proxy;
+
     private GoosedProxy proxyTls;
 
     /**

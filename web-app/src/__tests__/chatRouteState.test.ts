@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
     buildChatSessionState,
+    buildConsumedNewChatPath,
     buildNewChatState,
     clearPersistedChatSessionLocator,
     persistChatSessionLocator,
@@ -66,5 +67,53 @@ describe('chatRouteState', () => {
         expect(result.source).toBe('startNew')
         expect(result.preferredAgentId).toBe('universal-agent')
         expect(result.locatorState).toEqual({ kind: 'idle' })
+    })
+
+    it('treats embed startNew query as a new-chat request', () => {
+        persistChatSessionLocator({
+            sessionId: 'stored-session',
+            agentId: 'stored-agent',
+        })
+
+        const result = resolveChatRouteState(new URLSearchParams('embed=true&startNew=true&uid=embed-user'), null)
+
+        expect(result.source).toBe('startNew')
+        expect(result.locatorState).toEqual({ kind: 'idle' })
+    })
+
+    it('does not treat non-embed startNew query as a new-chat request', () => {
+        persistChatSessionLocator({
+            sessionId: 'stored-session',
+            agentId: 'stored-agent',
+        })
+
+        const result = resolveChatRouteState(new URLSearchParams('startNew=true'), null)
+
+        expect(result.source).toBe('storage')
+        expect(result.locatorState).toEqual({
+            kind: 'ready',
+            locator: {
+                sessionId: 'stored-session',
+                agentId: 'stored-agent',
+            },
+        })
+    })
+
+    it('consumes startNew from chat URL while preserving embed parameters', () => {
+        const path = buildConsumedNewChatPath(new URLSearchParams('embed=true&uid=embed-user&startNew=true'))
+
+        expect(path).toBe('/chat?embed=true&uid=embed-user')
+    })
+
+    it('removes stale session locator parameters when consuming a new-chat URL', () => {
+        const path = buildConsumedNewChatPath(new URLSearchParams('embed=true&startNew=true&sessionId=old-session&agent=old-agent'))
+
+        expect(path).toBe('/chat?embed=true')
+    })
+
+    it('builds the default chat path when there are no query parameters left', () => {
+        const path = buildConsumedNewChatPath(new URLSearchParams('startNew=true'))
+
+        expect(path).toBe('/chat')
     })
 })

@@ -39,8 +39,7 @@ public class ChannelWebhookController {
     /**
      * Creates the channel webhook controller instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param channelAdapterRegistry registry of channel adapters keyed by channel type
      */
     public ChannelWebhookController(ChannelAdapterRegistry channelAdapterRegistry) {
         this.channelAdapterRegistry = channelAdapterRegistry;
@@ -49,9 +48,9 @@ public class ChannelWebhookController {
     /**
      * Verifies a WhatsApp webhook challenge request.
      *
-     * @param channelId the channelId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param channelId channel identifier for routing to the correct adapter
+     * @param exchange current HTTP exchange containing verification parameters
+     * @return Mono emitting ResponseEntity with the challenge response string
      */
     @GetMapping(value = "/whatsapp/{channelId}", produces = MediaType.TEXT_PLAIN_VALUE)
     public Mono<ResponseEntity<String>> verifyWhatsAppWebhook(@PathVariable("channelId") String channelId,
@@ -63,8 +62,10 @@ public class ChannelWebhookController {
     /**
      * Receives and processes an incoming WhatsApp webhook event.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param channelId channel identifier for routing to the correct adapter
+     * @param body raw JSON webhook payload
+     * @param exchange current HTTP exchange
+     * @return Mono emitting ResponseEntity with acknowledgment status
      */
     @PostMapping(value = "/whatsapp/{channelId}", consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE)

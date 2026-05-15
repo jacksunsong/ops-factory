@@ -88,8 +88,11 @@ public class ReplyController {
     /**
      * Creates the reply controller instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param instanceManager manages goosed instance lifecycle and lookup
+     * @param goosedProxy proxies HTTP requests to the goosed backend
+     * @param hookPipeline hook pipeline for request/response transformations
+     * @param agentConfigService provides agent configuration and user directories
+     * @param fileService file service for workspace file operations
      */
     public ReplyController(InstanceManager instanceManager, GoosedProxy goosedProxy, HookPipeline hookPipeline,
         AgentConfigService agentConfigService, FileService fileService) {
@@ -103,11 +106,11 @@ public class ReplyController {
     /**
      * Submits a chat reply to an active session and proxies the response from goosed.
      *
-     * @param agentId the agentId parameter
-     * @param sessionId the sessionId parameter
-     * @param body the body parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId unique identifier of the target agent
+     * @param sessionId unique identifier of the chat session to reply in
+     * @param body JSON request body containing the user message and request metadata
+     * @param exchange reactive server exchange providing request attributes and the response sink
+     * @return a {@code Mono<Void>} that completes once the proxied reply and SSE stream are finished
      */
     @PostMapping(value = "/sessions/{sessionId}/reply", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<Void> sessionReply(@PathVariable("agentId") String agentId, @PathVariable("sessionId") String sessionId,
@@ -164,11 +167,11 @@ public class ReplyController {
     /**
      * Subscribes to the SSE event stream for an active session.
      *
-     * @param agentId the agentId parameter
-     * @param sessionId the sessionId parameter
-     * @param lastEventId the lastEventId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId unique identifier of the target agent
+     * @param sessionId unique identifier of the chat session to stream events from
+     * @param lastEventId ID of the last received SSE event for resumption, may be {@code null}
+     * @param exchange reactive server exchange providing request attributes and the response sink
+     * @return a {@code Mono<Void>} that completes when the SSE stream ends or errors out
      */
     @GetMapping(value = "/sessions/{sessionId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Mono<Void> sessionEvents(@PathVariable("agentId") String agentId, @PathVariable("sessionId") String sessionId,
@@ -206,11 +209,11 @@ public class ReplyController {
     /**
      * Cancels an in-progress request within a session.
      *
-     * @param agentId the agentId parameter
-     * @param sessionId the sessionId parameter
-     * @param body the body parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId unique identifier of the target agent
+     * @param sessionId unique identifier of the chat session containing the request to cancel
+     * @param body JSON request body with the request ID to cancel
+     * @param exchange reactive server exchange providing request attributes and the response sink
+     * @return a {@code Mono<Void>} that completes once the cancel command has been proxied
      */
     @PostMapping(value = "/sessions/{sessionId}/cancel", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<Void> sessionCancel(@PathVariable("agentId") String agentId, @PathVariable("sessionId") String sessionId,
@@ -356,7 +359,7 @@ public class ReplyController {
         try {
             List<Map<String, Object>> files = fileService.listCapsuleRelevantFiles(workingDir);
             return files != null ? files : Collections.emptyList();
-        } catch (IOException e) {
+        } catch (IllegalStateException e) {
             log.debug("[SESSION-REPLY] file snapshot failed (best-effort): {}", e.getMessage());
             return Collections.emptyList();
         }
@@ -641,10 +644,10 @@ public class ReplyController {
     /**
      * Resumes an existing session, loading model and extensions.
      *
-     * @param agentId the agentId parameter
-     * @param body the body parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId unique identifier of the target agent
+     * @param body JSON request body containing the session ID and resume options
+     * @param exchange reactive server exchange providing request attributes for user lookup
+     * @return a {@code Mono<String>} emitting the JSON response from the goosed resume endpoint
      */
     @PostMapping(value = {"/resume", "/agent/resume"}, produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<String> resume(@PathVariable("agentId") String agentId, @RequestBody String body, ServerWebExchange exchange) {
@@ -734,10 +737,10 @@ public class ReplyController {
     /**
      * Restarts the agent instance with a fresh configuration.
      *
-     * @param agentId the agentId parameter
-     * @param body the body parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId unique identifier of the target agent
+     * @param body JSON request body containing restart parameters
+     * @param exchange reactive server exchange providing request attributes and the response sink
+     * @return the restarts the agent instance with a fresh configuration
      */
     @PostMapping({"/restart", "/agent/restart"})
     public Mono<Void> restart(@PathVariable("agentId") String agentId, @RequestBody String body, ServerWebExchange exchange) {

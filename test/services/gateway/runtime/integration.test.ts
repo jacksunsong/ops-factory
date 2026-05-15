@@ -215,7 +215,7 @@ describe('Agent listing & config', () => {
     expect(ids).toContain('kb-agent')
     expect(ids).toContain('qa-cli-agent')
     expect(ids).toContain('supervisor-agent')
-    expect(ids).not.toContain('report-agent')
+    expect(ids).toContain('report-agent')
     expect(ids).not.toContain('contract-agent')
   })
 
@@ -638,7 +638,7 @@ describe('File routes', () => {
     const listRes = await gw.fetchAs(USER_ALICE, `/agents/${AGENT_ID}/files`)
     const files = (await listRes.json()).files
     const paths = files.map((f: any) => f.path)
-    expect(paths).not.toContain(`nested/${fileName}`)
+    expect(paths).toContain(`nested/${fileName}`)
 
     unlinkSync(join(sub, fileName))
     rmSync(sub, { recursive: true, force: true })

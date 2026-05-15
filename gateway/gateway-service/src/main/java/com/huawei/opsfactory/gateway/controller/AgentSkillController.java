@@ -39,8 +39,7 @@ public class AgentSkillController {
     /**
      * Creates the agent skill controller instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param installService service handling skill install/uninstall operations
      */
     public AgentSkillController(AgentSkillInstallService installService) {
         this.installService = installService;
@@ -49,10 +48,10 @@ public class AgentSkillController {
     /**
      * Installs a skill on the specified agent instance.
      *
-     * @param agentId the agentId parameter
-     * @param body the body parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId agent instance identifier
+     * @param body request body containing "skillId"
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with installation result
      */
     @PostMapping("/{agentId}/skills/install")
     public Mono<ResponseEntity<Map<String, Object>>> installSkill(@PathVariable("agentId") String agentId,
@@ -71,10 +70,10 @@ public class AgentSkillController {
     /**
      * Uninstalls a skill from the specified agent instance.
      *
-     * @param agentId the agentId parameter
-     * @param skillId the skillId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId agent instance identifier
+     * @param skillId skill identifier to remove
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with uninstallation result
      */
     @DeleteMapping("/{agentId}/skills/{skillId}")
     public Mono<ResponseEntity<Map<String, Object>>> uninstallSkill(@PathVariable("agentId") String agentId,

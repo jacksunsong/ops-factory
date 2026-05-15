@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Check, Copy } from 'lucide-react'
 import UIResourceRenderer, { isUIResource } from '../renderers/UIResourceRenderer'
 import './ToolCallDisplay.css'
 
@@ -76,8 +78,10 @@ export default function ToolCallDisplay({
     isPending = false,
     embedded = false
 }: ToolCallDisplayProps) {
+    const { t } = useTranslation()
     const [showDetails, setShowDetails] = useState(false)
     const [showOutput, setShowOutput] = useState(false)
+    const [copiedOutput, setCopiedOutput] = useState(false)
 
     const statusClass = (() => {
         if (isPending) return 'pending'
@@ -86,12 +90,23 @@ export default function ToolCallDisplay({
     })()
     const displayName = formatToolName(name)
     const formattedResult = result !== undefined ? formatResult(result) : ''
+    const copyableResult = result !== undefined ? formatResultForCopy(result) : ''
     const resultLineCount = formattedResult ? formattedResult.split('\n').length : 0
     const isCompactOutput = formattedResult.length > 0 && formattedResult.length <= 220 && resultLineCount <= 4
 
     // Extract UI resources from result
     const uiResources = result !== undefined ? extractUIResources(result) : []
     const hasUIResources = uiResources.length > 0
+
+    const handleCopyOutput = (event: MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation()
+        if (!copyableResult) return
+
+        navigator.clipboard.writeText(copyableResult).then(() => {
+            setCopiedOutput(true)
+            window.setTimeout(() => setCopiedOutput(false), 2000)
+        }).catch((err) => { console.warn('Failed to copy tool output:', err) })
+    }
 
     return (
         <>
@@ -156,9 +171,20 @@ export default function ToolCallDisplay({
                             </div>
                             {showOutput && (
                                 <div className="tool-call-section-content">
-                                    <pre className={`tool-call-output${isCompactOutput ? ' compact' : ''}${isError ? ' error' : ''}`}>
-                                        {formattedResult}
-                                    </pre>
+                                    <div className="tool-call-output-wrap">
+                                        <button
+                                            type="button"
+                                            className="tool-call-output-copy-btn"
+                                            onClick={handleCopyOutput}
+                                            title={t(copiedOutput ? 'chat.copiedOutput' : 'chat.copyOutput')}
+                                            aria-label={t(copiedOutput ? 'chat.copiedOutput' : 'chat.copyOutput')}
+                                        >
+                                            {copiedOutput ? <Check size={14} /> : <Copy size={14} />}
+                                        </button>
+                                        <pre className={`tool-call-output${isCompactOutput ? ' compact' : ''}${isError ? ' error' : ''}`}>
+                                            {formattedResult}
+                                        </pre>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -225,4 +251,22 @@ function formatResult(result: unknown): string {
     return serialized.length > MAX_RESULT_LENGTH
         ? serialized.slice(0, MAX_RESULT_LENGTH) + '\n... [truncated]'
         : serialized
+}
+
+function formatResultForCopy(result: unknown): string {
+    if (typeof result === 'string') {
+        return result
+    }
+    if (Array.isArray(result)) {
+        return result.map(item => {
+            if (typeof item === 'object' && item !== null) {
+                if ('text' in item) return (item as { text: string }).text
+                if ('type' in item && item.type === 'text' && 'text' in item) {
+                    return (item as { text: string }).text
+                }
+            }
+            return JSON.stringify(item, null, 2)
+        }).join('\n')
+    }
+    return JSON.stringify(result, null, 2)
 }

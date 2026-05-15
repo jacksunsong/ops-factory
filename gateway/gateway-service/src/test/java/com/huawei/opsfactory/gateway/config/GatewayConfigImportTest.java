@@ -10,6 +10,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.huawei.opsfactory.gateway.filter.RequestContextFilter;
 import com.huawei.opsfactory.gateway.support.TestLogAppender;
+
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
@@ -21,10 +22,8 @@ import org.springframework.core.env.Environment;
 import org.springframework.test.context.junit4.SpringRunner;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(
-    webEnvironment = SpringBootTest.WebEnvironment.NONE,
-    properties = "spring.config.import=optional:file:src/test/resources/config/test-gateway-config.yaml"
-)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE,
+    properties = "spring.config.import=optional:file:src/test/resources/config/test-gateway-config.yaml")
 
 /**
  * Test coverage for Gateway Config Import.

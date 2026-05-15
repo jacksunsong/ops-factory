@@ -42,9 +42,6 @@ public class ChannelDedupService {
 
     /**
      * Creates the channel dedup service instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public ChannelDedupService(ChannelConfigService channelConfigService,
         ChannelRuntimeStorageService runtimeStorageService) {
@@ -55,9 +52,9 @@ public class ChannelDedupService {
     /**
      * Checks if a message is new and marks it as seen, using the default owner user ID.
      *
-     * @param channelId the channelId parameter
-     * @param externalMessageId the externalMessageId parameter
-     * @return the result
+     * @param channelId channel identifier
+     * @param externalMessageId external message id
+     * @return true if if a message is new and marks it as seen, using the default owner user ID
      */
     public boolean markIfNew(String channelId, String externalMessageId) {
         return markIfNew(channelId, "admin", externalMessageId);
@@ -66,10 +63,10 @@ public class ChannelDedupService {
     /**
      * Checks if a message is new and marks it as seen to prevent duplicate processing.
      *
-     * @param channelId the channelId parameter
-     * @param ownerUserId the ownerUserId parameter
-     * @param externalMessageId the externalMessageId parameter
-     * @return the result
+     * @param channelId channel identifier
+     * @param ownerUserId owner user id
+     * @param externalMessageId external message id
+     * @return true if if a message is new and marks it as seen to prevent duplicate processing
      */
     public boolean markIfNew(String channelId, String ownerUserId, String externalMessageId) {
         ChannelDetail channel = requireChannel(channelId, ownerUserId);

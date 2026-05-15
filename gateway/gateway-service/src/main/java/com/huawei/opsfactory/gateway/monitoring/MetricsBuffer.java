@@ -43,21 +43,28 @@ public class MetricsBuffer {
     private static final long ONE_HOUR_MS = 3_600_000L;
 
     private final MetricsSnapshot[] snapshots = new MetricsSnapshot[SNAPSHOT_CAPACITY];
+
     private final RequestTiming[] timings = new RequestTiming[TIMING_CAPACITY];
+
     // Per-agent stats accumulated over the 1-hour window
     private final ConcurrentHashMap<String, AgentStats> agentStatsMap = new ConcurrentHashMap<>();
+
     private final Path persistPath;
+
     private int snapshotWriteIndex = 0;
+
     private int snapshotCount = 0;
+
     private boolean dirty = false;
+
     private int timingWriteIndex = 0;
+
     private int pendingTimingCount = 0;
 
     /**
      * Creates the metrics buffer instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param properties gateway configuration properties
      */
     public MetricsBuffer(GatewayProperties properties) {
         Path gatewayRoot = properties.getGatewayRootPath();
@@ -67,9 +74,6 @@ public class MetricsBuffer {
 
     /**
      * Record a collected metrics snapshot.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public synchronized void record(MetricsSnapshot snapshot) {
         snapshots[snapshotWriteIndex] = snapshot;
@@ -84,7 +88,7 @@ public class MetricsBuffer {
      * Record a single request timing (called from SSE relay threads).
      * Uses a separate lock object to avoid contention with snapshot operations.
      *
-     * @param timing the timing parameter
+     * @param timing request timing sample to record
      */
     public synchronized void recordTiming(RequestTiming timing) {
         timings[timingWriteIndex] = timing;
@@ -108,7 +112,7 @@ public class MetricsBuffer {
     /**
      * Get per-agent statistics accumulated over the buffer lifetime.
      *
-     * @return the result
+     * @return map of agent ID to stats including requestCount, errorCount, avgLatencyMs, and avgTtftMs
      */
     public Map<String, Map<String, Object>> getAgentStats() {
         Map<String, Map<String, Object>> result = new LinkedHashMap<>();
@@ -128,7 +132,7 @@ public class MetricsBuffer {
      * Drain all request timings recorded since the last drain.
      * Uses pendingTimingCount to correctly handle buffer wrap-around.
      *
-     * @return the result
+     * @return list of request timings recorded since the last drain
      */
     public synchronized List<RequestTiming> drainTimings() {
         List<RequestTiming> result = new ArrayList<>();
@@ -152,8 +156,8 @@ public class MetricsBuffer {
     /**
      * Get the most recent snapshots, ordered oldest-first (for charting).
      *
-     * @param maxSlots the maxSlots parameter
-     * @return the result
+     * @param maxSlots maximum number of snapshots to return
+     * @return list of recent snapshots ordered oldest-first
      */
     public synchronized List<MetricsSnapshot> getSnapshots(int maxSlots) {
         int count = Math.min(this.snapshotCount, maxSlots);
@@ -249,8 +253,9 @@ public class MetricsBuffer {
         /**
          * Records a new request sample.
          *
-         * @author x00000000
-         * @since 2026-05-09
+         * @param totalMs total request latency in milliseconds
+         * @param ttftMs time-to-first-token in milliseconds
+         * @param error whether the request resulted in an error
          */
         public void record(long totalMs, long ttftMs, boolean error) {
             requestCount++;
@@ -264,7 +269,7 @@ public class MetricsBuffer {
         /**
          * Gets the request count.
          *
-         * @return the result
+         * @return total number of recorded requests
          */
         public int getRequestCount() {
             return requestCount;
@@ -273,7 +278,7 @@ public class MetricsBuffer {
         /**
          * Gets the error count.
          *
-         * @return the result
+         * @return number of requests that resulted in an error
          */
         public int getErrorCount() {
             return errorCount;
@@ -282,7 +287,7 @@ public class MetricsBuffer {
         /**
          * Gets the average request latency in milliseconds.
          *
-         * @return the result
+         * @return average request latency in milliseconds
          */
         public double getAvgLatencyMs() {
             return requestCount > 0 ? (double) latencySum / requestCount : 0;
@@ -291,7 +296,7 @@ public class MetricsBuffer {
         /**
          * Gets the average time-to-first-token in milliseconds.
          *
-         * @return the result
+         * @return average time-to-first-token in milliseconds
          */
         public double getAvgTtftMs() {
             return requestCount > 0 ? (double) ttftSum / requestCount : 0;

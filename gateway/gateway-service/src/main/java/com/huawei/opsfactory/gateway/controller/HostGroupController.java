@@ -50,9 +50,6 @@ public class HostGroupController {
 
     /**
      * Creates the host group controller instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public HostGroupController(HostGroupService hostGroupService, ClusterService clusterService,
         BusinessServiceService businessServiceService, HostService hostService) {
@@ -65,8 +62,8 @@ public class HostGroupController {
     /**
      * Lists host groups, optionally filtered by enabled status.
      *
-     * @param enabledOnly the enabledOnly parameter
-     * @param exchange the exchange parameter
+     * @param enabledOnly enabled-only filter flag
+     * @param exchange server web exchange
      * @return the result
      */
     @GetMapping({"", "/"})
@@ -89,9 +86,9 @@ public class HostGroupController {
     /**
      * Returns the hierarchical tree of groups, clusters, and business services.
      *
-     * @param enabledOnly the enabledOnly parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param enabledOnly returns the hierarchical tree of groups, clusters, and business services
+     * @param exchange returns the hierarchical tree of groups, clusters, and business services
+     * @return the hierarchical tree of groups, clusters, and business services
      */
     @GetMapping("/tree")
     public Mono<Map<String, Object>> getTree(
@@ -117,9 +114,9 @@ public class HostGroupController {
     /**
      * Gets a host group by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id entity identifier
+     * @param exchange server web exchange
+     * @return a host group by ID
      */
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getGroup(@PathVariable("id") String id,
@@ -144,8 +141,8 @@ public class HostGroupController {
     /**
      * Creates a new host group.
      *
-     * @param request the request parameter
-     * @param exchange the exchange parameter
+     * @param request HTTP request
+     * @param exchange server web exchange
      * @return the result
      */
     @PostMapping({"", "/"})
@@ -171,9 +168,9 @@ public class HostGroupController {
     /**
      * Updates a host group by ID.
      *
-     * @param id the id parameter
-     * @param request the request parameter
-     * @param exchange the exchange parameter
+     * @param id a host group by ID
+     * @param request a host group by ID
+     * @param exchange a host group by ID
      * @return the result
      */
     @PutMapping("/{id}")
@@ -199,9 +196,9 @@ public class HostGroupController {
     /**
      * Deletes a host group by ID, optionally forcing deletion of associated resources.
      *
-     * @param id the id parameter
-     * @param force the force parameter
-     * @param exchange the exchange parameter
+     * @param id entity identifier
+     * @param force whether to force the operation
+     * @param exchange server web exchange
      * @return the result
      */
     @DeleteMapping("/{id}")

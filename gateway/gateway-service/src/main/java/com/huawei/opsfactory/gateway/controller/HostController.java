@@ -56,9 +56,6 @@ public class HostController {
 
     /**
      * Creates the host controller instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public HostController(HostService hostService, ClusterService clusterService,
         BusinessServiceService businessServiceService, HostGroupService hostGroupService) {
@@ -71,12 +68,13 @@ public class HostController {
     /**
      * Lists hosts, optionally filtered by tags, cluster, group, business service, or enabled status.
      *
-     * @param tags the tags parameter
-     * @param clusterId the clusterId parameter
-     * @param groupId the groupId parameter
-     * @param businessServiceId the businessServiceId parameter
-     * @param enabledOnly the enabledOnly parameter
-     * @param exchange the exchange parameter
+     * @param tags tags
+     * @param clusterId cluster identifier
+     * @param groupId group identifier
+     * @param businessServiceId business service id
+     *        status
+     * @param enabledOnly enabled-only filter flag
+     * @param exchange server web exchange
      * @return the result
      */
     @GetMapping({"", "/"})
@@ -154,9 +152,9 @@ public class HostController {
     /**
      * Gets a host by its IP address.
      *
-     * @param ip the ip parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param ip ip
+     * @param exchange server web exchange
+     * @return a host by its IP address
      */
     @GetMapping("/by-ip")
     public Mono<ResponseEntity<Map<String, Object>>> getHostByIp(@RequestParam("ip") String ip,
@@ -180,9 +178,9 @@ public class HostController {
     /**
      * Gets a host by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id entity identifier
+     * @param exchange server web exchange
+     * @return a host by ID
      */
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getHost(@PathVariable("id") String id,
@@ -214,8 +212,8 @@ public class HostController {
     /**
      * Creates a new host.
      *
-     * @param request the request parameter
-     * @param exchange the exchange parameter
+     * @param request HTTP request
+     * @param exchange server web exchange
      * @return the result
      */
     @PostMapping({"", "/"})
@@ -241,9 +239,9 @@ public class HostController {
     /**
      * Updates a host by ID.
      *
-     * @param id the id parameter
-     * @param request the request parameter
-     * @param exchange the exchange parameter
+     * @param id a host by ID
+     * @param request a host by ID
+     * @param exchange a host by ID
      * @return the result
      */
     @PutMapping("/{id}")
@@ -277,8 +275,8 @@ public class HostController {
     /**
      * Deletes a host by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
+     * @param id entity identifier
+     * @param exchange server web exchange
      * @return the result
      */
     @DeleteMapping("/{id}")
@@ -302,8 +300,8 @@ public class HostController {
     /**
      * Returns all unique host tags.
      *
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param exchange returns all unique host tags
+     * @return all unique host tags
      */
     @GetMapping("/tags")
     public Mono<Map<String, Object>> getTags(ServerWebExchange exchange) {
@@ -319,9 +317,9 @@ public class HostController {
     /**
      * Tests SSH connectivity to a host.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id tests SSH connectivity to a host
+     * @param exchange tests SSH connectivity to a host
+     * @return the tests SSH connectivity to a host
      */
     @PostMapping("/{id}/test")
     public Mono<Map<String, Object>> testConnectivity(@PathVariable("id") String id, ServerWebExchange exchange) {

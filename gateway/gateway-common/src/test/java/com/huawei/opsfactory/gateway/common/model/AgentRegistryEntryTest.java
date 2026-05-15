@@ -4,9 +4,9 @@
 
 package com.huawei.opsfactory.gateway.common.model;
 
-import org.junit.Test;
-
 import static org.junit.Assert.assertEquals;
+
+import org.junit.Test;
 
 /**
  * Test coverage for Agent Registry Entry.

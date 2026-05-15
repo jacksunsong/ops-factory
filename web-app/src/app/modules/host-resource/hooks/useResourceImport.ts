@@ -82,7 +82,8 @@ export function useResourceImport(deps: ImportDeps) {
         const groupNameToId = new Map(deps.groups.map(g => [g.name, g.id]))
         const groupCodeToId = new Map(deps.groups.map(g => [g.code ?? '', g.id]))
         const clusterNameToId = new Map(deps.clusters.map(c => [c.name, c.id]))
-        const clusterTypeNameToCode = new Map(deps.clusterTypes.map(ct => [ct.name, ct.code]))
+        const clusterTypeNameSet = new Set(deps.clusterTypes.map(ct => ct.name))
+        const clusterTypeCodeToName = new Map(deps.clusterTypes.map(ct => [ct.code, ct.name]))
         const businessTypeNameToId = new Map(deps.businessTypes.map(bt => [bt.name, bt.id]))
         const hostNameToId = new Map(deps.allHosts.map(h => [h.name, h.id]))
         const bsNameToId = new Map(deps.businessServices.map(bs => [bs.name, bs.id]))
@@ -138,14 +139,17 @@ export function useResourceImport(deps: ImportDeps) {
                         const groupId = row.group
                             ? (groupNameToId.get(row.group) || groupCodeToId.get(row.group))
                             : undefined
-                        const typeCode = row.type ? (clusterTypeNameToCode.get(row.type) || row.type) : ''
+                        let typeName = row.type || ''
+                        if (typeName && !clusterTypeNameSet.has(typeName)) {
+                            typeName = clusterTypeCodeToName.get(typeName) || typeName
+                        }
                         if (!groupId && row.group) {
                             errors.push({ row: i + 1, message: `Group "${row.group}" not found` })
                             continue
                         }
                         const created = await deps.createCluster({
                             name: row.name,
-                            type: typeCode,
+                            type: typeName,
                             purpose: row.purpose || '',
                             groupId,
                             description: row.description || '',

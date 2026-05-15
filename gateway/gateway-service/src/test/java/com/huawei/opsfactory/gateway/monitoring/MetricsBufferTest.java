@@ -4,16 +4,19 @@
 
 package com.huawei.opsfactory.gateway.monitoring;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
 
-import static org.junit.Assert.*;
-
 /**
  * Unit tests for MetricsBuffer — circular buffer, drainTimings, persistence.
+ *
  * @author x00000000
  * @since 2026-05-09
  */

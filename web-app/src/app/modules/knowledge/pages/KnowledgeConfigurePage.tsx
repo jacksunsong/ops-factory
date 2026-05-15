@@ -1786,6 +1786,7 @@ export default function KnowledgeConfigure() {
     const [expandedFailureJobId, setExpandedFailureJobId] = useState<string | null>(null)
 
     const activeTab = parseTab(searchParams.get('tab'))
+    const [hasOpenedRetrievalTab, setHasOpenedRetrievalTab] = useState(activeTab === 'retrieval')
     const isMaintenanceMode = source?.runtimeStatus?.toUpperCase() === 'MAINTENANCE'
     const isRuntimeError = source?.runtimeStatus?.toUpperCase() === 'ERROR'
     const isSourceUnavailable = isMaintenanceMode || isRuntimeError
@@ -1799,6 +1800,12 @@ export default function KnowledgeConfigure() {
         { key: 'config', label: t('knowledge.tabConfigParams') },
         { key: 'maintenance', label: t('knowledge.tabMaintenance') },
     ]
+
+    useEffect(() => {
+        if (activeTab === 'retrieval') {
+            setHasOpenedRetrievalTab(true)
+        }
+    }, [activeTab])
 
     const defaultsConfigGroups = useMemo(
         () => defaults
@@ -2931,14 +2938,17 @@ export default function KnowledgeConfigure() {
                         />
                     )}
 
-                    {activeTab === 'retrieval' && (
-                        <KnowledgeRetrievalTab
-                            source={source}
-                            capabilities={capabilities}
-                            defaults={defaults}
-                            retrievalProfileDetail={retrievalProfileDetail}
-                            disabled={isSourceUnavailable}
-                        />
+                    {hasOpenedRetrievalTab && (
+                        <div hidden={activeTab !== 'retrieval'}>
+                            <KnowledgeRetrievalTab
+                                key={source.id}
+                                source={source}
+                                capabilities={capabilities}
+                                defaults={defaults}
+                                retrievalProfileDetail={retrievalProfileDetail}
+                                disabled={isSourceUnavailable}
+                            />
+                        </div>
                     )}
                 </div>
 

@@ -25,20 +25,20 @@ public class WebConfig {
 
     private final OperationIntelligenceProperties properties;
 
-/**
- * Web Config.
- *
- * @param properties the properties
- */
+    /**
+     * Web Config.
+     *
+     * @param properties the properties
+     */
     public WebConfig(OperationIntelligenceProperties properties) {
         this.properties = properties;
     }
 
-/**
- * cors Web Filter.
- *
- * @return the result
- */
+    /**
+     * cors Web Filter.
+     *
+     * @return the result
+     */
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration config = new CorsConfiguration();

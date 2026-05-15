@@ -4,10 +4,15 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.huawei.opsfactory.gateway.filter.AuthWebFilter;
 import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.SopService;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +26,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
 
 /**
  * Test coverage for Sop Controller.
@@ -54,14 +55,18 @@ public class SopControllerTest {
     public void testListSops_empty() {
         when(sopService.listSops()).thenReturn(List.of());
 
-        webTestClient.get().uri("/gateway/sops/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.sops").isArray()
-                .jsonPath("$.sops").isEmpty();
+        webTestClient.get()
+            .uri("/gateway/sops/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.sops")
+            .isArray()
+            .jsonPath("$.sops")
+            .isEmpty();
     }
 
     /**
@@ -74,14 +79,18 @@ public class SopControllerTest {
         sop.put("name", "RCPA诊断");
         when(sopService.listSops()).thenReturn(List.of(sop));
 
-        webTestClient.get().uri("/gateway/sops/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.sops[0].id").isEqualTo("sop-1")
-                .jsonPath("$.sops[0].name").isEqualTo("RCPA诊断");
+        webTestClient.get()
+            .uri("/gateway/sops/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.sops[0].id")
+            .isEqualTo("sop-1")
+            .jsonPath("$.sops[0].name")
+            .isEqualTo("RCPA诊断");
     }
 
     // ── getSop ───────────────────────────────────────────────────
@@ -97,14 +106,18 @@ public class SopControllerTest {
         sop.put("nodes", List.of());
         when(sopService.getSop("sop-1")).thenReturn(sop);
 
-        webTestClient.get().uri("/gateway/sops/sop-1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.sop.id").isEqualTo("sop-1");
+        webTestClient.get()
+            .uri("/gateway/sops/sop-1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.sop.id")
+            .isEqualTo("sop-1");
     }
 
     /**
@@ -112,14 +125,15 @@ public class SopControllerTest {
      */
     @Test
     public void testGetSop_notFound() {
-        when(sopService.getSop("nonexistent"))
-                .thenThrow(new IllegalArgumentException("SOP not found: nonexistent"));
+        when(sopService.getSop("nonexistent")).thenThrow(new IllegalArgumentException("SOP not found: nonexistent"));
 
-        webTestClient.get().uri("/gateway/sops/nonexistent")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().is5xxServerError();
+        webTestClient.get()
+            .uri("/gateway/sops/nonexistent")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .is5xxServerError();
     }
 
     // ── createSop ────────────────────────────────────────────────
@@ -138,16 +152,20 @@ public class SopControllerTest {
         body.put("name", "NewSOP");
         body.put("description", "Test");
 
-        webTestClient.post().uri("/gateway/sops/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isCreated()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.sop.id").isEqualTo("new-id");
+        webTestClient.post()
+            .uri("/gateway/sops/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isCreated()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.sop.id")
+            .isEqualTo("new-id");
     }
 
     /**
@@ -155,22 +173,25 @@ public class SopControllerTest {
      */
     @Test
     public void testCreateSop_error() {
-        when(sopService.createSop(any()))
-                .thenThrow(new RuntimeException("Write failed"));
+        when(sopService.createSop(any())).thenThrow(new RuntimeException("Write failed"));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "SOP");
 
-        webTestClient.post().uri("/gateway/sops/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().is5xxServerError()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error").isEqualTo("Internal server error");
+        webTestClient.post()
+            .uri("/gateway/sops/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .is5xxServerError()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false)
+            .jsonPath("$.error")
+            .isEqualTo("Internal server error");
     }
 
     // ── updateSop ────────────────────────────────────────────────
@@ -188,16 +209,20 @@ public class SopControllerTest {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "UpdatedSOP");
 
-        webTestClient.put().uri("/gateway/sops/sop-1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.sop.name").isEqualTo("UpdatedSOP");
+        webTestClient.put()
+            .uri("/gateway/sops/sop-1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.sop.name")
+            .isEqualTo("UpdatedSOP");
     }
 
     /**
@@ -206,18 +231,20 @@ public class SopControllerTest {
     @Test
     public void testUpdateSop_notFound() {
         when(sopService.updateSop(eq("nonexistent"), any()))
-                .thenThrow(new IllegalArgumentException("SOP not found: nonexistent"));
+            .thenThrow(new IllegalArgumentException("SOP not found: nonexistent"));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "Updated");
 
-        webTestClient.put().uri("/gateway/sops/nonexistent")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isEqualTo(409);
+        webTestClient.put()
+            .uri("/gateway/sops/nonexistent")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isEqualTo(409);
     }
 
     // ── deleteSop ────────────────────────────────────────────────
@@ -229,13 +256,16 @@ public class SopControllerTest {
     public void testDeleteSop_success() {
         when(sopService.deleteSop("sop-1")).thenReturn(true);
 
-        webTestClient.delete().uri("/gateway/sops/sop-1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true);
+        webTestClient.delete()
+            .uri("/gateway/sops/sop-1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true);
     }
 
     /**
@@ -245,13 +275,16 @@ public class SopControllerTest {
     public void testDeleteSop_notFound() {
         when(sopService.deleteSop("nonexistent")).thenReturn(false);
 
-        webTestClient.delete().uri("/gateway/sops/nonexistent")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isNotFound()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false);
+        webTestClient.delete()
+            .uri("/gateway/sops/nonexistent")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isNotFound()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false);
     }
 
     /**
@@ -259,22 +292,25 @@ public class SopControllerTest {
      */
     @Test
     public void testCreateSop_duplicateName_returnsConflict() {
-        when(sopService.createSop(any()))
-                .thenThrow(new IllegalArgumentException("SOP name already exists: TestSOP"));
+        when(sopService.createSop(any())).thenThrow(new IllegalArgumentException("SOP name already exists: TestSOP"));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "TestSOP");
 
-        webTestClient.post().uri("/gateway/sops/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isEqualTo(409)
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error").isEqualTo("SOP name already exists");
+        webTestClient.post()
+            .uri("/gateway/sops/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isEqualTo(409)
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false)
+            .jsonPath("$.error")
+            .isEqualTo("SOP name already exists");
     }
 
     // ── Auth tests ───────────────────────────────────────────────
@@ -284,10 +320,12 @@ public class SopControllerTest {
      */
     @Test
     public void testListSops_unauthorized_noKey() {
-        webTestClient.get().uri("/gateway/sops/")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isUnauthorized();
+        webTestClient.get()
+            .uri("/gateway/sops/")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isUnauthorized();
     }
 
     /**
@@ -295,11 +333,13 @@ public class SopControllerTest {
      */
     @Test
     public void testListSops_forbidden_nonAdmin() {
-        webTestClient.get().uri("/gateway/sops/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.get()
+            .uri("/gateway/sops/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 
     /**
@@ -310,12 +350,14 @@ public class SopControllerTest {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "SOP");
 
-        webTestClient.post().uri("/gateway/sops/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.post()
+            .uri("/gateway/sops/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 }

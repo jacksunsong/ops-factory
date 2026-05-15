@@ -4,17 +4,19 @@
 
 package com.huawei.opsfactory.gateway.process;
 
-import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
-import com.huawei.opsfactory.gateway.config.GatewayProperties;
-import org.junit.Before;
-import org.junit.Test;
-import reactor.core.publisher.Mono;
-
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
+import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
+import reactor.core.publisher.Mono;
+
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test coverage for Prewarm Service.
@@ -24,7 +26,9 @@ import static org.mockito.Mockito.when;
  */
 public class PrewarmServiceTest {
     private InstanceManager instanceManager;
+
     private GatewayProperties properties;
+
     private PrewarmService prewarmService;
 
     /**
@@ -126,7 +130,7 @@ public class PrewarmServiceTest {
     @Test
     public void testOnUserActivity_spawnError_doesNotThrow() {
         when(instanceManager.getOrSpawn("universal-agent", "alice"))
-                .thenReturn(Mono.error(new RuntimeException("spawn failed")));
+            .thenReturn(Mono.error(new RuntimeException("spawn failed")));
 
         // Should not throw — error is handled in subscribe
         prewarmService.onUserActivity("alice");

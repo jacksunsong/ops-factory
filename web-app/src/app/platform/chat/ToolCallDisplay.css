@@ -225,13 +225,40 @@
     line-height: 1.5;
 }
 
+.tool-call-output-wrap {
+    position: relative;
+}
+
+.tool-call-output-copy-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(221, 226, 234, 0.92);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #697586;
+    cursor: pointer;
+    transition: opacity 0.16s ease, color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.tool-call-output-copy-btn:hover {
+    color: #2f3a4a;
+    border-color: rgba(185, 194, 207, 0.95);
+    background: #fff;
+}
+
 .tool-call-output {
     margin: 0;
     font-size: 0.78rem;
     line-height: 1.6;
     background: rgba(251, 252, 253, 0.68);
     border: 1px solid #f1f4f8;
-    padding: 8px 10px;
+    padding: 8px 42px 8px 10px;
     border-radius: 6px;
     overflow: auto;
     max-height: 320px;
@@ -245,7 +272,7 @@
 .tool-call-output.compact {
     background: rgba(248, 250, 252, 0.46);
     border-color: #f1f4f8;
-    padding: 6px 9px;
+    padding: 6px 42px 6px 9px;
     border-radius: 6px;
     max-height: none;
 }

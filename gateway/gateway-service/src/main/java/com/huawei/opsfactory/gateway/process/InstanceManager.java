@@ -96,8 +96,13 @@ public class InstanceManager {
     /**
      * Creates the instance manager instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param properties gateway configuration properties
+     * @param portAllocator allocator for assigning unique ports to goosed instances
+     * @param runtimePreparer prepares the runtime directory for each agent instance
+     * @param agentConfigService service for loading agent configuration and secrets
+     * @param serverPort the HTTP port the gateway server listens on
+     * @param serverSslEnabled whether the gateway server has SSL enabled
+     * @param gatewayApiPassword password for authenticating gateway API requests
      */
     public InstanceManager(GatewayProperties properties, PortAllocator portAllocator, RuntimePreparer runtimePreparer,
         AgentConfigService agentConfigService, @Value("${server.port:3000}") int serverPort,
@@ -118,28 +123,28 @@ public class InstanceManager {
             TrustManager[] trustAll = {new X509TrustManager() {
 
                 /**
-                 * Returns the accepted issuers.
+                 * Returns the accepted issuers (empty for trust-all manager).
                  *
-                 * @return the result
+                 * @return an empty array of X509 certificates
                  */
                 public X509Certificate[] getAcceptedIssuers() {
                     return new X509Certificate[0];
                 }
 
                 /**
-                 * Executes the check client trusted operation.
+                 * No-op client trust check (trust-all strategy).
                  *
-                 * @param certs the certs parameter
-                 * @param authType the authType parameter
+                 * @param certs the peer certificate chain presented by the client
+                 * @param authType the authentication type used (e.g. RSA, DHE)
                  */
                 public void checkClientTrusted(X509Certificate[] certs, String authType) {
                 }
 
                 /**
-                 * Executes the check server trusted operation.
+                 * No-op server trust check (trust-all strategy).
                  *
-                 * @param certs the certs parameter
-                 * @param authType the authType parameter
+                 * @param certs the peer certificate chain presented by the server
+                 * @param authType the key exchange algorithm used (e.g. RSA, DHE)
                  */
                 public void checkServerTrusted(X509Certificate[] certs, String authType) {
                 }
@@ -167,13 +172,9 @@ public class InstanceManager {
                 log.info("Auto-starting resident instance for {}:{}", target.agentId(), target.userId());
                 ManagedInstance instance = doSpawn(target.agentId(), target.userId());
                 registerDefaultSchedules(target.agentId(), instance.getPort(), instance.getSecretKey());
-            } catch (IOException | IllegalStateException e) {
+            } catch (IllegalStateException e) {
                 log.error("Failed to auto-start resident instance for {}:{}: {}", target.agentId(), target.userId(),
                     e.getMessage());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.error("Interrupted while auto-starting resident instance for {}:{}", target.agentId(),
-                    target.userId());
             }
         });
     }
@@ -181,8 +182,9 @@ public class InstanceManager {
     /**
      * Scan agent's config/recipes/ directory and register each recipe as a paused schedule.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param agentId unique identifier of the agent whose recipes are being registered
+     * @param port the port number the goosed instance is listening on
+     * @param secretKey authentication secret for the goosed instance API
      */
     private void registerDefaultSchedules(String agentId, int port, String secretKey) {
         Path recipesDir = agentConfigService.getAgentsDir().resolve(agentId).resolve("config").resolve("recipes");
@@ -262,6 +264,13 @@ public class InstanceManager {
         }
     }
 
+    /**
+     * Opens an HTTP(S) connection to the given URL, configuring TLS trust-all if goose TLS is enabled.
+     *
+     * @param url the target URL to connect to
+     * @return an open HttpURLConnection ready for request configuration
+     * @throws IOException if the connection cannot be established
+     */
     private HttpURLConnection openConnection(URL url) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         if (properties.isGooseTls() && conn instanceof HttpsURLConnection) {
@@ -275,6 +284,8 @@ public class InstanceManager {
     /**
      * Quick health probe: HTTP GET /status with 3s timeout.
      * Returns false if the goosed instance is unresponsive (hung, TLS broken, etc.).
+     *
+     * @param port port number of the goosed instance to check
      */
     private boolean isHealthy(int port) {
         try {
@@ -294,6 +305,15 @@ public class InstanceManager {
         }
     }
 
+    /**
+     * Performs an HTTP GET request to a goosed instance.
+     *
+     * @param port the port number of the target goosed instance
+     * @param path the URL path to request (e.g. "/schedule/list")
+     * @param secretKey authentication secret for the goosed instance API
+     * @return the response body as a string if status is 200, or null otherwise
+     * @throws IOException if the connection fails or cannot be read
+     */
     private String httpGet(int port, String path, String secretKey) throws IOException {
         URL url = new URL(goosedBaseUrl(port) + path);
         HttpURLConnection conn = openConnection(url);
@@ -312,6 +332,16 @@ public class InstanceManager {
         }
     }
 
+    /**
+     * Performs an HTTP POST request to a goosed instance with a JSON body.
+     *
+     * @param port the port number of the target goosed instance
+     * @param path the URL path to post to (e.g. "/schedule/create")
+     * @param body the JSON-encoded request body
+     * @param secretKey authentication secret for the goosed instance API
+     * @return true if the server responded with status 200, false otherwise
+     * @throws IOException if the connection fails or cannot be written
+     */
     private boolean httpPost(int port, String path, String body, String secretKey) throws IOException {
         URL url = new URL(goosedBaseUrl(port) + path);
         HttpURLConnection conn = openConnection(url);
@@ -335,9 +365,9 @@ public class InstanceManager {
      * Get a running instance or spawn a new one.
      * Returns a Mono that resolves to the ManagedInstance.
      *
-     * @param agentId the agentId parameter
-     * @param userId the userId parameter
-     * @return the result
+     * @param agentId unique identifier of the agent to get or spawn
+     * @param userId unique identifier of the user that owns the instance
+     * @return a Mono emitting the ready ManagedInstance, reusing existing or newly spawned
      */
     public Mono<ManagedInstance> getOrSpawn(String agentId, String userId) {
         String key = ManagedInstance.buildKey(agentId, userId);
@@ -382,7 +412,14 @@ public class InstanceManager {
             .subscribeOn(Schedulers.boundedElastic());
     }
 
-    private ManagedInstance doSpawn(String agentId, String userId) throws IOException, InterruptedException {
+    /**
+     * Spawns a new goosed process for the given agent and user with per-key locking.
+     *
+     * @param agentId unique identifier of the agent to spawn
+     * @param userId unique identifier of the user that owns the instance
+     * @return the newly created and ready ManagedInstance
+     */
+    private ManagedInstance doSpawn(String agentId, String userId) {
         String key = ManagedInstance.buildKey(agentId, userId);
         long spawnStart = System.currentTimeMillis();
         ReentrantLock lock = spawnLocks.computeIfAbsent(key, k -> new ReentrantLock());
@@ -470,6 +507,8 @@ public class InstanceManager {
                 agentId, userId, port, pid, prepareMs, processStartMs, readyMs,
                 System.currentTimeMillis() - spawnStart);
             return instance;
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to spawn instance for " + agentId + ":" + userId, e);
         } finally {
             lock.unlock();
         }
@@ -479,6 +518,8 @@ public class InstanceManager {
      * Reset stuck currently_running flags in schedule.json before goosed starts.
      * goosed persists currently_running=true but doesn't reset it on restart,
      * so we fix it here before the process loads the file.
+     *
+     * @param runtimeRoot root directory of the agent runtime containing the data folder
      */
     private void resetStuckRunningSchedules(Path runtimeRoot) {
         Path scheduleFile = runtimeRoot.resolve("data").resolve("schedule.json");
@@ -511,6 +552,16 @@ public class InstanceManager {
         }
     }
 
+    /**
+     * Builds the environment variable map for a goosed process, including agent config,
+     * secrets, core goosed settings, and gateway callback URLs.
+     *
+     * @param agentId unique identifier of the agent
+     * @param userId unique identifier of the user
+     * @param port the allocated port for the goosed instance
+     * @param runtimeRoot the runtime directory assigned to this instance
+     * @return a map of environment variable names to values for the goosed process
+     */
     private Map<String, String> buildEnvironment(String agentId, String userId, int port, Path runtimeRoot) {
         Map<String, String> env = new HashMap<>();
 
@@ -575,7 +626,25 @@ public class InstanceManager {
         return env;
     }
 
-    private void waitForReady(int port, Process process) throws IOException, InterruptedException {
+    /**
+     * Polls the goosed health endpoint with exponential backoff until the instance responds
+     * or the process exits unexpectedly.
+     *
+     * @param port the port the goosed instance is expected to listen on
+     * @param process the goosed process to monitor for premature exit
+     */
+    private void waitForReady(int port, Process process) {
+        try {
+            doWaitForReady(port, process);
+        } catch (IOException e) {
+            throw new IllegalStateException("goosed instance failed to become ready on port " + port, e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting for goosed on port " + port, e);
+        }
+    }
+
+    private void doWaitForReady(int port, Process process) throws IOException, InterruptedException {
         String baseUrl = goosedBaseUrl(port);
         URL url = new URL(baseUrl + "/status");
         String healthCheckUrl = url.toString();
@@ -633,9 +702,9 @@ public class InstanceManager {
     /**
      * Gets a managed instance by agent and user identifiers.
      *
-     * @param agentId the agentId parameter
-     * @param userId the userId parameter
-     * @return the result
+     * @param agentId unique identifier of the agent
+     * @param userId unique identifier of the user
+     * @return the matching ManagedInstance, or null if no instance exists for the given key
      */
     public ManagedInstance getInstance(String agentId, String userId) {
         return instances.get(ManagedInstance.buildKey(agentId, userId));
@@ -644,7 +713,7 @@ public class InstanceManager {
     /**
      * Gets all managed instances regardless of status.
      *
-     * @return the result
+     * @return an unmodifiable collection of all currently tracked ManagedInstance entries
      */
     public Collection<ManagedInstance> getAllInstances() {
         return instances.values();
@@ -653,7 +722,7 @@ public class InstanceManager {
     /**
      * Stops a managed instance gracefully and removes it from the registry.
      *
-     * @param instance the instance parameter
+     * @param instance the managed instance to stop and unregister
      */
     public void stopInstance(ManagedInstance instance) {
         log.info("Stopping instance {}:{} (port={})", instance.getAgentId(), instance.getUserId(), instance.getPort());
@@ -666,8 +735,8 @@ public class InstanceManager {
      * Kill a hung instance asynchronously so the next getOrSpawn() will create a fresh one.
      * Called by gateway health and timeout handlers when goosed is considered unrecoverable.
      *
-     * @param agentId the agentId parameter
-     * @param userId the userId parameter
+     * @param agentId unique identifier of the agent whose instance should be recycled
+     * @param userId unique identifier of the user that owns the instance
      */
     public void forceRecycle(String agentId, String userId) {
         String key = ManagedInstance.buildKey(agentId, userId);
@@ -681,7 +750,7 @@ public class InstanceManager {
     /**
      * Stop all instances for a given agent across all users.
      *
-     * @param agentId the agentId parameter
+     * @param agentId unique identifier of the agent whose instances should be stopped
      */
     public void stopAllForAgent(String agentId) {
         instances.values()
@@ -694,7 +763,7 @@ public class InstanceManager {
     /**
      * Touch all instances for a user (keep them alive together).
      *
-     * @param userId the userId parameter
+     * @param userId unique identifier of the user whose instances should be touched
      */
     public void touchAllForUser(String userId) {
         for (ManagedInstance inst : instances.values()) {
@@ -708,9 +777,9 @@ public class InstanceManager {
      * Asynchronously respawn a crashed instance. Called by InstanceWatchdog
      * when a dead process is detected during periodic health checks.
      *
-     * @param agentId the agentId parameter
-     * @param userId the userId parameter
-     * @param restartCount the restartCount parameter
+     * @param agentId unique identifier of the agent to respawn
+     * @param userId unique identifier of the user that owns the instance
+     * @param restartCount the cumulative number of restarts for this instance
      */
     public void respawnAsync(String agentId, String userId, int restartCount) {
         Mono.fromCallable(() -> {

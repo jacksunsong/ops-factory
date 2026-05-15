@@ -41,8 +41,8 @@ public class FileCitationController {
     /**
      * Creates the file citation controller.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param agentConfigService service for resolving knowledge base root directories
+     * @param fileService service for MIME type detection
      */
     public FileCitationController(AgentConfigService agentConfigService, FileService fileService) {
         this.agentConfigService = agentConfigService;
@@ -52,9 +52,9 @@ public class FileCitationController {
     /**
      * Returns the content of a knowledge-base citation file for inline preview.
      *
-     * @param agentId the agentId parameter
-     * @param requestedPath the requestedPath parameter
-     * @return the result
+     * @param agentId agent instance identifier
+     * @param requestedPath absolute path of the citation file to preview
+     * @return Mono emitting ResponseEntity with file content and appropriate content type
      */
     @GetMapping("/content")
     public Mono<ResponseEntity<?>> getCitationFile(@PathVariable("agentId") String agentId,

@@ -4,15 +4,6 @@
 
 package com.huawei.opsfactory.gateway.process;
 
-import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
-import com.huawei.opsfactory.gateway.config.GatewayProperties;
-import com.huawei.opsfactory.gateway.service.AgentConfigService;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.Collection;
-import java.util.Map;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -23,6 +14,16 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
+import com.huawei.opsfactory.gateway.config.GatewayProperties;
+import com.huawei.opsfactory.gateway.service.AgentConfigService;
+
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.Collection;
+import java.util.Map;
+
 /**
  * Test coverage for Instance Manager.
  *
@@ -31,9 +32,13 @@ import static org.mockito.Mockito.when;
  */
 public class InstanceManagerTest {
     private InstanceManager instanceManager;
+
     private GatewayProperties properties;
+
     private PortAllocator portAllocator;
+
     private RuntimePreparer runtimePreparer;
+
     private AgentConfigService agentConfigService;
 
     /**
@@ -47,14 +52,14 @@ public class InstanceManagerTest {
         properties.setSecretKey("test-secret");
         portAllocator = mock(PortAllocator.class);
         runtimePreparer = mock(RuntimePreparer.class);
-        doReturn(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "gateway-test"))
-                .when(runtimePreparer).prepare(anyString(), anyString());
+        doReturn(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "gateway-test")).when(runtimePreparer)
+            .prepare(anyString(), anyString());
         agentConfigService = mock(AgentConfigService.class);
         when(agentConfigService.loadAgentConfigYaml(anyString())).thenReturn(Map.of());
         when(agentConfigService.loadAgentSecretsYaml(anyString())).thenReturn(Map.of());
 
-        instanceManager = new InstanceManager(properties, portAllocator, runtimePreparer, agentConfigService,
-                3000, false, "");
+        instanceManager =
+            new InstanceManager(properties, portAllocator, runtimePreparer, agentConfigService, 3000, false, "");
     }
 
     /**
@@ -225,7 +230,7 @@ public class InstanceManagerTest {
             field.setAccessible(true);
             @SuppressWarnings("unchecked")
             java.util.concurrent.ConcurrentHashMap<String, ManagedInstance> instances =
-                    (java.util.concurrent.ConcurrentHashMap<String, ManagedInstance>) field.get(instanceManager);
+                (java.util.concurrent.ConcurrentHashMap<String, ManagedInstance>) field.get(instanceManager);
             instances.put(instance.getKey(), instance);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);

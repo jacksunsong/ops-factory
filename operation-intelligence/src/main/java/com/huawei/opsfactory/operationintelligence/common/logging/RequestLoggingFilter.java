@@ -33,18 +33,18 @@ public class RequestLoggingFilter implements WebFilter {
 
     private final OperationIntelligenceProperties properties;
 
-/**
- * Request Logging Filter.
- *
- * @param properties the properties
- */
+    /**
+     * Request Logging Filter.
+     *
+     * @param properties the properties
+     */
     public RequestLoggingFilter(OperationIntelligenceProperties properties) {
         this.properties = properties;
     }
 
-/**
- * {@inheritDoc}
- */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String requestId = resolveRequestId(exchange);

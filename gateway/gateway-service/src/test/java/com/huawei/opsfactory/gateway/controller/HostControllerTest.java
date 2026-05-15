@@ -4,12 +4,17 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.huawei.opsfactory.gateway.filter.AuthWebFilter;
 import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.ClusterService;
 import com.huawei.opsfactory.gateway.service.HostGroupService;
 import com.huawei.opsfactory.gateway.service.HostService;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +28,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
 
 /**
  * Test coverage for Host Controller.
@@ -64,14 +66,18 @@ public class HostControllerTest {
     public void testListHosts_empty() {
         when(hostService.listHosts(any())).thenReturn(List.of());
 
-        webTestClient.get().uri("/gateway/hosts/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.hosts").isArray()
-                .jsonPath("$.hosts").isEmpty();
+        webTestClient.get()
+            .uri("/gateway/hosts/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.hosts")
+            .isArray()
+            .jsonPath("$.hosts")
+            .isEmpty();
     }
 
     /**
@@ -85,14 +91,18 @@ public class HostControllerTest {
         host.put("credential", "***");
         when(hostService.listHosts(any())).thenReturn(List.of(host));
 
-        webTestClient.get().uri("/gateway/hosts/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.hosts[0].id").isEqualTo("host-1")
-                .jsonPath("$.hosts[0].name").isEqualTo("Server1");
+        webTestClient.get()
+            .uri("/gateway/hosts/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.hosts[0].id")
+            .isEqualTo("host-1")
+            .jsonPath("$.hosts[0].name")
+            .isEqualTo("Server1");
     }
 
     /**
@@ -102,11 +112,13 @@ public class HostControllerTest {
     public void testListHosts_withTagsFilter() {
         when(hostService.listHosts(any())).thenReturn(List.of());
 
-        webTestClient.get().uri("/gateway/hosts/?tags=RCPA,GMDB")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk();
+        webTestClient.get()
+            .uri("/gateway/hosts/?tags=RCPA,GMDB")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk();
     }
 
     // ── getHost ──────────────────────────────────────────────────
@@ -122,14 +134,18 @@ public class HostControllerTest {
         host.put("credential", "***");
         when(hostService.getHost("host-1")).thenReturn(host);
 
-        webTestClient.get().uri("/gateway/hosts/host-1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.host.id").isEqualTo("host-1");
+        webTestClient.get()
+            .uri("/gateway/hosts/host-1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.host.id")
+            .isEqualTo("host-1");
     }
 
     /**
@@ -137,14 +153,15 @@ public class HostControllerTest {
      */
     @Test
     public void testGetHost_notFound() {
-        when(hostService.getHost("nonexistent"))
-                .thenThrow(new IllegalArgumentException("Host not found: nonexistent"));
+        when(hostService.getHost("nonexistent")).thenThrow(new IllegalArgumentException("Host not found: nonexistent"));
 
-        webTestClient.get().uri("/gateway/hosts/nonexistent")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isNotFound();
+        webTestClient.get()
+            .uri("/gateway/hosts/nonexistent")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isNotFound();
     }
 
     // ── createHost ───────────────────────────────────────────────
@@ -164,16 +181,20 @@ public class HostControllerTest {
         body.put("name", "NewHost");
         body.put("ip", "10.0.0.1");
 
-        webTestClient.post().uri("/gateway/hosts/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isCreated()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.host.id").isEqualTo("new-id");
+        webTestClient.post()
+            .uri("/gateway/hosts/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isCreated()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.host.id")
+            .isEqualTo("new-id");
     }
 
     /**
@@ -181,22 +202,25 @@ public class HostControllerTest {
      */
     @Test
     public void testCreateHost_error() {
-        when(hostService.createHost(any()))
-                .thenThrow(new RuntimeException("Encryption failed"));
+        when(hostService.createHost(any())).thenThrow(new RuntimeException("Encryption failed"));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "Host");
 
-        webTestClient.post().uri("/gateway/hosts/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().is5xxServerError()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error").isEqualTo("Internal server error");
+        webTestClient.post()
+            .uri("/gateway/hosts/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .is5xxServerError()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false)
+            .jsonPath("$.error")
+            .isEqualTo("Internal server error");
     }
 
     // ── updateHost ───────────────────────────────────────────────
@@ -214,16 +238,20 @@ public class HostControllerTest {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "Updated");
 
-        webTestClient.put().uri("/gateway/hosts/host-1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.host.name").isEqualTo("Updated");
+        webTestClient.put()
+            .uri("/gateway/hosts/host-1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.host.name")
+            .isEqualTo("Updated");
     }
 
     /**
@@ -232,18 +260,20 @@ public class HostControllerTest {
     @Test
     public void testUpdateHost_notFound() {
         when(hostService.updateHost(eq("nonexistent"), any()))
-                .thenThrow(new IllegalArgumentException("Host not found: nonexistent"));
+            .thenThrow(new IllegalArgumentException("Host not found: nonexistent"));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "Updated");
 
-        webTestClient.put().uri("/gateway/hosts/nonexistent")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isNotFound();
+        webTestClient.put()
+            .uri("/gateway/hosts/nonexistent")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isNotFound();
     }
 
     // ── deleteHost ───────────────────────────────────────────────
@@ -255,13 +285,16 @@ public class HostControllerTest {
     public void testDeleteHost_success() {
         when(hostService.deleteHost("host-1")).thenReturn(true);
 
-        webTestClient.delete().uri("/gateway/hosts/host-1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true);
+        webTestClient.delete()
+            .uri("/gateway/hosts/host-1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true);
     }
 
     /**
@@ -271,13 +304,16 @@ public class HostControllerTest {
     public void testDeleteHost_notFound() {
         when(hostService.deleteHost("nonexistent")).thenReturn(false);
 
-        webTestClient.delete().uri("/gateway/hosts/nonexistent")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isNotFound()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false);
+        webTestClient.delete()
+            .uri("/gateway/hosts/nonexistent")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isNotFound()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false);
     }
 
     // ── getTags ──────────────────────────────────────────────────
@@ -289,15 +325,20 @@ public class HostControllerTest {
     public void testGetTags() {
         when(hostService.getAllTags()).thenReturn(List.of("RCPA", "GMDB", "ALL"));
 
-        webTestClient.get().uri("/gateway/hosts/tags")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.tags[0]").isEqualTo("RCPA")
-                .jsonPath("$.tags[1]").isEqualTo("GMDB")
-                .jsonPath("$.tags[2]").isEqualTo("ALL");
+        webTestClient.get()
+            .uri("/gateway/hosts/tags")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.tags[0]")
+            .isEqualTo("RCPA")
+            .jsonPath("$.tags[1]")
+            .isEqualTo("GMDB")
+            .jsonPath("$.tags[2]")
+            .isEqualTo("ALL");
     }
 
     // ── testConnectivity ─────────────────────────────────────────
@@ -313,14 +354,18 @@ public class HostControllerTest {
         testResult.put("latencyMs", 45);
         when(hostService.testConnection("host-1")).thenReturn(testResult);
 
-        webTestClient.post().uri("/gateway/hosts/host-1/test")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.reachable").isEqualTo(true);
+        webTestClient.post()
+            .uri("/gateway/hosts/host-1/test")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.reachable")
+            .isEqualTo(true);
     }
 
     /**
@@ -333,13 +378,16 @@ public class HostControllerTest {
         testResult.put("error", "Connection refused");
         when(hostService.testConnection("host-1")).thenReturn(testResult);
 
-        webTestClient.post().uri("/gateway/hosts/host-1/test")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false);
+        webTestClient.post()
+            .uri("/gateway/hosts/host-1/test")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false);
     }
 
     // ── Auth tests ───────────────────────────────────────────────
@@ -349,10 +397,12 @@ public class HostControllerTest {
      */
     @Test
     public void testListHosts_unauthorized_noKey() {
-        webTestClient.get().uri("/gateway/hosts/")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isUnauthorized();
+        webTestClient.get()
+            .uri("/gateway/hosts/")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isUnauthorized();
     }
 
     /**
@@ -360,11 +410,13 @@ public class HostControllerTest {
      */
     @Test
     public void testListHosts_forbidden_nonAdmin() {
-        webTestClient.get().uri("/gateway/hosts/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.get()
+            .uri("/gateway/hosts/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 
     /**
@@ -375,12 +427,14 @@ public class HostControllerTest {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "Host");
 
-        webTestClient.post().uri("/gateway/hosts/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.post()
+            .uri("/gateway/hosts/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 }

@@ -27,8 +27,7 @@ public class HookPipeline {
     /**
      * Creates the hook pipeline instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param hooks ordered list of request hooks to execute
      */
     public HookPipeline(List<RequestHook> hooks) {
         this.hooks = hooks;
@@ -39,8 +38,8 @@ public class HookPipeline {
      * Run all request hooks in order. Returns the (possibly modified) body.
      * If any hook returns an error Mono, the pipeline short-circuits.
      *
-     * @param ctx the ctx parameter
-     * @return the result
+     * @param ctx hook context carrying the request body and metadata
+     * @return Mono emitting the potentially modified request body string
      */
     public Mono<String> executeRequest(HookContext ctx) {
         Mono<HookContext> chain = Mono.just(ctx);

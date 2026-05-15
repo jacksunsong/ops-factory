@@ -11,9 +11,15 @@ const USER_SYS = 'admin'       // admin
 const USER_ALICE = 'test-alice' // non-admin
 
 let gw: GatewayHandle
+let defaultProvider: string
+let defaultModel: string
 
 beforeAll(async () => {
   gw = await startJavaGateway()
+  const configRes = await gw.fetchAs(USER_SYS, '/agents/universal-agent/config')
+  const config = await configRes.json()
+  defaultProvider = config.provider
+  defaultModel = config.model
 }, 60_000)
 
 afterAll(async () => {
@@ -111,8 +117,8 @@ describe('Agent Create — POST /agents', () => {
     expect(data.agent).toBeDefined()
     expect(data.agent.id).toBe(id)
     expect(data.agent.name).toBe(name)
-    expect(data.agent.provider).toBe('openai')
-    expect(data.agent.model).toBe('qwen/qwen3.5-35b-a3b')
+    expect(data.agent.provider).toBe(defaultProvider)
+    expect(data.agent.model).toBe(defaultModel)
   })
 
   it('new agent appears in listing', async () => {
@@ -127,8 +133,8 @@ describe('Agent Create — POST /agents', () => {
     const found = agents.find((a: { id: string }) => a.id === id)
     expect(found).toBeDefined()
     expect(found.name).toBe(name)
-    expect(found.provider).toBe('openai')
-    expect(found.model).toBe('qwen/qwen3.5-35b-a3b')
+    expect(found.provider).toBe(defaultProvider)
+    expect(found.model).toBe(defaultModel)
   })
 
   it('new agent config is readable', async () => {
@@ -143,8 +149,8 @@ describe('Agent Create — POST /agents', () => {
     const config = await configRes.json()
     expect(config.id).toBe(id)
     expect(config.name).toBe(name)
-    expect(config.provider).toBe('openai')
-    expect(config.model).toBe('qwen/qwen3.5-35b-a3b')
+    expect(config.provider).toBe(defaultProvider)
+    expect(config.model).toBe(defaultModel)
     expect(config.agentsMd).toContain(name)
   })
 

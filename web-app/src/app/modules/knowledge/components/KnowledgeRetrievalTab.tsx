@@ -64,12 +64,6 @@ interface RetrievalCacheEntry {
     results: Record<RetrievalMode, RetrievalModeResultState>
 }
 
-interface RetrievalPersistedState {
-    lastQuery: string
-    settings: RetrievalSettings | null
-    entries: RetrievalCacheEntry[]
-}
-
 interface RetrievalDisplayHit extends RetrievalSearchHit {
     documentName: string
     displayScore: number
@@ -186,133 +180,6 @@ function normalizeRetrievalMode(value: string | null | undefined): RetrievalMode
     default:
         return null
     }
-}
-
-function getStorageKey(sourceId: string): string {
-    return `opsfactory:knowledge:retrieval-history:${sourceId}:v1`
-}
-
-function getCacheStorageKey(sourceId: string): string {
-    return `opsfactory:knowledge:retrieval-cache:${sourceId}:v1`
-}
-
-function normalizeHistoryEntry(raw: unknown): RetrievalHistoryEntry | null {
-    if (!raw || typeof raw !== 'object') return null
-
-    const record = raw as Record<string, unknown>
-    const query = typeof record.query === 'string' ? record.query.trim() : ''
-    if (!query) return null
-
-    return {
-        id: typeof record.id === 'string' ? record.id : `${Date.now()}:compare:${query}`,
-        query,
-        createdAt: typeof record.createdAt === 'string' ? record.createdAt : new Date().toISOString(),
-    }
-}
-
-function loadHistory(storageKey: string): RetrievalHistoryEntry[] {
-    if (typeof window === 'undefined') return []
-
-    try {
-        const raw = window.localStorage.getItem(storageKey)
-        if (!raw) return []
-
-        const parsed = JSON.parse(raw) as unknown
-        if (!Array.isArray(parsed)) return []
-
-        return parsed
-            .map(entry => normalizeHistoryEntry(entry))
-            .filter((entry): entry is RetrievalHistoryEntry => Boolean(entry))
-            .slice(0, HISTORY_LIMIT)
-    } catch {
-        return []
-    }
-}
-
-function saveHistory(storageKey: string, entries: RetrievalHistoryEntry[]): void {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(storageKey, JSON.stringify(entries))
-}
-
-function normalizeModeResultState(raw: unknown): RetrievalModeResultState {
-    if (!raw || typeof raw !== 'object') {
-        return {
-            hits: [],
-            total: 0,
-            error: null,
-        }
-    }
-
-    const record = raw as Record<string, unknown>
-    const hits = Array.isArray(record.hits) ? record.hits as RetrievalSearchHit[] : []
-    const total = typeof record.total === 'number' ? record.total : hits.length
-    const error = typeof record.error === 'string' ? record.error : null
-
-    return {
-        hits,
-        total,
-        error,
-    }
-}
-
-function normalizeCacheEntry(raw: unknown): RetrievalCacheEntry | null {
-    if (!raw || typeof raw !== 'object') return null
-
-    const record = raw as Record<string, unknown>
-    const query = typeof record.query === 'string' ? record.query.trim() : ''
-    if (!query) return null
-
-    const results = isRecord(record.results) ? record.results : {}
-
-    return {
-        query,
-        createdAt: typeof record.createdAt === 'string' ? record.createdAt : new Date().toISOString(),
-        fetchedTopK: typeof record.fetchedTopK === 'number' ? record.fetchedTopK : COMPARE_FETCH_TOP_K,
-        results: {
-            hybrid: normalizeModeResultState(results.hybrid),
-            semantic: normalizeModeResultState(results.semantic),
-            lexical: normalizeModeResultState(results.lexical),
-        },
-    }
-}
-
-function loadPersistedState(storageKey: string): RetrievalPersistedState | null {
-    if (typeof window === 'undefined') return null
-
-    try {
-        const raw = window.localStorage.getItem(storageKey)
-        if (!raw) return null
-
-        const parsed = JSON.parse(raw) as unknown
-        if (!parsed || typeof parsed !== 'object') return null
-
-        const record = parsed as Record<string, unknown>
-        const entries = Array.isArray(record.entries)
-            ? record.entries
-                .map(entry => normalizeCacheEntry(entry))
-                .filter((entry): entry is RetrievalCacheEntry => Boolean(entry))
-                .slice(0, HISTORY_LIMIT)
-            : []
-
-        return {
-            lastQuery: typeof record.lastQuery === 'string' ? record.lastQuery.trim() : '',
-            settings: normalizeSettings(record.settings, null),
-            entries,
-        }
-    } catch {
-        return null
-    }
-}
-
-function savePersistedState(storageKey: string, state: RetrievalPersistedState | null): void {
-    if (typeof window === 'undefined') return
-
-    if (!state || (state.entries.length === 0 && state.settings === null && !state.lastQuery)) {
-        window.localStorage.removeItem(storageKey)
-        return
-    }
-
-    window.localStorage.setItem(storageKey, JSON.stringify(state))
 }
 
 function upsertCacheEntry(entries: RetrievalCacheEntry[], entry: RetrievalCacheEntry): RetrievalCacheEntry[] {
@@ -1148,19 +1015,11 @@ export default function KnowledgeRetrievalTab({
         return new Set<RetrievalMode>([configuredMode])
     }, [allowRequestOverride, configuredMode, systemSupportedModes])
     const orderedModes = useMemo(() => getOrderedModes(supportedModes), [supportedModes])
-    const storageKey = useMemo(() => getStorageKey(source.id), [source.id])
-    const cacheStorageKey = useMemo(() => getCacheStorageKey(source.id), [source.id])
 
-    const [settings, setSettings] = useState<RetrievalSettings>(() => {
-        const persistedState = loadPersistedState(cacheStorageKey)
-        return persistedState?.settings
-            ? normalizeSettings(persistedState.settings, defaults)
-            : buildInitialSettings(defaults)
-    })
+    const [settings, setSettings] = useState<RetrievalSettings>(() => buildInitialSettings(defaults))
     const [query, setQuery] = useState('')
-    const [history, setHistory] = useState<RetrievalHistoryEntry[]>(() => loadHistory(storageKey))
-    const [cachedEntries, setCachedEntries] = useState<RetrievalCacheEntry[]>(() => loadPersistedState(cacheStorageKey)?.entries ?? [])
-    const [hasLoadedPersistedState, setHasLoadedPersistedState] = useState(false)
+    const [history, setHistory] = useState<RetrievalHistoryEntry[]>([])
+    const [cachedEntries, setCachedEntries] = useState<RetrievalCacheEntry[]>([])
     const [documentNames, setDocumentNames] = useState<Record<string, string>>({})
     const [modeResults, setModeResults] = useState<Record<RetrievalMode, RetrievalModeResultState>>(() => createEmptyModeResults())
     const [compareCache, setCompareCache] = useState<CompareCacheState | null>(null)
@@ -1189,49 +1048,24 @@ export default function KnowledgeRetrievalTab({
     }, [])
 
     useEffect(() => {
-        setHistory(loadHistory(storageKey))
-    }, [storageKey])
+        setSettings(current => normalizeSettings(current, defaults))
+    }, [defaults])
 
     useEffect(() => {
-        saveHistory(storageKey, history)
-    }, [history, storageKey])
-
-    useEffect(() => {
-        const persistedState = loadPersistedState(cacheStorageKey)
-        const nextCachedEntries = persistedState?.entries ?? []
-        const lastQuery = persistedState?.lastQuery ?? ''
-        const lastEntry = getCachedEntry(nextCachedEntries, lastQuery)
-        const restoredModes = lastEntry ? [...orderedModes] : []
-        const persistedSettings = normalizeSettings(persistedState?.settings, defaults)
-
-        setCachedEntries(nextCachedEntries)
-        setSettings(persistedSettings)
-        setQuery(lastEntry?.query ?? '')
-        setModeResults(lastEntry?.results ?? createEmptyModeResults())
-        setCompareCache(lastEntry ? {
-            query: lastEntry.query,
-            fetchedTopK: lastEntry.fetchedTopK,
-            results: lastEntry.results,
-        } : null)
-        setLastExecutedQuery(lastEntry?.query ?? '')
-        setSearchedModes(lastEntry ? restoredModes : [])
+        setCachedEntries([])
+        setHistory([])
+        setQuery('')
+        setModeResults(createEmptyModeResults())
+        setCompareCache(null)
+        setLastExecutedQuery('')
+        setSearchedModes([])
         setActiveSearchModes([])
         setSearchError(null)
         setSelection(null)
         setDetail(null)
         setDetailError(null)
         setDetailLoading(false)
-        setHasLoadedPersistedState(true)
-    }, [cacheStorageKey, orderedModes, source.id])
-
-    useEffect(() => {
-        if (!hasLoadedPersistedState) return
-        savePersistedState(cacheStorageKey, {
-            lastQuery: lastExecutedQuery,
-            settings,
-            entries: cachedEntries,
-        })
-    }, [cacheStorageKey, cachedEntries, hasLoadedPersistedState, lastExecutedQuery, settings])
+    }, [source.id])
 
     useEffect(() => {
         let cancelled = false

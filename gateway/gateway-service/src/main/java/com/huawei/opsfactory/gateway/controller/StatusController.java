@@ -32,8 +32,7 @@ public class StatusController {
     /**
      * Creates the status controller.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param properties gateway configuration properties
      */
     public StatusController(GatewayProperties properties) {
         this.properties = properties;
@@ -42,7 +41,7 @@ public class StatusController {
     /**
      * Returns health check status.
      *
-     * @return the result
+     * @return Mono emitting the string "ok"
      */
     @GetMapping("/status")
     public Mono<String> status() {
@@ -52,8 +51,8 @@ public class StatusController {
     /**
      * Returns the current user's identity and role.
      *
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param exchange current HTTP exchange carrying user context attributes
+     * @return Mono emitting a map containing "userId" and "role"
      */
     @GetMapping("/me")
     public Mono<Map<String, Object>> me(ServerWebExchange exchange) {
@@ -66,7 +65,7 @@ public class StatusController {
     /**
      * Returns public configuration such as Office preview settings.
      *
-     * @return the result
+     * @return Mono emitting a map with Office preview configuration
      */
     @GetMapping("/config")
     public Mono<Map<String, Object>> config() {

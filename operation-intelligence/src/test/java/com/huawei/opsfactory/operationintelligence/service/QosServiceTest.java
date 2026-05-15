@@ -4,12 +4,21 @@
 
 package com.huawei.opsfactory.operationintelligence.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.huawei.opsfactory.operationintelligence.config.OperationIntelligenceProperties;
 import com.huawei.opsfactory.operationintelligence.qos.model.IndicatorNormalizeData;
 import com.huawei.opsfactory.operationintelligence.qos.store.AlarmDetailDataStore;
 import com.huawei.opsfactory.operationintelligence.qos.store.IndicatorDetailDataStore;
 import com.huawei.opsfactory.operationintelligence.qos.store.IndicatorNormalizeDataStore;
 import com.huawei.opsfactory.operationintelligence.qos.store.ProductConfigRuleStore;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -17,16 +26,21 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 class QosServiceTest {
 
     private QosService service;
+
     private IndicatorNormalizeDataStore normalizeStore;
+
     private IndicatorDetailDataStore detailStore;
+
     private AlarmDetailDataStore alarmStore;
+
     private ProductConfigRuleStore ruleStore;
+
+    private static BigDecimal bd(String val) {
+        return new BigDecimal(val);
+    }
 
     @BeforeEach
     void setUp() {
@@ -96,8 +110,8 @@ class QosServiceTest {
         OperationIntelligenceProperties props = new OperationIntelligenceProperties();
         props.getQos().setDvEnvironments(List.of(env));
 
-        service = new QosService(
-                new QosCalculationService(), ruleStore, normalizeStore, detailStore, alarmStore, props);
+        service =
+            new QosService(new QosCalculationService(), ruleStore, normalizeStore, detailStore, alarmStore, props);
 
         List<Map<String, String>> result = service.getEnvironments();
         assertNotNull(result);
@@ -170,9 +184,5 @@ class QosServiceTest {
         when(detailStore.loadRange(anyLong(), anyLong())).thenReturn(List.of());
         Map<String, Object> result = service.getIndicatorDetail("ENV1", "A", 0L, 2000L, 1, 5000);
         assertEquals(10, result.get("pageSize"));
-    }
-
-    private static BigDecimal bd(String val) {
-        return new BigDecimal(val);
     }
 }

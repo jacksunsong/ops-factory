@@ -4,8 +4,16 @@
 
 package com.huawei.opsfactory.gateway.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.huawei.opsfactory.gateway.common.model.AgentRegistryEntry;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -26,13 +34,6 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertThrows;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 /**
  * Test coverage for Agent Skill Install Service.
  *
@@ -44,8 +45,11 @@ public class AgentSkillInstallServiceTest {
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     private AgentConfigService agentConfigService;
+
     private SkillMarketClient skillMarketClient;
+
     private AgentSkillInstallService service;
+
     private Path configDir;
 
     /**
@@ -73,13 +77,9 @@ public class AgentSkillInstallServiceTest {
      */
     @Test
     public void installCopiesPackageIntoAgentSkillsDirectory() throws Exception {
-        byte[] zip = zipBytes(
-                entry("SKILL.md", "# Log Analysis\n"),
-                entry("scripts/analyze.py", "print('ok')\n"));
-        when(skillMarketClient.getSkill("log-analysis")).thenReturn(Map.of(
-                "name", "Log Analysis",
-                "description", "Analyze logs",
-                "checksum", "sha256:" + sha256(zip)));
+        byte[] zip = zipBytes(entry("SKILL.md", "# Log Analysis\n"), entry("scripts/analyze.py", "print('ok')\n"));
+        when(skillMarketClient.getSkill("log-analysis")).thenReturn(
+            Map.of("name", "Log Analysis", "description", "Analyze logs", "checksum", "sha256:" + sha256(zip)));
         when(skillMarketClient.downloadPackage("log-analysis")).thenReturn(zip);
 
         Map<String, Object> result = service.install("agent1", "log-analysis");

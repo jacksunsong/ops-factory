@@ -31,6 +31,7 @@ public class WeChatAdapterTest {
     private static final String OWNER_USER_ID = "alice@example.com";
 
     private ChannelConfigService channelConfigService;
+
     private WeChatAdapter adapter;
 
     /**
@@ -47,15 +48,15 @@ public class WeChatAdapterTest {
      */
     @Test
     public void testConnectedConnectivity() {
-        when(channelConfigService.getChannel("wechat-main", OWNER_USER_ID)).thenReturn(channelWithStatus(
-                "connected", ""));
+        when(channelConfigService.getChannel("wechat-main", OWNER_USER_ID))
+            .thenReturn(channelWithStatus("connected", ""));
 
         StepVerifier.create(adapter.testConnectivity("wechat-main", OWNER_USER_ID))
-                .expectNextMatches(result -> result.ok() && "WeChat session connected".equals(result.message()))
-                .verifyComplete();
+            .expectNextMatches(result -> result.ok() && "WeChat session connected".equals(result.message()))
+            .verifyComplete();
 
-        verify(channelConfigService).recordEvent("wechat-main", OWNER_USER_ID, "info",
-                "wechat.status", "WeChat session is connected");
+        verify(channelConfigService).recordEvent("wechat-main", OWNER_USER_ID, "info", "wechat.status",
+            "WeChat session is connected");
     }
 
     /**
@@ -63,15 +64,15 @@ public class WeChatAdapterTest {
      */
     @Test
     public void testPendingConnectivity() {
-        when(channelConfigService.getChannel("wechat-main", OWNER_USER_ID)).thenReturn(channelWithStatus(
-                "pending", ""));
+        when(channelConfigService.getChannel("wechat-main", OWNER_USER_ID))
+            .thenReturn(channelWithStatus("pending", ""));
 
         StepVerifier.create(adapter.testConnectivity("wechat-main", OWNER_USER_ID))
-                .expectNextMatches(result -> !result.ok() && "WeChat QR login is pending".equals(result.message()))
-                .verifyComplete();
+            .expectNextMatches(result -> !result.ok() && "WeChat QR login is pending".equals(result.message()))
+            .verifyComplete();
 
-        verify(channelConfigService, never()).recordEvent("wechat-main", OWNER_USER_ID, "info",
-                "wechat.status", "WeChat session is connected");
+        verify(channelConfigService, never()).recordEvent("wechat-main", OWNER_USER_ID, "info", "wechat.status",
+            "WeChat session is connected");
     }
 
     /**
@@ -79,31 +80,18 @@ public class WeChatAdapterTest {
      */
     @Test
     public void testErrorConnectivityUsesLastError() {
-        when(channelConfigService.getChannel("wechat-main", OWNER_USER_ID)).thenReturn(channelWithStatus(
-                "error", "session expired"));
+        when(channelConfigService.getChannel("wechat-main", OWNER_USER_ID))
+            .thenReturn(channelWithStatus("error", "session expired"));
 
         StepVerifier.create(adapter.testConnectivity("wechat-main", OWNER_USER_ID))
-                .expectNextMatches(result -> !result.ok() && "session expired".equals(
-                        result.message()))
-                .verifyComplete();
+            .expectNextMatches(result -> !result.ok() && "session expired".equals(result.message()))
+            .verifyComplete();
     }
 
     private ChannelDetail channelWithStatus(String status, String lastError) {
-        return new ChannelDetail(
-                "wechat-main",
-                "WeChat Main",
-                "wechat",
-                true,
-                "fo-copilot",
-                OWNER_USER_ID,
-                "2026-04-15T00:00:00Z",
-                "2026-04-15T00:00:00Z",
-                "",
-                new ChannelConnectionConfig(status, "auth", "", "",
-                        lastError, "", "wxid_123", "Tester"),
-                new ChannelVerificationResult(true, List.of()),
-                List.of(),
-                List.of()
-        );
+        return new ChannelDetail("wechat-main", "WeChat Main", "wechat", true, "fo-copilot", OWNER_USER_ID,
+            "2026-04-15T00:00:00Z", "2026-04-15T00:00:00Z", "",
+            new ChannelConnectionConfig(status, "auth", "", "", lastError, "", "wxid_123", "Tester"),
+            new ChannelVerificationResult(true, List.of()), List.of(), List.of());
     }
 }

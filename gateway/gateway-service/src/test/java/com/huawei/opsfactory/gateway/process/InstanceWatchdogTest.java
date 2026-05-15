@@ -4,18 +4,19 @@
 
 package com.huawei.opsfactory.gateway.process;
 
-import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
-import com.huawei.opsfactory.gateway.config.GatewayProperties;
-import com.huawei.opsfactory.gateway.service.AgentConfigService;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.List;
-
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
+import com.huawei.opsfactory.gateway.config.GatewayProperties;
+import com.huawei.opsfactory.gateway.service.AgentConfigService;
+
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.List;
 
 /**
  * Test coverage for Instance Watchdog.
@@ -25,9 +26,13 @@ import static org.mockito.Mockito.when;
  */
 public class InstanceWatchdogTest {
     private InstanceManager instanceManager;
+
     private GatewayProperties properties;
+
     private PrewarmService prewarmService;
+
     private AgentConfigService agentConfigService;
+
     private InstanceWatchdog watchdog;
 
     /**
@@ -82,12 +87,8 @@ public class InstanceWatchdogTest {
      */
     @Test
     public void testReap_neverReapsResidentInstance() {
-        ManagedInstance resident = createInstance(
-                "agent1",
-                "admin",
-                ManagedInstance.Status.RUNNING,
-                mockAliveProcess()
-        );
+        ManagedInstance resident =
+            createInstance("agent1", "admin", ManagedInstance.Status.RUNNING, mockAliveProcess());
         setLastActivity(resident, System.currentTimeMillis() - 60 * 60 * 1000L);
 
         when(instanceManager.getAllInstances()).thenReturn(List.of(resident));
@@ -222,8 +223,8 @@ public class InstanceWatchdogTest {
 
     // ---- Helpers ----
 
-    private ManagedInstance createInstance(String agentId, String userId,
-                                          ManagedInstance.Status status, Process process) {
+    private ManagedInstance createInstance(String agentId, String userId, ManagedInstance.Status status,
+        Process process) {
         ManagedInstance instance = new ManagedInstance(agentId, userId, 8080, 1234L, process, "test-secret");
         instance.setStatus(status);
         return instance;

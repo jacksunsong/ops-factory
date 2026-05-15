@@ -40,11 +40,11 @@ public class QosController {
 
     private final QosService qosService;
 
-/**
- * Qos Controller.
- *
- * @param qosService the qosService
- */
+    /**
+     * Qos Controller.
+     *
+     * @param qosService the qosService
+     */
     public QosController(QosService qosService) {
         this.qosService = qosService;
     }
@@ -75,12 +75,12 @@ public class QosController {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid numeric value: " + val);
     }
 
-/**
- * Gets the health indicator.
- *
- * @param req the req
- * @return the result
- */
+    /**
+     * Gets the health indicator.
+     *
+     * @param req the req
+     * @return the result
+     */
     @PostMapping("/getHealthIndicator")
     public Mono<Map<String, Object>> getHealthIndicator(@RequestBody Map<String, Object> req) {
         return Mono.fromCallable(() -> {
@@ -96,34 +96,34 @@ public class QosController {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
-/**
- * Gets the available indicator detail.
- *
- * @param req the req
- * @return the result
- */
+    /**
+     * Gets the available indicator detail.
+     *
+     * @param req the req
+     * @return the result
+     */
     @PostMapping("/getAvailableIndicatorDetail")
     public Mono<Map<String, Object>> getAvailableIndicatorDetail(@RequestBody Map<String, Object> req) {
         return getIndicatorDetail(req, "A");
     }
 
-/**
- * Gets the performance indicator detail.
- *
- * @param req the req
- * @return the result
- */
+    /**
+     * Gets the performance indicator detail.
+     *
+     * @param req the req
+     * @return the result
+     */
     @PostMapping("/getPerformanceIndicatorDetail")
     public Mono<Map<String, Object>> getPerformanceIndicatorDetail(@RequestBody Map<String, Object> req) {
         return getIndicatorDetail(req, "P");
     }
 
-/**
- * Gets the resource indicator detail.
- *
- * @param req the req
- * @return the result
- */
+    /**
+     * Gets the resource indicator detail.
+     *
+     * @param req the req
+     * @return the result
+     */
     @PostMapping("/getResourceIndicatorDetail")
     public Mono<Map<String, Object>> getResourceIndicatorDetail(@RequestBody Map<String, Object> req) {
         return Mono.fromCallable(() -> {
@@ -139,12 +139,12 @@ public class QosController {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
-/**
- * Gets the contribution data.
- *
- * @param req the req
- * @return the result
- */
+    /**
+     * Gets the contribution data.
+     *
+     * @param req the req
+     * @return the result
+     */
     @PostMapping("/getContributionData")
     public Mono<Map<String, Object>> getContributionData(@RequestBody Map<String, Object> req) {
         return Mono.fromCallable(() -> {
@@ -160,12 +160,12 @@ public class QosController {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
-/**
- * Gets the alarm indicator detail.
- *
- * @param req the req
- * @return the result
- */
+    /**
+     * Gets the alarm indicator detail.
+     *
+     * @param req the req
+     * @return the result
+     */
     @PostMapping("/getAlarmIndicatorDetail")
     public Mono<Map<String, Object>> getAlarmIndicatorDetail(@RequestBody Map<String, Object> req) {
         return Mono.fromCallable(() -> {
@@ -180,12 +180,12 @@ public class QosController {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
-/**
- * Gets the product config rule.
- *
- * @param req the req
- * @return the result
- */
+    /**
+     * Gets the product config rule.
+     *
+     * @param req the req
+     * @return the result
+     */
     @PostMapping("/getProductConfigRule")
     public Mono<ResponseEntity<Map<String, Object>>> getProductConfigRule(@RequestBody Map<String, Object> req) {
         return Mono.fromCallable(() -> {
@@ -200,11 +200,11 @@ public class QosController {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
-/**
- * Gets the environments.
- *
- * @return the result
- */
+    /**
+     * Gets the environments.
+     *
+     * @return the result
+     */
     @GetMapping("/getEnvironments")
     public Mono<Map<String, Object>> getEnvironments() {
         return Mono.fromCallable(() -> {

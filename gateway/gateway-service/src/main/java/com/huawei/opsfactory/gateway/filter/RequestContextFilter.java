@@ -40,8 +40,7 @@ public class RequestContextFilter implements WebFilter {
     /**
      * Creates the request context filter instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param properties gateway configuration properties
      */
     public RequestContextFilter(GatewayProperties properties) {
         this.properties = properties;
@@ -50,9 +49,9 @@ public class RequestContextFilter implements WebFilter {
     /**
      * Assigns a unique request ID and logs access details for each HTTP request.
      *
-     * @param exchange the exchange parameter
-     * @param chain the chain parameter
-     * @return the result
+     * @param exchange current HTTP exchange
+     * @param chain filter chain to continue processing
+     * @return Mono that completes when filtering is done
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {

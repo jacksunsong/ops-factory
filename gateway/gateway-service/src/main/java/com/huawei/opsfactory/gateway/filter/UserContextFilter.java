@@ -56,8 +56,8 @@ public class UserContextFilter implements WebFilter {
     /**
      * Creates the user context filter instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param prewarmService service for pre-warming agent instances
+     * @param gatewayProperties gateway configuration properties including admin user list
      */
     public UserContextFilter(PrewarmService prewarmService, GatewayProperties gatewayProperties) {
         this.prewarmService = prewarmService;
@@ -91,9 +91,9 @@ public class UserContextFilter implements WebFilter {
     /**
      * Resolves the authenticated user identity and role from request headers.
      *
-     * @param exchange the exchange parameter
-     * @param chain the chain parameter
-     * @return the result
+     * @param exchange current HTTP exchange
+     * @param chain filter chain to continue processing
+     * @return Mono that completes when filtering is done
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
@@ -135,7 +135,7 @@ public class UserContextFilter implements WebFilter {
     /**
      * Shared admin check — throws 403 if the current user is not an admin.
      *
-     * @param exchange the exchange parameter
+     * @param exchange current HTTP exchange carrying user role attribute
      */
     public static void requireAdmin(ServerWebExchange exchange) {
         UserRole role = exchange.getAttribute(USER_ROLE_ATTR);

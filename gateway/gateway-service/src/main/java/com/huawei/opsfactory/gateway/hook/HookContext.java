@@ -14,19 +14,20 @@ import java.util.Map;
  * @since 2026-05-09
  */
 public class HookContext {
-    private String body;
-
     private final String agentId;
 
     private final String userId;
 
     private final Map<String, Object> state = new HashMap<>();
 
+    private String body;
+
     /**
      * Creates the hook context instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param body raw request body string
+     * @param agentId agent instance identifier
+     * @param userId user identifier
      */
     public HookContext(String body, String agentId, String userId) {
         this.body = body;
@@ -37,7 +38,7 @@ public class HookContext {
     /**
      * Gets the request body.
      *
-     * @return the result
+     * @return raw request body string
      */
     public String getBody() {
         return body;
@@ -46,7 +47,7 @@ public class HookContext {
     /**
      * Sets the request body.
      *
-     * @param body the body parameter
+     * @param body new request body string
      */
     public void setBody(String body) {
         this.body = body;
@@ -55,7 +56,7 @@ public class HookContext {
     /**
      * Gets the agent identifier.
      *
-     * @return the result
+     * @return agent instance identifier
      */
     public String getAgentId() {
         return agentId;
@@ -64,7 +65,7 @@ public class HookContext {
     /**
      * Gets the user identifier.
      *
-     * @return the result
+     * @return user identifier
      */
     public String getUserId() {
         return userId;
@@ -73,7 +74,7 @@ public class HookContext {
     /**
      * Gets the mutable state map shared across hooks.
      *
-     * @return the result
+     * @return mutable state map for inter-hook data passing
      */
     public Map<String, Object> getState() {
         return state;

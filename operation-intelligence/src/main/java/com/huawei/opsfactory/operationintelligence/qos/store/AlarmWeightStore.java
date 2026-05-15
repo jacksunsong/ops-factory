@@ -25,31 +25,31 @@ public class AlarmWeightStore {
 
     private final JsonFileStore<AlarmWeight> store;
 
-/**
- * Alarm Weight Store.
- *
- * @param properties the properties
- */
+    /**
+     * Alarm Weight Store.
+     *
+     * @param properties the properties
+     */
     public AlarmWeightStore(OperationIntelligenceProperties properties) {
         Path dir = properties.resolveDataRoot().resolve("qos").resolve("config");
         this.store = new JsonFileStore<>(dir, "alarm_weight", new TypeReference<List<AlarmWeight>>() {}, false, 0, 0);
         this.store.init();
     }
 
-/**
- * load All.
- *
- * @return the result
- */
+    /**
+     * load All.
+     *
+     * @return the result
+     */
     public List<AlarmWeight> loadAll() {
         return store.loadAll();
     }
 
-/**
- * replace All.
- *
- * @param items the items
- */
+    /**
+     * replace All.
+     *
+     * @param items the items
+     */
     public void replaceAll(List<AlarmWeight> items) {
         store.replaceAll(items);
     }

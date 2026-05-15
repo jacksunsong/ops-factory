@@ -25,11 +25,11 @@ public class IndicatorRawDataStore {
 
     private final JsonFileStore<IndicatorRawData> store;
 
-/**
- * Indicator Raw Data Store.
- *
- * @param properties the properties
- */
+    /**
+     * Indicator Raw Data Store.
+     *
+     * @param properties the properties
+     */
     public IndicatorRawDataStore(OperationIntelligenceProperties properties) {
         Path dir = properties.resolveDataRoot().resolve("qos").resolve("raw");
         long rotationMs = properties.getQos().getRotationIntervalMs();
@@ -39,38 +39,38 @@ public class IndicatorRawDataStore {
         this.store.init();
     }
 
-/**
- * load Range.
- *
- * @param startMs the startMs
- * @param endMs the endMs
- * @return the result
- */
+    /**
+     * load Range.
+     *
+     * @param startMs the startMs
+     * @param endMs the endMs
+     * @return the result
+     */
     public List<IndicatorRawData> loadRange(long startMs, long endMs) {
         return store.loadRange(startMs, endMs);
     }
 
-/**
- * append.
- *
- * @param item the item
- */
+    /**
+     * append.
+     *
+     * @param item the item
+     */
     public void append(IndicatorRawData item) {
         store.append(item);
     }
 
-/**
- * append All.
- *
- * @param items the items
- */
+    /**
+     * append All.
+     *
+     * @param items the items
+     */
     public void appendAll(List<IndicatorRawData> items) {
         store.appendAll(items);
     }
 
-/**
- * cleanup.
- */
+    /**
+     * cleanup.
+     */
     public void cleanup() {
         store.cleanup();
     }

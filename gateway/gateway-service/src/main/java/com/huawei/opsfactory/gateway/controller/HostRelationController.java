@@ -49,9 +49,6 @@ public class HostRelationController {
 
     /**
      * Creates the host relation controller instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public HostRelationController(HostRelationService hostRelationService,
         BusinessServiceService businessServiceService) {
@@ -62,12 +59,12 @@ public class HostRelationController {
     /**
      * Lists host relations, optionally filtered by host, group, cluster, or source.
      *
-     * @param hostId the hostId parameter
-     * @param groupId the groupId parameter
-     * @param clusterId the clusterId parameter
-     * @param sourceType the sourceType parameter
-     * @param sourceId the sourceId parameter
-     * @param exchange the exchange parameter
+     * @param hostId host identifier
+     * @param groupId group identifier
+     * @param clusterId cluster identifier
+     * @param sourceType source type filter
+     * @param sourceId source identifier filter
+     * @param exchange server web exchange
      * @return the result
      */
     @GetMapping
@@ -89,10 +86,10 @@ public class HostRelationController {
     /**
      * Returns the host relation graph data enriched with business services.
      *
-     * @param groupId the groupId parameter
-     * @param clusterId the clusterId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param groupId returns the host relation graph data enriched with business services
+     * @param clusterId returns the host relation graph data enriched with business services
+     * @param exchange returns the host relation graph data enriched with business services
+     * @return the host relation graph data enriched with business services
      */
     @GetMapping("/graph")
     public Mono<Map<String, Object>> getGraph(@RequestParam(value = "groupId", required = false) String groupId,
@@ -108,9 +105,9 @@ public class HostRelationController {
     /**
      * Returns the neighbor hosts for a given host.
      *
-     * @param hostId the hostId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param hostId returns the neighbor hosts for a given host
+     * @param exchange returns the neighbor hosts for a given host
+     * @return the neighbor hosts for a given host
      */
     @GetMapping("/hosts/{hostId}/neighbors")
     public Mono<Map<String, Object>> getHostNeighbors(@PathVariable("hostId") String hostId,
@@ -123,8 +120,8 @@ public class HostRelationController {
     /**
      * Creates a new host relation edge.
      *
-     * @param request the request parameter
-     * @param exchange the exchange parameter
+     * @param request HTTP request
+     * @param exchange server web exchange
      * @return the result
      */
     @PostMapping
@@ -150,9 +147,9 @@ public class HostRelationController {
     /**
      * Updates a host relation by ID.
      *
-     * @param id the id parameter
-     * @param request the request parameter
-     * @param exchange the exchange parameter
+     * @param id a host relation by ID
+     * @param request a host relation by ID
+     * @param exchange a host relation by ID
      * @return the result
      */
     @PutMapping("/{id}")
@@ -178,8 +175,8 @@ public class HostRelationController {
     /**
      * Deletes a host relation by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
+     * @param id entity identifier
+     * @param exchange server web exchange
      * @return the result
      */
     @DeleteMapping("/{id}")

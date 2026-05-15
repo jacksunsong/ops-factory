@@ -40,8 +40,8 @@ public class CatchAllProxyController {
     /**
      * Creates the catch all proxy controller instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param instanceManager manages goosed process instances
+     * @param goosedProxy forwards requests to goosed instances
      */
     public CatchAllProxyController(InstanceManager instanceManager, GoosedProxy goosedProxy) {
         this.instanceManager = instanceManager;
@@ -51,8 +51,8 @@ public class CatchAllProxyController {
     /**
      * Forwards unmatched agent requests to the appropriate goosed instance.
      *
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param exchange current HTTP exchange containing request path and user context
+     * @return Mono that completes when the proxy response has been written
      */
     @RequestMapping("/agents/{agentId}/**")
     public Mono<Void> catchAll(ServerWebExchange exchange) {

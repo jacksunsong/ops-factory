@@ -39,9 +39,6 @@ public class InstanceWatchdog {
 
     /**
      * Creates the instance watchdog instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public InstanceWatchdog(InstanceManager instanceManager, GatewayProperties properties,
         PrewarmService prewarmService, AgentConfigService agentConfigService) {

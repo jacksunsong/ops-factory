@@ -4,10 +4,16 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.when;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.huawei.opsfactory.gateway.filter.AuthWebFilter;
 import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.BusinessServiceService;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +27,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
 
 /**
  * Test coverage for Business Service Controller.
@@ -51,17 +54,20 @@ public class BusinessServiceControllerTest {
      */
     @Test
     public void testListBusinessServices() {
-        when(businessServiceService.listBusinessServices(isNull(), isNull()))
-                .thenReturn(List.of());
+        when(businessServiceService.listBusinessServices(isNull(), isNull())).thenReturn(List.of());
 
-        webTestClient.get().uri("/gateway/business-services")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.businessServices").isArray()
-                .jsonPath("$.businessServices").isEmpty();
+        webTestClient.get()
+            .uri("/gateway/business-services")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.businessServices")
+            .isArray()
+            .jsonPath("$.businessServices")
+            .isEmpty();
     }
 
     /**
@@ -74,13 +80,16 @@ public class BusinessServiceControllerTest {
         bs.put("name", "OrderService");
         when(businessServiceService.searchByKeyword("order")).thenReturn(List.of(bs));
 
-        webTestClient.get().uri("/gateway/business-services?keyword=order")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.businessServices[0].id").isEqualTo("bs-1");
+        webTestClient.get()
+            .uri("/gateway/business-services?keyword=order")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.businessServices[0].id")
+            .isEqualTo("bs-1");
     }
 
     // ── getBusinessService ─────────────────────────────────────────
@@ -95,14 +104,18 @@ public class BusinessServiceControllerTest {
         bs.put("name", "OrderService");
         when(businessServiceService.getBusinessService("bs-1")).thenReturn(bs);
 
-        webTestClient.get().uri("/gateway/business-services/bs-1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.businessService.id").isEqualTo("bs-1");
+        webTestClient.get()
+            .uri("/gateway/business-services/bs-1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.businessService.id")
+            .isEqualTo("bs-1");
     }
 
     /**
@@ -111,15 +124,18 @@ public class BusinessServiceControllerTest {
     @Test
     public void testGetBusinessService_notFound() {
         when(businessServiceService.getBusinessService("nonexistent"))
-                .thenThrow(new IllegalArgumentException("Business service not found: nonexistent"));
+            .thenThrow(new IllegalArgumentException("Business service not found: nonexistent"));
 
-        webTestClient.get().uri("/gateway/business-services/nonexistent")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isNotFound()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false);
+        webTestClient.get()
+            .uri("/gateway/business-services/nonexistent")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isNotFound()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false);
     }
 
     // ── getResolved ────────────────────────────────────────────────
@@ -136,14 +152,18 @@ public class BusinessServiceControllerTest {
         resolved.put("totalHostCount", 0);
         when(businessServiceService.getWithResolvedHosts("bs-1")).thenReturn(resolved);
 
-        webTestClient.get().uri("/gateway/business-services/bs-1/resolved")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.businessService.id").isEqualTo("bs-1");
+        webTestClient.get()
+            .uri("/gateway/business-services/bs-1/resolved")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.businessService.id")
+            .isEqualTo("bs-1");
     }
 
     // ── getHosts ───────────────────────────────────────────────────
@@ -156,16 +176,18 @@ public class BusinessServiceControllerTest {
         Map<String, Object> host = new LinkedHashMap<>();
         host.put("id", "host-1");
         host.put("name", "Server1");
-        when(businessServiceService.getHostsForBusinessService("bs-1"))
-                .thenReturn(List.of(host));
+        when(businessServiceService.getHostsForBusinessService("bs-1")).thenReturn(List.of(host));
 
-        webTestClient.get().uri("/gateway/business-services/bs-1/hosts")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.hosts[0].id").isEqualTo("host-1");
+        webTestClient.get()
+            .uri("/gateway/business-services/bs-1/hosts")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.hosts[0].id")
+            .isEqualTo("host-1");
     }
 
     // ── getTopology ────────────────────────────────────────────────
@@ -180,14 +202,18 @@ public class BusinessServiceControllerTest {
         topology.put("edges", List.of());
         when(businessServiceService.getTopologyForBusinessService("bs-1")).thenReturn(topology);
 
-        webTestClient.get().uri("/gateway/business-services/bs-1/topology")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.nodes").isArray()
-                .jsonPath("$.edges").isArray();
+        webTestClient.get()
+            .uri("/gateway/business-services/bs-1/topology")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.nodes")
+            .isArray()
+            .jsonPath("$.edges")
+            .isArray();
     }
 
     // ── createBusinessService ──────────────────────────────────────
@@ -205,16 +231,20 @@ public class BusinessServiceControllerTest {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "NewService");
 
-        webTestClient.post().uri("/gateway/business-services")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isCreated()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.businessService.id").isEqualTo("new-id");
+        webTestClient.post()
+            .uri("/gateway/business-services")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isCreated()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.businessService.id")
+            .isEqualTo("new-id");
     }
 
     /**
@@ -222,22 +252,25 @@ public class BusinessServiceControllerTest {
      */
     @Test
     public void testCreateBusinessService_error() {
-        when(businessServiceService.createBusinessService(any()))
-                .thenThrow(new RuntimeException("Creation failed"));
+        when(businessServiceService.createBusinessService(any())).thenThrow(new RuntimeException("Creation failed"));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "FailService");
 
-        webTestClient.post().uri("/gateway/business-services")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().is5xxServerError()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error").isEqualTo("Internal server error");
+        webTestClient.post()
+            .uri("/gateway/business-services")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .is5xxServerError()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false)
+            .jsonPath("$.error")
+            .isEqualTo("Internal server error");
     }
 
     // ── updateBusinessService ──────────────────────────────────────
@@ -255,16 +288,20 @@ public class BusinessServiceControllerTest {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "UpdatedService");
 
-        webTestClient.put().uri("/gateway/business-services/bs-1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.businessService.name").isEqualTo("UpdatedService");
+        webTestClient.put()
+            .uri("/gateway/business-services/bs-1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.businessService.name")
+            .isEqualTo("UpdatedService");
     }
 
     /**
@@ -273,20 +310,23 @@ public class BusinessServiceControllerTest {
     @Test
     public void testUpdateBusinessService_notFound() {
         when(businessServiceService.updateBusinessService(eq("nonexistent"), any()))
-                .thenThrow(new IllegalArgumentException("Business service not found: nonexistent"));
+            .thenThrow(new IllegalArgumentException("Business service not found: nonexistent"));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "Updated");
 
-        webTestClient.put().uri("/gateway/business-services/nonexistent")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isNotFound()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false);
+        webTestClient.put()
+            .uri("/gateway/business-services/nonexistent")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isNotFound()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false);
     }
 
     // ── deleteBusinessService ──────────────────────────────────────
@@ -298,13 +338,16 @@ public class BusinessServiceControllerTest {
     public void testDeleteBusinessService() {
         when(businessServiceService.deleteBusinessService("bs-1")).thenReturn(true);
 
-        webTestClient.delete().uri("/gateway/business-services/bs-1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true);
+        webTestClient.delete()
+            .uri("/gateway/business-services/bs-1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true);
     }
 
     /**
@@ -314,13 +357,16 @@ public class BusinessServiceControllerTest {
     public void testDeleteBusinessService_notFound() {
         when(businessServiceService.deleteBusinessService("nonexistent")).thenReturn(false);
 
-        webTestClient.delete().uri("/gateway/business-services/nonexistent")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isNotFound()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false);
+        webTestClient.delete()
+            .uri("/gateway/business-services/nonexistent")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isNotFound()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false);
     }
 
     // ── migrate ────────────────────────────────────────────────────
@@ -335,13 +381,16 @@ public class BusinessServiceControllerTest {
         migrateResult.put("businessServices", List.of());
         when(businessServiceService.migrateFromBusinessField()).thenReturn(migrateResult);
 
-        webTestClient.post().uri("/gateway/business-services/migrate")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.migrated").isEqualTo(2);
+        webTestClient.post()
+            .uri("/gateway/business-services/migrate")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.migrated")
+            .isEqualTo(2);
     }
 
     // ── Auth tests ─────────────────────────────────────────────────
@@ -351,10 +400,12 @@ public class BusinessServiceControllerTest {
      */
     @Test
     public void testListBusinessServices_unauthorized_noKey() {
-        webTestClient.get().uri("/gateway/business-services")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isUnauthorized();
+        webTestClient.get()
+            .uri("/gateway/business-services")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isUnauthorized();
     }
 
     /**
@@ -362,11 +413,13 @@ public class BusinessServiceControllerTest {
      */
     @Test
     public void testListBusinessServices_forbidden_nonAdmin() {
-        webTestClient.get().uri("/gateway/business-services")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.get()
+            .uri("/gateway/business-services")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 
     /**
@@ -377,12 +430,14 @@ public class BusinessServiceControllerTest {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "Service");
 
-        webTestClient.post().uri("/gateway/business-services")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.post()
+            .uri("/gateway/business-services")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 }

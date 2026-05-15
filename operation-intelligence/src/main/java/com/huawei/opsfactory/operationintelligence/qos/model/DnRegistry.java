@@ -20,38 +20,38 @@ public class DnRegistry {
 
     private List<DnCluster> clusters;
 
-/**
- * Gets the env code.
- *
- * @return the result
- */
+    /**
+     * Gets the env code.
+     *
+     * @return the result
+     */
     public String getEnvCode() {
         return envCode;
     }
 
-/**
- * Sets the env code.
- *
- * @param envCode the envCode
- */
+    /**
+     * Sets the env code.
+     *
+     * @param envCode the envCode
+     */
     public void setEnvCode(String envCode) {
         this.envCode = envCode;
     }
 
-/**
- * Gets the clusters.
- *
- * @return the result
- */
+    /**
+     * Gets the clusters.
+     *
+     * @return the result
+     */
     public List<DnCluster> getClusters() {
         return clusters;
     }
 
-/**
- * Sets the clusters.
- *
- * @param clusters the clusters
- */
+    /**
+     * Sets the clusters.
+     *
+     * @param clusters the clusters
+     */
     public void setClusters(List<DnCluster> clusters) {
         this.clusters = clusters;
     }

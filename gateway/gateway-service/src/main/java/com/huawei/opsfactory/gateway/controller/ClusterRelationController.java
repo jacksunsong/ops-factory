@@ -41,8 +41,7 @@ public class ClusterRelationController {
     /**
      * Creates the cluster relation controller instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param clusterRelationService service handling cluster relation CRUD operations
      */
     public ClusterRelationController(ClusterRelationService clusterRelationService) {
         this.clusterRelationService = clusterRelationService;
@@ -51,9 +50,9 @@ public class ClusterRelationController {
     /**
      * Lists cluster relations, optionally filtered by cluster ID.
      *
-     * @param clusterId the clusterId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param clusterId optional cluster identifier to filter relations
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting a map with "relations" list
      */
     @GetMapping
     public Mono<Map<String, Object>> listRelations(
@@ -70,9 +69,9 @@ public class ClusterRelationController {
     /**
      * Returns the cluster relation graph data for visualization.
      *
-     * @param groupId the groupId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param groupId optional group identifier to filter graph data
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting a map with graph nodes and edges
      */
     @GetMapping("/graph")
     public Mono<Map<String, Object>> getGraph(@RequestParam(value = "groupId", required = false) String groupId,
@@ -85,9 +84,9 @@ public class ClusterRelationController {
     /**
      * Returns the neighbor clusters for a given cluster.
      *
-     * @param clusterId the clusterId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param clusterId cluster identifier to look up neighbors for
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting a map with neighbor cluster data
      */
     @GetMapping("/clusters/{clusterId}/neighbors")
     public Mono<Map<String, Object>> getClusterNeighbors(@PathVariable("clusterId") String clusterId,
@@ -100,9 +99,9 @@ public class ClusterRelationController {
     /**
      * Returns the neighbor hosts for a given host via cluster relations.
      *
-     * @param hostId the hostId parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param hostId host identifier to look up neighbors for
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting a map with neighbor host data
      */
     @GetMapping("/hosts/{hostId}/neighbors")
     public Mono<Map<String, Object>> getHostNeighbors(@PathVariable("hostId") String hostId,
@@ -115,9 +114,9 @@ public class ClusterRelationController {
     /**
      * Creates a new cluster relation edge.
      *
-     * @param request the request parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param request request body containing relation fields
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with created relation or 400
      */
     @PostMapping
     public Mono<ResponseEntity<Map<String, Object>>> createRelation(@RequestBody Map<String, Object> request,
@@ -142,10 +141,10 @@ public class ClusterRelationController {
     /**
      * Updates a cluster relation by ID.
      *
-     * @param id the id parameter
-     * @param request the request parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id relation identifier
+     * @param request request body containing updated fields
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with updated relation or 404
      */
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateRelation(@PathVariable("id") String id,
@@ -170,9 +169,9 @@ public class ClusterRelationController {
     /**
      * Deletes a cluster relation by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id relation identifier
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with success status or 404
      */
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteRelation(@PathVariable("id") String id,

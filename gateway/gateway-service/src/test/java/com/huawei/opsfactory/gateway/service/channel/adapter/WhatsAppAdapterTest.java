@@ -12,9 +12,11 @@ import com.huawei.opsfactory.gateway.service.channel.ChannelConfigService;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelConnectionConfig;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelDetail;
 import com.huawei.opsfactory.gateway.service.channel.model.ChannelVerificationResult;
+
+import reactor.test.StepVerifier;
+
 import org.junit.Before;
 import org.junit.Test;
-import reactor.test.StepVerifier;
 
 import java.util.List;
 

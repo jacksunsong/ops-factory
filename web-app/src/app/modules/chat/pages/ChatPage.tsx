@@ -6,6 +6,7 @@ import { useInbox } from '../../../platform/providers/InboxContext'
 import { useToast } from '../../../platform/providers/ToastContext'
 import { useUser } from '../../../platform/providers/UserContext'
 import {
+    buildConsumedNewChatPath,
     buildChatSessionState,
     clearPersistedChatSessionLocator,
     persistChatSessionLocator,
@@ -232,7 +233,7 @@ export default function Chat() {
             setLocatorState({ kind: 'ready', locator: nextLocator })
             persistChatSessionLocator(nextLocator)
             clearMessages()
-            navigate('/chat', {
+            navigate(buildConsumedNewChatPath(searchParams), {
                 replace: true,
                 state: buildChatSessionState(newSession.id, agentId, {
                     initialMessage: options.initialMessage,
@@ -255,7 +256,7 @@ export default function Chat() {
             }
             setIsCreatingSession(false)
         }
-    }, [getClient, clearMessages, cleanupEmptyDraftSessions, navigate])
+    }, [getClient, clearMessages, cleanupEmptyDraftSessions, navigate, searchParams])
 
     const handleAgentChange = useCallback(async (agentId: string) => {
         if (agentId === activeAgentId) return

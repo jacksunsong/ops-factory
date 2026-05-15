@@ -296,12 +296,10 @@ public class FileServiceExtendedTest {
      */
     @Test
     public void testDiffFiles_ignoresInternalMcpLogs() {
-        List<Map<String, Object>> before = List.of(
-                snapshot("logs/mcp/control_center.log", "control_center.log", "log", 100L,
-                        "2026-04-08T06:58:57Z"));
-        List<Map<String, Object>> after = List.of(
-                snapshot("logs/mcp/control_center.log", "control_center.log", "log", 120L,
-                        "2026-04-08T07:00:27Z"));
+        List<Map<String, Object>> before =
+            List.of(snapshot("logs/mcp/control_center.log", "control_center.log", "log", 100L, "2026-04-08T06:58:57Z"));
+        List<Map<String, Object>> after =
+            List.of(snapshot("logs/mcp/control_center.log", "control_center.log", "log", 120L, "2026-04-08T07:00:27Z"));
 
         List<Map<String, String>> changed = fileService.diffFiles(before, after);
 
@@ -314,9 +312,8 @@ public class FileServiceExtendedTest {
     @Test
     public void testDiffFiles_keepsUserGeneratedFiles() {
         List<Map<String, Object>> before = new ArrayList<>();
-        List<Map<String, Object>> after = List.of(
-                snapshot("reports/platform-status.md", "platform-status.md", "md", 256L,
-                        "2026-04-08T07:00:27Z"));
+        List<Map<String, Object>> after =
+            List.of(snapshot("reports/platform-status.md", "platform-status.md", "md", 256L, "2026-04-08T07:00:27Z"));
 
         List<Map<String, String>> changed = fileService.diffFiles(before, after);
 
@@ -333,10 +330,10 @@ public class FileServiceExtendedTest {
     public void testDiffFiles_keepsSameRelativePathFromDifferentRoots() {
         List<Map<String, Object>> before = new ArrayList<>();
         List<Map<String, Object>> after = List.of(
-                snapshotWithRoot("workingDir", "example-file.md", "example-file.md",
-                        "example-file.md", "md", 128L, "2026-04-21T14:20:00Z"),
-                snapshotWithRoot("output", "example-file.md", "output/example-file.md",
-                        "example-file.md", "md", 128L, "2026-04-21T14:20:00Z"));
+            snapshotWithRoot("workingDir", "example-file.md", "example-file.md", "example-file.md", "md", 128L,
+                "2026-04-21T14:20:00Z"),
+            snapshotWithRoot("output", "example-file.md", "output/example-file.md", "example-file.md", "md", 128L,
+                "2026-04-21T14:20:00Z"));
 
         List<Map<String, String>> changed = fileService.diffFiles(before, after);
 
@@ -376,10 +373,8 @@ public class FileServiceExtendedTest {
         createFile(new File(outputDir, "assets/chart.png"), "png");
 
         List<Map<String, Object>> files = fileService.listFiles(tempFolder.getRoot().toPath());
-        Map<String, Map<String, Object>> byName = files.stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        file -> (String) file.get("name"),
-                        file -> file));
+        Map<String, Map<String, Object>> byName =
+            files.stream().collect(java.util.stream.Collectors.toMap(file -> (String) file.get("name"), file -> file));
 
         assertEquals(2, files.size());
         assertEquals("workingDir", byName.get("summary.md").get("rootId"));
@@ -420,8 +415,8 @@ public class FileServiceExtendedTest {
     public void testListFiles_recursiveScanRootIncludesNestedFiles() throws IOException {
         GatewayProperties properties = new GatewayProperties();
         GatewayProperties.FileBrowser filesConfig = new GatewayProperties.FileBrowser();
-        filesConfig.setScanRoots(List.of(
-                new GatewayProperties.FileScanRoot("reports", "${userAgentDir}/reports", true)));
+        filesConfig
+            .setScanRoots(List.of(new GatewayProperties.FileScanRoot("reports", "${userAgentDir}/reports", true)));
         properties.setFiles(filesConfig);
         FileService recursiveFileService = new FileService(properties);
 
@@ -430,10 +425,8 @@ public class FileServiceExtendedTest {
         createFile(new File(tempFolder.getRoot(), "reports/.hidden/secret.md"), "# Secret");
 
         List<Map<String, Object>> files = recursiveFileService.listFiles(tempFolder.getRoot().toPath());
-        Map<String, Map<String, Object>> byPath = files.stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        file -> (String) file.get("path"),
-                        file -> file));
+        Map<String, Map<String, Object>> byPath =
+            files.stream().collect(java.util.stream.Collectors.toMap(file -> (String) file.get("path"), file -> file));
 
         assertEquals(2, files.size());
         assertTrue(byPath.containsKey("summary.md"));
@@ -450,8 +443,7 @@ public class FileServiceExtendedTest {
     public void testListFiles_recursiveScanRootHonorsConfiguredExcludeDirs() throws IOException {
         GatewayProperties properties = new GatewayProperties();
         GatewayProperties.FileBrowser filesConfig = new GatewayProperties.FileBrowser();
-        GatewayProperties.FileScanRoot root = new GatewayProperties.FileScanRoot("workingDir",
-                "${userAgentDir}", true);
+        GatewayProperties.FileScanRoot root = new GatewayProperties.FileScanRoot("workingDir", "${userAgentDir}", true);
         root.setExcludeDirs(List.of("tmp-output"));
         filesConfig.setScanRoots(List.of(root));
         properties.setFiles(filesConfig);
@@ -461,10 +453,8 @@ public class FileServiceExtendedTest {
         createFile(new File(tempFolder.getRoot(), "tmp-output/hidden.md"), "# Hidden");
 
         List<Map<String, Object>> files = recursiveFileService.listFiles(tempFolder.getRoot().toPath());
-        Map<String, Map<String, Object>> byPath = files.stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        file -> (String) file.get("path"),
-                        file -> file));
+        Map<String, Map<String, Object>> byPath =
+            files.stream().collect(java.util.stream.Collectors.toMap(file -> (String) file.get("path"), file -> file));
 
         assertEquals(1, files.size());
         assertTrue(byPath.containsKey("docs/visible.md"));
@@ -480,8 +470,7 @@ public class FileServiceExtendedTest {
     public void testListFiles_recursiveScanRootHonorsMaxDepth() throws IOException {
         GatewayProperties properties = new GatewayProperties();
         GatewayProperties.FileBrowser filesConfig = new GatewayProperties.FileBrowser();
-        GatewayProperties.FileScanRoot root = new GatewayProperties.FileScanRoot("workingDir",
-                "${userAgentDir}", true);
+        GatewayProperties.FileScanRoot root = new GatewayProperties.FileScanRoot("workingDir", "${userAgentDir}", true);
         root.setMaxDepth(1);
         filesConfig.setScanRoots(List.of(root));
         properties.setFiles(filesConfig);
@@ -492,10 +481,8 @@ public class FileServiceExtendedTest {
         createFile(new File(tempFolder.getRoot(), "level-one/level-two/hidden.md"), "# Hidden");
 
         List<Map<String, Object>> files = recursiveFileService.listFiles(tempFolder.getRoot().toPath());
-        Map<String, Map<String, Object>> byPath = files.stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        file -> (String) file.get("path"),
-                        file -> file));
+        Map<String, Map<String, Object>> byPath =
+            files.stream().collect(java.util.stream.Collectors.toMap(file -> (String) file.get("path"), file -> file));
 
         assertEquals(2, files.size());
         assertTrue(byPath.containsKey("top.md"));
@@ -512,8 +499,7 @@ public class FileServiceExtendedTest {
     public void testListFiles_recursiveScanRootHonorsMaxFiles() throws IOException {
         GatewayProperties properties = new GatewayProperties();
         GatewayProperties.FileBrowser filesConfig = new GatewayProperties.FileBrowser();
-        GatewayProperties.FileScanRoot root = new GatewayProperties.FileScanRoot("workingDir",
-                "${userAgentDir}", true);
+        GatewayProperties.FileScanRoot root = new GatewayProperties.FileScanRoot("workingDir", "${userAgentDir}", true);
         root.setMaxFiles(2);
         filesConfig.setScanRoots(List.of(root));
         properties.setFiles(filesConfig);
@@ -529,31 +515,13 @@ public class FileServiceExtendedTest {
     }
 
     private Map<String, Object> snapshot(String path, String name, String type, long size, String modifiedAt) {
-        return Map.of(
-                "path", path,
-                "name", name,
-                "type", type,
-                "size", size,
-                "modifiedAt", modifiedAt);
+        return Map.of("path", path, "name", name, "type", type, "size", size, "modifiedAt", modifiedAt);
     }
 
-    private Map<String, Object> snapshotWithRoot(
-            String rootId,
-            String path,
-            String displayPath,
-            String name,
-            String type,
-            long size,
-            String modifiedAt
-    ) {
-        return Map.of(
-                "rootId", rootId,
-                "path", path,
-                "displayPath", displayPath,
-                "name", name,
-                "type", type,
-                "size", size,
-                "modifiedAt", modifiedAt);
+    private Map<String, Object> snapshotWithRoot(String rootId, String path, String displayPath, String name,
+        String type, long size, String modifiedAt) {
+        return Map.of("rootId", rootId, "path", path, "displayPath", displayPath, "name", name, "type", type, "size",
+            size, "modifiedAt", modifiedAt);
     }
 
     private void createFile(File file, String content) throws IOException {

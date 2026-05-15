@@ -53,9 +53,6 @@ public class HostRelationService {
 
     /**
      * Creates the host relation service instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public HostRelationService(GatewayProperties properties, HostService hostService, ClusterService clusterService) {
         this.properties = properties;
@@ -66,7 +63,7 @@ public class HostRelationService {
     /**
      * Sets the business service service via lazy injection.
      *
-     * @param businessServiceService the businessServiceService parameter
+     * @param businessServiceService the business service service via lazy injection
      */
     @Lazy
     @Autowired
@@ -94,12 +91,12 @@ public class HostRelationService {
     /**
      * List relations with optional filters.
      *
-     * @param hostId the hostId parameter
-     * @param groupId the groupId parameter
-     * @param clusterId the clusterId parameter
-     * @param sourceType the sourceType parameter
-     * @param sourceId the sourceId parameter
-     * @return the result
+     * @param hostId host identifier
+     * @param groupId group identifier
+     * @param clusterId cluster identifier
+     * @param sourceType source type filter
+     * @param sourceId source identifier filter
+     * @return the list relations with optional filters
      */
     public List<Map<String, Object>> listRelations(String hostId, String groupId, String clusterId, String sourceType,
         String sourceId) {
@@ -173,7 +170,7 @@ public class HostRelationService {
     /**
      * Creates a new host relation from the provided field map.
      *
-     * @param body the body parameter
+     * @param body request body
      * @return the result
      */
     public Map<String, Object> createRelation(Map<String, Object> body) {
@@ -229,8 +226,8 @@ public class HostRelationService {
     /**
      * Updates an existing host relation with the provided field map.
      *
-     * @param id the id parameter
-     * @param body the body parameter
+     * @param id an existing host relation with the provided field map
+     * @param body an existing host relation with the provided field map
      * @return the result
      */
     public Map<String, Object> updateRelation(String id, Map<String, Object> body) {
@@ -287,7 +284,7 @@ public class HostRelationService {
     /**
      * Deletes a host relation by its ID.
      *
-     * @param id the id parameter
+     * @param id entity identifier
      * @return the result
      */
     public boolean deleteRelation(String id) {
@@ -318,7 +315,7 @@ public class HostRelationService {
     /**
      * Delete all relations involving a specific host (for cascade delete).
      *
-     * @param hostId the hostId parameter
+     * @param hostId host identifier
      */
     public void deleteRelationsByHost(String hostId) {
         List<Map<String, Object>> relations = listRelations(hostId, null, null, null, null);
@@ -334,7 +331,7 @@ public class HostRelationService {
     /**
      * Delete all relations where source is a specific business service (for cascade delete).
      *
-     * @param bsId the bsId parameter
+     * @param bsId bs id
      */
     public void deleteRelationsByBusinessService(String bsId) {
         List<Map<String, Object>> all = listRelations(null, null, null, "business-service", bsId);
@@ -350,9 +347,9 @@ public class HostRelationService {
      * Build ECharts graph data (nodes + edges) for a given group.
      * Includes all hosts in the group plus any related hosts from other groups.
      *
-     * @param groupId the groupId parameter
-     * @param clusterId the clusterId parameter
-     * @return the result
+     * @param groupId group identifier
+     * @param clusterId cluster identifier
+     * @return graph data containing nodes and edges
      */
     public Map<String, Object> getGraphData(String groupId, String clusterId) {
         // Collect hosts in this group or cluster
@@ -450,8 +447,8 @@ public class HostRelationService {
     /**
      * Get 1-hop neighbors (upstream + downstream) for a given host.
      *
-     * @param hostId the hostId parameter
-     * @return the result
+     * @param hostId host identifier
+     * @return 1-hop neighbors (upstream + downstream) for a given host
      */
     public Map<String, Object> getNeighbors(String hostId) {
         // 1. Validate host exists

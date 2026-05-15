@@ -4,6 +4,9 @@
 
 package com.huawei.opsfactory.gateway.config;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.core.codec.DecodingException;
@@ -13,9 +16,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebInputException;
 
 import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 
 /**
  * Test coverage for Global Exception Handler.

@@ -30,6 +30,7 @@ public class SystemUserMigrationServiceTest {
     public TemporaryFolder tempFolder = new TemporaryFolder();
 
     private Path usersDir;
+
     private SystemUserMigrationService migrationService;
 
     /**
@@ -64,8 +65,8 @@ public class SystemUserMigrationServiceTest {
         migrationService.migrateLegacySystemUser();
 
         assertFalse(Files.exists(legacyDir));
-        assertTrue(Files.isDirectory(usersDir.resolve(GatewayConstants.SYSTEM_USER).resolve(
-                "agents").resolve("test-agent")));
+        assertTrue(
+            Files.isDirectory(usersDir.resolve(GatewayConstants.SYSTEM_USER).resolve("agents").resolve("test-agent")));
     }
 
     /**
@@ -88,20 +89,26 @@ public class SystemUserMigrationServiceTest {
     @Test
     public void migrateLegacySystemUser_mergesOnConflict() throws IOException {
         Path legacyFile = usersDir.resolve(SystemUserMigrationService.LEGACY_SYSTEM_USER)
-                .resolve("agents").resolve("legacy-agent").resolve("state.txt");
+            .resolve("agents")
+            .resolve("legacy-agent")
+            .resolve("state.txt");
         Files.createDirectories(legacyFile.getParent());
         Files.writeString(legacyFile, "legacy");
 
         Path existingFile = usersDir.resolve(GatewayConstants.SYSTEM_USER)
-                .resolve("agents").resolve("current-agent").resolve("state.txt");
+            .resolve("agents")
+            .resolve("current-agent")
+            .resolve("state.txt");
         Files.createDirectories(existingFile.getParent());
         Files.writeString(existingFile, "current");
 
         migrationService.migrateLegacySystemUser();
 
         assertFalse(Files.exists(usersDir.resolve(SystemUserMigrationService.LEGACY_SYSTEM_USER)));
-        assertTrue(Files.exists(usersDir.resolve(GatewayConstants.SYSTEM_USER).resolve(
-                "agents").resolve("legacy-agent").resolve("state.txt")));
+        assertTrue(Files.exists(usersDir.resolve(GatewayConstants.SYSTEM_USER)
+            .resolve("agents")
+            .resolve("legacy-agent")
+            .resolve("state.txt")));
         assertTrue(Files.exists(existingFile));
     }
 }

@@ -4,8 +4,10 @@
 
 package com.huawei.opsfactory.operationintelligence.qos.dv;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 
 class DvSslContextFactoryTest {
 
@@ -13,14 +15,12 @@ class DvSslContextFactoryTest {
 
     @Test
     void createSslContext_nullContent_strictSsl_throws() {
-        assertThrows(IllegalStateException.class,
-                () -> factory.createSslContext(null, "cert.jks", true));
+        assertThrows(IllegalStateException.class, () -> factory.createSslContext(null, "cert.jks", true));
     }
 
     @Test
     void createSslContext_blankContent_strictSsl_throws() {
-        assertThrows(IllegalStateException.class,
-                () -> factory.createSslContext("  ", "cert.jks", true));
+        assertThrows(IllegalStateException.class, () -> factory.createSslContext("  ", "cert.jks", true));
     }
 
     @Test

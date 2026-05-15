@@ -26,92 +26,92 @@ public class IndicatorNormalizeData {
 
     private Long timestamp;
 
-/**
- * Gets the code.
- *
- * @return the result
- */
+    /**
+     * Gets the code.
+     *
+     * @return the result
+     */
     public Long getCode() {
         return code;
     }
 
-/**
- * Sets the code.
- *
- * @param code the code
- */
+    /**
+     * Sets the code.
+     *
+     * @param code the code
+     */
     public void setCode(Long code) {
         this.code = code;
     }
 
-/**
- * Gets the env code.
- *
- * @return the result
- */
+    /**
+     * Gets the env code.
+     *
+     * @return the result
+     */
     public String getEnvCode() {
         return envCode;
     }
 
-/**
- * Sets the env code.
- *
- * @param envCode the envCode
- */
+    /**
+     * Sets the env code.
+     *
+     * @param envCode the envCode
+     */
     public void setEnvCode(String envCode) {
         this.envCode = envCode;
     }
 
-/**
- * Gets the type.
- *
- * @return the result
- */
+    /**
+     * Gets the type.
+     *
+     * @return the result
+     */
     public String getType() {
         return type;
     }
 
-/**
- * Sets the type.
- *
- * @param type the type
- */
+    /**
+     * Sets the type.
+     *
+     * @param type the type
+     */
     public void setType(String type) {
         this.type = type;
     }
 
-/**
- * Gets the indicator value.
- *
- * @return the result
- */
+    /**
+     * Gets the indicator value.
+     *
+     * @return the result
+     */
     public BigDecimal getIndicatorValue() {
         return indicatorValue;
     }
 
-/**
- * Sets the indicator value.
- *
- * @param indicatorValue the indicatorValue
- */
+    /**
+     * Sets the indicator value.
+     *
+     * @param indicatorValue the indicatorValue
+     */
     public void setIndicatorValue(BigDecimal indicatorValue) {
         this.indicatorValue = indicatorValue;
     }
 
-/**
- * Gets the timestamp.
- *
- * @return the result
- */
+    /**
+     * Gets the timestamp.
+     *
+     * @return the result
+     */
     public Long getTimestamp() {
         return timestamp;
     }
 
-/**
- * Sets the timestamp.
- *
- * @param timestamp the timestamp
- */
+    /**
+     * Sets the timestamp.
+     *
+     * @param timestamp the timestamp
+     */
     public void setTimestamp(Long timestamp) {
         this.timestamp = timestamp;
     }

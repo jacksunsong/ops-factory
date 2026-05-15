@@ -20,9 +20,9 @@ public final class ProcessUtil {
     /**
      * Reads up to the given number of bytes from the process output stream.
      *
-     * @param process the process parameter
-     * @param maxBytes the maxBytes parameter
-     * @return the result
+     * @param process process whose stdout to read
+     * @param maxBytes maximum number of bytes to read
+     * @return trimmed stdout string, or an error message on failure
      */
     public static String readOutput(Process process, int maxBytes) {
         try {
@@ -36,8 +36,8 @@ public final class ProcessUtil {
     /**
      * Returns the process identifier for the given process.
      *
-     * @param process the process parameter
-     * @return the result
+     * @param process process whose PID to retrieve
+     * @return the native process identifier
      */
     public static long getPid(Process process) {
         return process.pid();
@@ -46,8 +46,8 @@ public final class ProcessUtil {
     /**
      * Checks whether the given process is still alive.
      *
-     * @param process the process parameter
-     * @return the result
+     * @param process process to check
+     * @return true if the process is still running
      */
     public static boolean isAlive(Process process) {
         return process.isAlive();
@@ -56,8 +56,8 @@ public final class ProcessUtil {
     /**
      * Stops a process gracefully before forcing termination if needed.
      *
-     * @param process the process parameter
-     * @param graceMs the graceMs parameter
+     * @param process process to stop
+     * @param graceMs milliseconds to wait after SIGTERM before SIGKILL
      */
     public static void stopGracefully(Process process, long graceMs) {
         if (!process.isAlive()) {

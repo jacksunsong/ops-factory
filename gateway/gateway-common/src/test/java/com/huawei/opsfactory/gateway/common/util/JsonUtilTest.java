@@ -4,10 +4,10 @@
 
 package com.huawei.opsfactory.gateway.common.util;
 
-import org.junit.Test;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+
+import org.junit.Test;
 
 /**
  * Test coverage for Json Util.

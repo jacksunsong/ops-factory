@@ -36,8 +36,8 @@ public class SessionService {
     /**
      * Creates the session service instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param instanceManager manages goosed process instances
+     * @param goosedProxy proxy for communicating with goosed instances
      */
     public SessionService(InstanceManager instanceManager,
         com.huawei.opsfactory.gateway.proxy.GoosedProxy goosedProxy) {
@@ -49,8 +49,8 @@ public class SessionService {
     /**
      * Query sessions from a specific goosed instance.
      *
-     * @param instance the instance parameter
-     * @return the result
+     * @param instance managed instance to query sessions from
+     * @return Mono emitting raw JSON string of sessions
      */
     public Mono<String> getSessionsFromInstance(ManagedInstance instance) {
         String url = goosedProxy.goosedBaseUrl(instance.getPort()) + "/sessions";

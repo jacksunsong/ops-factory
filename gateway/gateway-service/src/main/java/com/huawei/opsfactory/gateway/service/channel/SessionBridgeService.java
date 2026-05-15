@@ -65,9 +65,6 @@ public class SessionBridgeService {
 
     /**
      * Creates the session bridge service instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public SessionBridgeService(ChannelConfigService channelConfigService, ChannelBindingService channelBindingService,
         InstanceManager instanceManager, GoosedProxy goosedProxy, AgentConfigService agentConfigService) {
@@ -82,9 +79,10 @@ public class SessionBridgeService {
     /**
      * Ensures a session exists for the given channel and external user ID, creating one if necessary.
      *
-     * @param channelId the channelId parameter
-     * @param externalUserId the externalUserId parameter
-     * @return the result
+     * @param channelId ensures a session exists for the given channel and external user ID, creating one if necessary
+     * @param externalUserId ensures a session exists for the given channel and external user ID, creating one if
+     *        necessary
+     * @return the ensures a session exists for the given channel and external user ID, creating one if necessary
      */
     public Mono<ChannelBinding> ensureSession(String channelId, String externalUserId) {
         return ensureConversationSession(channelId, "admin", "default", externalUserId, externalUserId, null, "direct");
@@ -93,13 +91,13 @@ public class SessionBridgeService {
     /**
      * Ensures a conversation session exists using the default owner user ID.
      *
-     * @param channelId the channelId parameter
-     * @param accountId the accountId parameter
-     * @param peerId the peerId parameter
-     * @param conversationId the conversationId parameter
-     * @param threadId the threadId parameter
-     * @param conversationType the conversationType parameter
-     * @return the result
+     * @param channelId ensures a conversation session exists using the default owner user ID
+     * @param accountId ensures a conversation session exists using the default owner user ID
+     * @param peerId ensures a conversation session exists using the default owner user ID
+     * @param conversationId ensures a conversation session exists using the default owner user ID
+     * @param threadId ensures a conversation session exists using the default owner user ID
+     * @param conversationType ensures a conversation session exists using the default owner user ID
+     * @return the ensures a conversation session exists using the default owner user ID
      */
     public Mono<ChannelBinding> ensureConversationSession(String channelId, String accountId, String peerId,
         String conversationId, String threadId, String conversationType) {
@@ -110,14 +108,22 @@ public class SessionBridgeService {
     /**
      * Ensures a conversation session exists for the given channel, creating a binding and starting a session if needed.
      *
-     * @param channelId the channelId parameter
-     * @param ownerUserId the ownerUserId parameter
-     * @param accountId the accountId parameter
-     * @param peerId the peerId parameter
-     * @param conversationId the conversationId parameter
-     * @param threadId the threadId parameter
-     * @param conversationType the conversationType parameter
-     * @return the result
+     * @param channelId ensures a conversation session exists for the given channel, creating a binding and starting a
+     *        session if needed
+     * @param ownerUserId ensures a conversation session exists for the given channel, creating a binding and starting a
+     *        session if needed
+     * @param accountId ensures a conversation session exists for the given channel, creating a binding and starting a
+     *        session if needed
+     * @param peerId ensures a conversation session exists for the given channel, creating a binding and starting a
+     *        session if needed
+     * @param conversationId ensures a conversation session exists for the given channel, creating a binding and
+     *        starting a session if needed
+     * @param threadId ensures a conversation session exists for the given channel, creating a binding and starting a
+     *        session if needed
+     * @param conversationType ensures a conversation session exists for the given channel, creating a binding and
+     *        starting a session if needed
+     * @return the ensures a conversation session exists for the given channel, creating a binding and starting a
+     *         session if needed
      */
     public Mono<ChannelBinding> ensureConversationSession(String channelId, String ownerUserId, String accountId,
         String peerId, String conversationId, String threadId, String conversationType) {
@@ -138,10 +144,10 @@ public class SessionBridgeService {
     /**
      * Sends text to a channel conversation using the default owner user ID and direct conversation parameters.
      *
-     * @param channelId the channelId parameter
-     * @param externalUserId the externalUserId parameter
-     * @param text the text parameter
-     * @return the result
+     * @param channelId unique identifier of the target channel
+     * @param externalUserId external user ID of the conversation peer
+     * @param text message text to send
+     * @return the reply result from the channel adapter
      */
     public Mono<ChannelReplyResult> sendText(String channelId, String externalUserId, String text) {
         return sendConversationText(channelId, "admin", "default", externalUserId, externalUserId, null, "direct",
@@ -151,14 +157,14 @@ public class SessionBridgeService {
     /**
      * Sends text to a conversation session using the default owner user ID.
      *
-     * @param channelId the channelId parameter
-     * @param accountId the accountId parameter
-     * @param peerId the peerId parameter
-     * @param conversationId the conversationId parameter
-     * @param threadId the threadId parameter
-     * @param conversationType the conversationType parameter
-     * @param text the text parameter
-     * @return the result
+     * @param channelId sends text to a conversation session using the default owner user ID
+     * @param accountId sends text to a conversation session using the default owner user ID
+     * @param peerId sends text to a conversation session using the default owner user ID
+     * @param conversationId sends text to a conversation session using the default owner user ID
+     * @param threadId sends text to a conversation session using the default owner user ID
+     * @param conversationType sends text to a conversation session using the default owner user ID
+     * @param text sends text to a conversation session using the default owner user ID
+     * @return the sends text to a conversation session using the default owner user ID
      */
     public Mono<ChannelReplyResult> sendConversationText(String channelId, String accountId, String peerId,
         String conversationId, String threadId, String conversationType, String text) {
@@ -169,15 +175,18 @@ public class SessionBridgeService {
     /**
      * Sends text to a conversation session, ensuring the session exists and extracting the agent reply.
      *
-     * @param channelId the channelId parameter
-     * @param ownerUserId the ownerUserId parameter
-     * @param accountId the accountId parameter
-     * @param peerId the peerId parameter
-     * @param conversationId the conversationId parameter
-     * @param threadId the threadId parameter
-     * @param conversationType the conversationType parameter
-     * @param text the text parameter
-     * @return the result
+     * @param channelId sends text to a conversation session, ensuring the session exists and extracting the agent reply
+     * @param ownerUserId sends text to a conversation session, ensuring the session exists and extracting the agent
+     *        reply
+     * @param accountId sends text to a conversation session, ensuring the session exists and extracting the agent reply
+     * @param peerId sends text to a conversation session, ensuring the session exists and extracting the agent reply
+     * @param conversationId sends text to a conversation session, ensuring the session exists and extracting the agent
+     *        reply
+     * @param threadId sends text to a conversation session, ensuring the session exists and extracting the agent reply
+     * @param conversationType sends text to a conversation session, ensuring the session exists and extracting the
+     *        agent reply
+     * @param text sends text to a conversation session, ensuring the session exists and extracting the agent reply
+     * @return the sends text to a conversation session, ensuring the session exists and extracting the agent reply
      */
     public Mono<ChannelReplyResult> sendConversationText(String channelId, String ownerUserId, String accountId,
         String peerId, String conversationId, String threadId, String conversationType, String text) {

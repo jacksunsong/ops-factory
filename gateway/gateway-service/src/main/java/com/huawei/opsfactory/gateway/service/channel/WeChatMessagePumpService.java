@@ -47,9 +47,6 @@ public class WeChatMessagePumpService {
 
     /**
      * Creates the we chat message pump service instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public WeChatMessagePumpService(ChannelConfigService channelConfigService,
         ChannelRuntimeStorageService runtimeStorageService, ChannelDedupService channelDedupService,

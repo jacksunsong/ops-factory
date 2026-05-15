@@ -58,9 +58,6 @@ public class BusinessServiceService {
 
     /**
      * Creates the business service service instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public BusinessServiceService(GatewayProperties properties) {
         this.properties = properties;
@@ -69,7 +66,7 @@ public class BusinessServiceService {
     /**
      * Sets the cluster service via lazy injection.
      *
-     * @param clusterService the clusterService parameter
+     * @param clusterService the cluster service via lazy injection
      */
     @Lazy
     @Autowired
@@ -80,7 +77,7 @@ public class BusinessServiceService {
     /**
      * Sets the host service via lazy injection.
      *
-     * @param hostService the hostService parameter
+     * @param hostService the host service via lazy injection
      */
     @Lazy
     @Autowired
@@ -91,7 +88,7 @@ public class BusinessServiceService {
     /**
      * Sets the host relation service via lazy injection.
      *
-     * @param hostRelationService the hostRelationService parameter
+     * @param hostRelationService the host relation service via lazy injection
      */
     @Lazy
     @Autowired
@@ -102,7 +99,7 @@ public class BusinessServiceService {
     /**
      * Sets the cluster relation service via lazy injection.
      *
-     * @param clusterRelationService the clusterRelationService parameter
+     * @param clusterRelationService the cluster relation service via lazy injection
      */
     @Lazy
     @Autowired
@@ -130,8 +127,8 @@ public class BusinessServiceService {
     /**
      * Lists business services optionally filtered by group ID and host ID.
      *
-     * @param groupId the groupId parameter
-     * @param hostId the hostId parameter
+     * @param groupId group identifier
+     * @param hostId host identifier
      * @return the result
      */
     public List<Map<String, Object>> listBusinessServices(String groupId, String hostId) {
@@ -174,8 +171,8 @@ public class BusinessServiceService {
     /**
      * Gets a business service by its ID.
      *
-     * @param id the id parameter
-     * @return the result
+     * @param id entity identifier
+     * @return a business service by its ID
      */
     public Map<String, Object> getBusinessService(String id) {
         Path file = businessServicesDir.resolve(id + ".json");
@@ -189,7 +186,7 @@ public class BusinessServiceService {
     /**
      * Creates a new business service from the provided field map.
      *
-     * @param body the body parameter
+     * @param body request body
      * @return the result
      */
     @SuppressWarnings("unchecked")
@@ -220,8 +217,8 @@ public class BusinessServiceService {
     /**
      * Updates an existing business service with the provided field map.
      *
-     * @param id the id parameter
-     * @param body the body parameter
+     * @param id an existing business service with the provided field map
+     * @param body an existing business service with the provided field map
      * @return the result
      */
     @SuppressWarnings("unchecked")
@@ -272,7 +269,7 @@ public class BusinessServiceService {
     /**
      * Deletes a business service by ID, cascading to related host and cluster relations.
      *
-     * @param id the id parameter
+     * @param id entity identifier
      * @return the result
      */
     public boolean deleteBusinessService(String id) {
@@ -304,8 +301,8 @@ public class BusinessServiceService {
     /**
      * Get business service with resolved host info.
      *
-     * @param id the id parameter
-     * @return the result
+     * @param id entity identifier
+     * @return business service with resolved host info
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getWithResolvedHosts(String id) {
@@ -332,8 +329,8 @@ public class BusinessServiceService {
     /**
      * Get hosts for the entry resources of a business service.
      *
-     * @param id the id parameter
-     * @return the result
+     * @param id entity identifier
+     * @return hosts for the entry resources of a business service
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getHostsForBusinessService(String id) {
@@ -355,8 +352,8 @@ public class BusinessServiceService {
      * Get topology for a business service: entry hosts + N-hop downstream expansion.
      * Returns { nodes, edges }
      *
-     * @param id the id parameter
-     * @return the result
+     * @param id entity identifier
+     * @return topology for a business service: entry hosts + N-hop downstream expansion
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getTopologyForBusinessService(String id) {
@@ -463,7 +460,7 @@ public class BusinessServiceService {
     /**
      * Migrate from Host.business field: group by (businessName, groupId) -> create BusinessService.
      *
-     * @return the result
+     * @return the migrate from Host.business field: group by (businessName, groupId) -> create BusinessService
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> migrateFromBusinessField() {
@@ -550,7 +547,7 @@ public class BusinessServiceService {
     /**
      * Sync hostIds on a business service from its HostRelation records.
      *
-     * @param bsId the bsId parameter
+     * @param bsId bs id
      */
     @SuppressWarnings("unchecked")
     public void syncHostIdsFromRelations(String bsId) {
@@ -567,7 +564,7 @@ public class BusinessServiceService {
      * Derives entry hosts from ClusterRelation where sourceType="business-service" and sourceId=bsId.
      * Resolves targetId (cluster) -> get cluster's hosts -> populate BS.hostIds.
      *
-     * @param bsId the bsId parameter
+     * @param bsId bs id
      */
     @SuppressWarnings("unchecked")
     public void syncHostIdsFromClusterRelations(String bsId) {
@@ -600,7 +597,7 @@ public class BusinessServiceService {
     /**
      * Remove a host from all business services' hostIds (called when a host is deleted).
      *
-     * @param hostId the hostId parameter
+     * @param hostId remove a host from all business services' hostIds (called when a host is deleted)
      */
     @SuppressWarnings("unchecked")
     public void removeHostFromAllBusinessServices(String hostId) {
@@ -620,8 +617,8 @@ public class BusinessServiceService {
     /**
      * Search business services by keyword matching against name, code, and tags.
      *
-     * @param keyword the keyword parameter
-     * @return the result
+     * @param keyword search business services by keyword matching against name, code, and tags
+     * @return the search business services by keyword matching against name, code, and tags
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> searchByKeyword(String keyword) {

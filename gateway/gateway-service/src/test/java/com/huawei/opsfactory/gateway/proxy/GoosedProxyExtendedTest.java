@@ -4,7 +4,20 @@
 
 package com.huawei.opsfactory.gateway.proxy;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.netty.DisposableServer;
+import reactor.netty.http.server.HttpServer;
+import reactor.test.StepVerifier;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -14,28 +27,18 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.mock.http.server.reactive.MockServerHttpResponse;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.netty.DisposableServer;
-import reactor.netty.http.server.HttpServer;
-import reactor.test.StepVerifier;
 
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.function.Function;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-
 /**
  * Extended tests for GoosedProxy covering:
  * - copyHeaders: secret key injection
  * - copyUpstreamHeaders: CORS header filtering
  * - fetchJson: returns non-null Mono (construction-level)
+ *
  * @author x00000000
  * @since 2026-05-09
  */
@@ -66,12 +69,8 @@ public class GoosedProxyExtendedTest {
 
         HttpHeaders target = new HttpHeaders();
 
-        Method copyHeaders = GoosedProxy.class.getDeclaredMethod(
-                "copyHeaders",
-                HttpHeaders.class,
-                HttpHeaders.class,
-                String.class
-        );
+        Method copyHeaders =
+            GoosedProxy.class.getDeclaredMethod("copyHeaders", HttpHeaders.class, HttpHeaders.class, String.class);
         copyHeaders.setAccessible(true);
         copyHeaders.invoke(proxy, source, target, "my-secret");
 
@@ -92,12 +91,8 @@ public class GoosedProxyExtendedTest {
 
         HttpHeaders target = new HttpHeaders();
 
-        Method copyHeaders = GoosedProxy.class.getDeclaredMethod(
-                "copyHeaders",
-                HttpHeaders.class,
-                HttpHeaders.class,
-                String.class
-        );
+        Method copyHeaders =
+            GoosedProxy.class.getDeclaredMethod("copyHeaders", HttpHeaders.class, HttpHeaders.class, String.class);
         copyHeaders.setAccessible(true);
         copyHeaders.invoke(proxy, source, target, "my-secret");
 
@@ -124,11 +119,8 @@ public class GoosedProxyExtendedTest {
 
         HttpHeaders target = new HttpHeaders();
 
-        Method copyUpstream = GoosedProxy.class.getDeclaredMethod(
-                "copyUpstreamHeaders",
-                HttpHeaders.class,
-                HttpHeaders.class
-        );
+        Method copyUpstream =
+            GoosedProxy.class.getDeclaredMethod("copyUpstreamHeaders", HttpHeaders.class, HttpHeaders.class);
         copyUpstream.setAccessible(true);
         copyUpstream.invoke(proxy, source, target);
 
@@ -155,11 +147,8 @@ public class GoosedProxyExtendedTest {
         HttpHeaders source = new HttpHeaders();
         HttpHeaders target = new HttpHeaders();
 
-        Method copyUpstream = GoosedProxy.class.getDeclaredMethod(
-                "copyUpstreamHeaders",
-                HttpHeaders.class,
-                HttpHeaders.class
-        );
+        Method copyUpstream =
+            GoosedProxy.class.getDeclaredMethod("copyUpstreamHeaders", HttpHeaders.class, HttpHeaders.class);
         copyUpstream.setAccessible(true);
         copyUpstream.invoke(proxy, source, target);
 
@@ -181,30 +170,31 @@ public class GoosedProxyExtendedTest {
     @Test
     public void testProxyWithBody_returnsNonNullMono() {
         // Construction-level test: verifies Mono is created
-        assertNotNull(proxy.proxyWithBody(null, 99999, "/test",
-                org.springframework.http.HttpMethod.POST, "{}", "test-secret"));
+        assertNotNull(
+            proxy.proxyWithBody(null, 99999, "/test", org.springframework.http.HttpMethod.POST, "{}", "test-secret"));
     }
 
     /**
      * Tests proxy session command with body non2xx throws upstream error without committing response.
      */
     @Test
-    public void testProxySessionCommandWithBody_non2xxThrowsUpstreamErrorWithoutCommittingResponse() {
+    public void testProxySessionCmdWithBody_non2xxThrowsErrorWithoutCommit() {
         DisposableServer server = HttpServer.create()
-                .host("127.0.0.1")
-                .port(0)
-                .route(routes -> routes.post("/sessions/session-123/reply", (request, response) ->
-                        response.status(400)
-                                .header(HttpHeaders.CONTENT_TYPE, "text/plain")
-                                .sendString(Mono.just("Session already has an active request. Cancel it first."))))
-                .bindNow();
+            .host("127.0.0.1")
+            .port(0)
+            .route(routes -> routes.post("/sessions/session-123/reply",
+                (request, response) -> response.status(400)
+                    .header(HttpHeaders.CONTENT_TYPE, "text/plain")
+                    .sendString(Mono.just("Session already has an active request. Cancel it first."))))
+            .bindNow();
 
         try {
             MockServerHttpResponse response = new MockServerHttpResponse();
-            WebClientResponseException error = assertThrows(WebClientResponseException.class, () ->
-                    proxy.proxySessionCommandWithBody(response, server.port(), "/sessions/session-123/reply",
-                            HttpMethod.POST, "{}", "test-secret")
-                            .block(Duration.ofSeconds(5)));
+            WebClientResponseException error = assertThrows(WebClientResponseException.class,
+                () -> proxy
+                    .proxySessionCommandWithBody(response, server.port(), "/sessions/session-123/reply",
+                        HttpMethod.POST, "{}", "test-secret")
+                    .block(Duration.ofSeconds(5)));
 
             assertEquals(400, error.getRawStatusCode());
             assertEquals("Session already has an active request. Cancel it first.", error.getResponseBodyAsString());
@@ -220,26 +210,20 @@ public class GoosedProxyExtendedTest {
      * @throws Exception if the operation fails
      */
     @Test
-    public void testEmitTransformedFrame_emitsOriginalBeforeSupplementalEventCompletes() throws Exception {
-        Method emitTransformedFrame = GoosedProxy.class.getDeclaredMethod(
-                "emitTransformedFrame",
-                String.class,
-                org.springframework.core.io.buffer.DataBufferFactory.class,
-                Function.class);
+    public void testEmitTransformedFrame_emitsOriginalBeforeSupplemental() throws Exception {
+        Method emitTransformedFrame = GoosedProxy.class.getDeclaredMethod("emitTransformedFrame", String.class,
+            org.springframework.core.io.buffer.DataBufferFactory.class, Function.class);
         emitTransformedFrame.setAccessible(true);
 
         String frame = "id: 42\ndata: {\"type\":\"Finish\",\"chat_request_id\":\"req-1\"}";
         @SuppressWarnings("unchecked")
-        Flux<DataBuffer> result = (Flux<DataBuffer>) emitTransformedFrame.invoke(
-                proxy,
-                frame,
-                new DefaultDataBufferFactory(),
-                (Function<String, Mono<String>>) ignored -> Mono.never());
+        Flux<DataBuffer> result = (Flux<DataBuffer>) emitTransformedFrame.invoke(proxy, frame,
+            new DefaultDataBufferFactory(), (Function<String, Mono<String>>) ignored -> Mono.never());
 
         StepVerifier.create(result.map(this::dataBufferToString))
-                .expectNext(frame + "\n\n")
-                .thenCancel()
-                .verify(Duration.ofSeconds(1));
+            .expectNext(frame + "\n\n")
+            .thenCancel()
+            .verify(Duration.ofSeconds(1));
     }
 
     private String dataBufferToString(DataBuffer buffer) {

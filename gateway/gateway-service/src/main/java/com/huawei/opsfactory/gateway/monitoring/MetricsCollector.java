@@ -48,8 +48,9 @@ public class MetricsCollector {
     /**
      * Creates the metrics collector instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param instanceManager manages goosed process instances
+     * @param goosedProxy proxy for fetching insights from goosed instances
+     * @param metricsBuffer buffer for recording collected metrics
      */
     public MetricsCollector(InstanceManager instanceManager, GoosedProxy goosedProxy, MetricsBuffer metricsBuffer) {
         this.instanceManager = instanceManager;

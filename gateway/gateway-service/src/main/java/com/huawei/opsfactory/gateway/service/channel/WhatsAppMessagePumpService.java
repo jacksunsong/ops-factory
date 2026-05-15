@@ -50,9 +50,6 @@ public class WhatsAppMessagePumpService {
 
     /**
      * Creates the whats app message pump service instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public WhatsAppMessagePumpService(ChannelConfigService channelConfigService,
         ChannelRuntimeStorageService runtimeStorageService, ChannelDedupService channelDedupService,
@@ -95,9 +92,9 @@ public class WhatsAppMessagePumpService {
     /**
      * Runs a self-test on a WhatsApp channel by sending a text to the channel's own phone number.
      *
-     * @param channelId the channelId parameter
-     * @param text the text parameter
-     * @return the result
+     * @param channelId runs a self-test on a WhatsApp channel by sending a text to the channel's own phone number
+     * @param text runs a self-test on a WhatsApp channel by sending a text to the channel's own phone number
+     * @return the runs a self-test on a WhatsApp channel by sending a text to the channel's own phone number
      */
     public ChannelSelfTestResult runSelfTest(String channelId, String text) {
         return runSelfTest(channelId, "admin", text);
@@ -106,10 +103,14 @@ public class WhatsAppMessagePumpService {
     /**
      * Runs a self-test on a WhatsApp channel by sending a text to the channel's own phone and queuing the reply.
      *
-     * @param channelId the channelId parameter
-     * @param ownerUserId the ownerUserId parameter
-     * @param text the text parameter
-     * @return the result
+     * @param channelId runs a self-test on a WhatsApp channel by sending a text to the channel's own phone and queuing
+     *        the reply
+     * @param ownerUserId runs a self-test on a WhatsApp channel by sending a text to the channel's own phone and
+     *        queuing the reply
+     * @param text runs a self-test on a WhatsApp channel by sending a text to the channel's own phone and queuing the
+     *        reply
+     * @return the runs a self-test on a WhatsApp channel by sending a text to the channel's own phone and queuing the
+     *         reply
      */
     public ChannelSelfTestResult runSelfTest(String channelId, String ownerUserId, String text) {
         ChannelDetail channel = channelConfigService.getChannel(channelId, ownerUserId);

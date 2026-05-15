@@ -39,8 +39,7 @@ public class CommandWhitelistController {
     /**
      * Creates the command whitelist controller instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param commandWhitelistService service managing the command whitelist
      */
     public CommandWhitelistController(CommandWhitelistService commandWhitelistService) {
         this.commandWhitelistService = commandWhitelistService;
@@ -49,8 +48,8 @@ public class CommandWhitelistController {
     /**
      * Returns the current command whitelist configuration.
      *
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting the current whitelist configuration map
      */
     @GetMapping({"", "/"})
     public Mono<Map<String, Object>> getWhitelist(ServerWebExchange exchange) {
@@ -64,9 +63,9 @@ public class CommandWhitelistController {
     /**
      * Adds a command pattern to the whitelist.
      *
-     * @param request the request parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param request request body containing command pattern fields
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with added command or 409
      */
     @PostMapping({"", "/"})
     public Mono<ResponseEntity<Map<String, Object>>> addCommand(@RequestBody Map<String, Object> request,
@@ -91,10 +90,10 @@ public class CommandWhitelistController {
     /**
      * Updates a command pattern in the whitelist.
      *
-     * @param pattern the pattern parameter
-     * @param request the request parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param pattern existing command pattern to update
+     * @param request request body containing updated fields
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with updated command or 404
      */
     @PutMapping("/{pattern}")
     public Mono<ResponseEntity<Map<String, Object>>> updateCommand(@PathVariable("pattern") String pattern,
@@ -119,9 +118,9 @@ public class CommandWhitelistController {
     /**
      * Deletes a command pattern from the whitelist.
      *
-     * @param pattern the pattern parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param pattern command pattern to remove
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with success status or 404
      */
     @DeleteMapping("/{pattern}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteCommand(@PathVariable("pattern") String pattern,

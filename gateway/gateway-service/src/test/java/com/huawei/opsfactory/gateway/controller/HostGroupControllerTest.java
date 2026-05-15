@@ -4,14 +4,21 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.when;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.huawei.opsfactory.gateway.filter.AuthWebFilter;
 import com.huawei.opsfactory.gateway.filter.UserContextFilter;
+import com.huawei.opsfactory.gateway.process.PrewarmService;
 import com.huawei.opsfactory.gateway.service.BusinessServiceService;
 import com.huawei.opsfactory.gateway.service.ClusterService;
 import com.huawei.opsfactory.gateway.service.HostGroupService;
 import com.huawei.opsfactory.gateway.service.HostService;
-import com.huawei.opsfactory.gateway.process.PrewarmService;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +29,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
-import java.util.*;
-
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Test coverage for Host Group Controller.
@@ -62,19 +70,21 @@ public class HostGroupControllerTest {
      */
     @Test
     public void testListGroups_returnsAll() {
-        when(hostGroupService.listGroups()).thenReturn(List.of(
-                makeGroup("g1", "PROD", null, true),
-                makeGroup("g2", "TEST", null, false)
-        ));
+        when(hostGroupService.listGroups())
+            .thenReturn(List.of(makeGroup("g1", "PROD", null, true), makeGroup("g2", "TEST", null, false)));
 
-        webTestClient.get().uri("/gateway/host-groups/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.groups").isArray()
-                .jsonPath("$.groups.length()").isEqualTo(2);
+        webTestClient.get()
+            .uri("/gateway/host-groups/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.groups")
+            .isArray()
+            .jsonPath("$.groups.length()")
+            .isEqualTo(2);
     }
 
     /**
@@ -88,15 +98,20 @@ public class HostGroupControllerTest {
         when(hostGroupService.listGroups()).thenReturn(new ArrayList<>(List.of(g1, g2)));
         when(hostGroupService.getDisabledGroupIds(any())).thenReturn(Set.of("g1"));
 
-        webTestClient.get().uri("/gateway/host-groups/?enabledOnly=true")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.groups").isArray()
-                .jsonPath("$.groups.length()").isEqualTo(1)
-                .jsonPath("$.groups[0].id").isEqualTo("g2");
+        webTestClient.get()
+            .uri("/gateway/host-groups/?enabledOnly=true")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.groups")
+            .isArray()
+            .jsonPath("$.groups.length()")
+            .isEqualTo(1)
+            .jsonPath("$.groups[0].id")
+            .isEqualTo("g2");
     }
 
     /**
@@ -111,14 +126,18 @@ public class HostGroupControllerTest {
         when(hostGroupService.listGroups()).thenReturn(new ArrayList<>(List.of(g1, g1Sub, g2)));
         when(hostGroupService.getDisabledGroupIds(any())).thenReturn(Set.of("g1", "g1-sub"));
 
-        webTestClient.get().uri("/gateway/host-groups/?enabledOnly=true")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.groups.length()").isEqualTo(1)
-                .jsonPath("$.groups[0].id").isEqualTo("g2");
+        webTestClient.get()
+            .uri("/gateway/host-groups/?enabledOnly=true")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.groups.length()")
+            .isEqualTo(1)
+            .jsonPath("$.groups[0].id")
+            .isEqualTo("g2");
     }
 
     // ── getTree ─────────────────────────────────────────────────
@@ -128,9 +147,7 @@ public class HostGroupControllerTest {
      */
     @Test
     public void testGetTree_returnsAll() {
-        when(hostGroupService.listGroups()).thenReturn(new ArrayList<>(List.of(
-                makeGroup("g1", "PROD", null, true)
-        )));
+        when(hostGroupService.listGroups()).thenReturn(new ArrayList<>(List.of(makeGroup("g1", "PROD", null, true))));
         when(clusterService.listClusters(isNull(), isNull())).thenReturn(new ArrayList<>());
         when(businessServiceService.listBusinessServices(isNull(), isNull())).thenReturn(new ArrayList<>());
         when(hostGroupService.getTree(anyList(), anyList(), anyList())).thenAnswer(inv -> {
@@ -139,13 +156,16 @@ public class HostGroupControllerTest {
             return result;
         });
 
-        webTestClient.get().uri("/gateway/host-groups/tree")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.tree").isArray();
+        webTestClient.get()
+            .uri("/gateway/host-groups/tree")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.tree")
+            .isArray();
     }
 
     /**
@@ -166,13 +186,16 @@ public class HostGroupControllerTest {
             return result;
         });
 
-        webTestClient.get().uri("/gateway/host-groups/tree?enabledOnly=true")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.tree.length()").isEqualTo(1);
+        webTestClient.get()
+            .uri("/gateway/host-groups/tree?enabledOnly=true")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.tree.length()")
+            .isEqualTo(1);
     }
 
     /**
@@ -195,11 +218,13 @@ public class HostGroupControllerTest {
             return result;
         });
 
-        webTestClient.get().uri("/gateway/host-groups/tree?enabledOnly=true")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk();
+        webTestClient.get()
+            .uri("/gateway/host-groups/tree?enabledOnly=true")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk();
     }
 
     // ── updateGroup (enabled toggle) ────────────────────────────
@@ -215,16 +240,20 @@ public class HostGroupControllerTest {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("enabled", false);
 
-        webTestClient.put().uri("/gateway/host-groups/g1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.group.enabled").isEqualTo(false);
+        webTestClient.put()
+            .uri("/gateway/host-groups/g1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.group.enabled")
+            .isEqualTo(false);
     }
 
     /**
@@ -238,16 +267,20 @@ public class HostGroupControllerTest {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("enabled", true);
 
-        webTestClient.put().uri("/gateway/host-groups/g1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.group.enabled").isEqualTo(true);
+        webTestClient.put()
+            .uri("/gateway/host-groups/g1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.group.enabled")
+            .isEqualTo(true);
     }
 
     /**
@@ -256,18 +289,20 @@ public class HostGroupControllerTest {
     @Test
     public void testUpdateGroup_notFound() {
         when(hostGroupService.updateGroup(eq("nonexistent"), any()))
-                .thenThrow(new IllegalArgumentException("Host group not found: nonexistent"));
+            .thenThrow(new IllegalArgumentException("Host group not found: nonexistent"));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("enabled", false);
 
-        webTestClient.put().uri("/gateway/host-groups/nonexistent")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isNotFound();
+        webTestClient.put()
+            .uri("/gateway/host-groups/nonexistent")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isNotFound();
     }
 
     // ── Auth ────────────────────────────────────────────────────
@@ -277,10 +312,12 @@ public class HostGroupControllerTest {
      */
     @Test
     public void testListGroups_unauthorized_noKey() {
-        webTestClient.get().uri("/gateway/host-groups/")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isUnauthorized();
+        webTestClient.get()
+            .uri("/gateway/host-groups/")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isUnauthorized();
     }
 
     /**
@@ -288,11 +325,13 @@ public class HostGroupControllerTest {
      */
     @Test
     public void testListGroups_forbidden_nonAdmin() {
-        webTestClient.get().uri("/gateway/host-groups/")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.get()
+            .uri("/gateway/host-groups/")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 
     // ── Helpers ────────────────────────────────────────────────────

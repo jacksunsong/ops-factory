@@ -33,8 +33,7 @@ public class SkillMarketClient {
     /**
      * Creates the skill market client instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param properties gateway configuration properties providing skill market settings
      */
     public SkillMarketClient(GatewayProperties properties) {
         this.properties = properties;
@@ -51,8 +50,8 @@ public class SkillMarketClient {
     /**
      * Fetches skill metadata from the skill market by skill ID.
      *
-     * @param skillId the skillId parameter
-     * @return the result
+     * @param skillId skill identifier to look up
+     * @return map containing skill metadata fields
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getSkill(String skillId) {
@@ -75,8 +74,8 @@ public class SkillMarketClient {
     /**
      * Downloads a skill package as a byte array from the skill market.
      *
-     * @param skillId the skillId parameter
-     * @return the result
+     * @param skillId skill identifier whose package to download
+     * @return raw ZIP package bytes
      */
     public byte[] downloadPackage(String skillId) {
         try {

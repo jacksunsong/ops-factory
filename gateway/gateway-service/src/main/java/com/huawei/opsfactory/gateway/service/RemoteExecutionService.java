@@ -48,8 +48,11 @@ public class RemoteExecutionService {
     /**
      * Creates the remote execution service instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param hostService service for resolving host credentials
+     * @param commandWhitelistService service for validating commands against the whitelist
+     * @param properties gateway configuration properties
+     * @param clusterService service for resolving cluster data
+     * @param clusterTypeService service for resolving cluster type command prefixes
      */
     public RemoteExecutionService(HostService hostService, CommandWhitelistService commandWhitelistService,
         GatewayProperties properties, ClusterService clusterService, ClusterTypeService clusterTypeService) {

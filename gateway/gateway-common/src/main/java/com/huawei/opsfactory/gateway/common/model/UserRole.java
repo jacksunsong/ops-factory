@@ -21,7 +21,7 @@ public enum UserRole {
     /**
      * Resolves the user role from the given user identifier.
      *
-     * @param userId the userId parameter
+     * @param userId user identifier
      * @return the result
      */
     public static UserRole fromUserId(String userId) {
@@ -31,8 +31,8 @@ public enum UserRole {
     /**
      * Resolves the user role from the given user identifier and admin user set.
      *
-     * @param userId the userId parameter
-     * @param adminUsers the adminUsers parameter
+     * @param userId user identifier
+     * @param adminUsers admin users
      * @return the result
      */
     public static UserRole fromUserId(String userId, Set<String> adminUsers) {
@@ -42,7 +42,7 @@ public enum UserRole {
     /**
      * Checks whether this role represents an administrator.
      *
-     * @return the result
+     * @return true if this role represents an administrator
      */
     public boolean isAdmin() {
         return this == ADMIN;

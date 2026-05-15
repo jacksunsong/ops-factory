@@ -50,6 +50,7 @@ public class ChannelConfigServiceTest {
     public TemporaryFolder tempFolder = new TemporaryFolder();
 
     private Path gatewayRoot;
+
     private ChannelConfigService service;
 
     /**
@@ -62,8 +63,7 @@ public class ChannelConfigServiceTest {
         when(properties.getGatewayRootPath()).thenReturn(gatewayRoot);
 
         AgentConfigService agentConfigService = mock(AgentConfigService.class);
-        when(agentConfigService.findAgent("fo-copilot")).thenReturn(new AgentRegistryEntry("fo-copilot",
-                "FO Copilot"));
+        when(agentConfigService.findAgent("fo-copilot")).thenReturn(new AgentRegistryEntry("fo-copilot", "FO Copilot"));
 
         ChannelRuntimeStorageService runtimeStorageService = new ChannelRuntimeStorageService(properties);
         service = new ChannelConfigService(properties, agentConfigService, runtimeStorageService);
@@ -80,8 +80,11 @@ public class ChannelConfigServiceTest {
         service.createChannel(upsertRequest("whatsapp-main", "whatsapp"), "admin");
 
         Path configDir = gatewayRoot.resolve("channels").resolve("whatsapp").resolve("whatsapp-main");
-        Path runtimeDir = gatewayRoot.resolve("users").resolve("admin").resolve("channels")
-                .resolve("whatsapp").resolve("whatsapp-main");
+        Path runtimeDir = gatewayRoot.resolve("users")
+            .resolve("admin")
+            .resolve("channels")
+            .resolve("whatsapp")
+            .resolve("whatsapp-main");
 
         assertTrue(Files.exists(configDir.resolve("config.json")));
         assertFalse(Files.exists(configDir.resolve("bindings.json")));
@@ -119,19 +122,22 @@ public class ChannelConfigServiceTest {
     public void runtimeStateIsReadFromUserDirectoryOnly() throws Exception {
         service.createChannel(upsertRequest("whatsapp-main", "whatsapp"), "admin");
 
-        Path oldState = gatewayRoot.resolve("channels").resolve("whatsapp").resolve(
-                "whatsapp-main").resolve("login-state.json");
-        Files.writeString(oldState, MAPPER.writeValueAsString(Map.of(
-                "status", "connected",
-                "selfPhone", "+10000000000"
-        )), StandardCharsets.UTF_8);
+        Path oldState =
+            gatewayRoot.resolve("channels").resolve("whatsapp").resolve("whatsapp-main").resolve("login-state.json");
+        Files.writeString(oldState,
+            MAPPER.writeValueAsString(Map.of("status", "connected", "selfPhone", "+10000000000")),
+            StandardCharsets.UTF_8);
 
         ChannelDetail before = service.getChannel("whatsapp-main");
         assertEquals("disconnected", before.config().loginStatus());
         assertEquals("", before.config().selfPhone());
 
-        Path runtimeState = gatewayRoot.resolve("users").resolve("admin").resolve("channels")
-                .resolve("whatsapp").resolve("whatsapp-main").resolve("login-state.json");
+        Path runtimeState = gatewayRoot.resolve("users")
+            .resolve("admin")
+            .resolve("channels")
+            .resolve("whatsapp")
+            .resolve("whatsapp-main")
+            .resolve("login-state.json");
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("status", "connected");
         payload.put("selfPhone", "+8613800000000");
@@ -153,20 +159,24 @@ public class ChannelConfigServiceTest {
     public void sharedConfigUsesIndependentRuntimePerUser() throws Exception {
         service.createChannel(upsertRequest("whatsapp-main", "whatsapp"), "admin");
 
-        Path adminRuntime = gatewayRoot.resolve("users").resolve("admin").resolve("channels")
-                .resolve("whatsapp").resolve("whatsapp-main");
-        Path aliceRuntime = gatewayRoot.resolve("users").resolve("alice@example.com").resolve("channels")
-                .resolve("whatsapp").resolve("whatsapp-main");
+        Path adminRuntime = gatewayRoot.resolve("users")
+            .resolve("admin")
+            .resolve("channels")
+            .resolve("whatsapp")
+            .resolve("whatsapp-main");
+        Path aliceRuntime = gatewayRoot.resolve("users")
+            .resolve("alice@example.com")
+            .resolve("channels")
+            .resolve("whatsapp")
+            .resolve("whatsapp-main");
         Files.createDirectories(adminRuntime);
         Files.createDirectories(aliceRuntime);
-        Files.writeString(adminRuntime.resolve("login-state.json"), MAPPER.writeValueAsString(Map.of(
-                "status", "connected",
-                "selfPhone", "+10000000000"
-        )), StandardCharsets.UTF_8);
-        Files.writeString(aliceRuntime.resolve("login-state.json"), MAPPER.writeValueAsString(Map.of(
-                "status", "pending",
-                "selfPhone", "+20000000000"
-        )), StandardCharsets.UTF_8);
+        Files.writeString(adminRuntime.resolve("login-state.json"),
+            MAPPER.writeValueAsString(Map.of("status", "connected", "selfPhone", "+10000000000")),
+            StandardCharsets.UTF_8);
+        Files.writeString(aliceRuntime.resolve("login-state.json"),
+            MAPPER.writeValueAsString(Map.of("status", "pending", "selfPhone", "+20000000000")),
+            StandardCharsets.UTF_8);
 
         ChannelDetail adminView = service.getChannel("whatsapp-main", "admin");
         ChannelDetail aliceView = service.getChannel("whatsapp-main", "alice@example.com");
@@ -191,10 +201,13 @@ public class ChannelConfigServiceTest {
         service.createChannel(upsertRequest("wechat-main", "wechat"), "admin");
 
         Path configDir = gatewayRoot.resolve("channels").resolve("wechat").resolve("wechat-main");
-        Path runtimeDir = gatewayRoot.resolve("users").resolve("admin").resolve("channels")
-                .resolve("wechat").resolve("wechat-main");
-        Path aliceRuntimeDir = gatewayRoot.resolve("users").resolve("alice@example.com").resolve("channels")
-                .resolve("wechat").resolve("wechat-main");
+        Path runtimeDir =
+            gatewayRoot.resolve("users").resolve("admin").resolve("channels").resolve("wechat").resolve("wechat-main");
+        Path aliceRuntimeDir = gatewayRoot.resolve("users")
+            .resolve("alice@example.com")
+            .resolve("channels")
+            .resolve("wechat")
+            .resolve("wechat-main");
         Files.createDirectories(aliceRuntimeDir);
         assertTrue(Files.exists(configDir));
         assertTrue(Files.exists(runtimeDir));
@@ -215,7 +228,7 @@ public class ChannelConfigServiceTest {
         service.createChannel(upsertRequest("whatsapp-main", "whatsapp"), "admin");
 
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
-                () -> service.updateChannel("whatsapp-main", upsertRequest("whatsapp-main", "wechat")));
+            () -> service.updateChannel("whatsapp-main", upsertRequest("whatsapp-main", "wechat")));
 
         assertTrue(error.getMessage().contains("Channel type cannot be changed"));
         assertTrue(Files.exists(gatewayRoot.resolve("channels").resolve("whatsapp").resolve("whatsapp-main")));
@@ -229,25 +242,11 @@ public class ChannelConfigServiceTest {
     public void authStateDirCannotEscapeUserRuntimeDirectory() {
         service.createChannel(upsertRequest("whatsapp-main", "whatsapp"), "admin");
 
-        ChannelUpsertRequest request = new ChannelUpsertRequest(
-                "whatsapp-main",
-                "whatsapp-main",
-                "whatsapp",
-                true,
-                "fo-copilot",
-                new ChannelConnectionConfig(
-                        "",
-                        "../../../../channels/whatsapp/whatsapp-main/auth",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        ""
-                )
-        );
-        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
-                () -> service.updateChannel("whatsapp-main", request));
+        ChannelUpsertRequest request = new ChannelUpsertRequest("whatsapp-main", "whatsapp-main", "whatsapp", true,
+            "fo-copilot", new ChannelConnectionConfig("", "../../../../channels/whatsapp/whatsapp-main/auth", "", "",
+                "", "", "", ""));
+        IllegalArgumentException error =
+            assertThrows(IllegalArgumentException.class, () -> service.updateChannel("whatsapp-main", request));
 
         assertTrue(error.getMessage().contains("authStateDir"));
     }
@@ -259,12 +258,15 @@ public class ChannelConfigServiceTest {
     public void ownerUserIdAllowsExistingUserIdCharactersButRejectsPathTraversal() {
         service.createChannel(upsertRequest("email-owner", "whatsapp"), "alice@example.com");
 
-        Path runtimeDir = gatewayRoot.resolve("users").resolve("alice@example.com").resolve("channels")
-                .resolve("whatsapp").resolve("email-owner");
+        Path runtimeDir = gatewayRoot.resolve("users")
+            .resolve("alice@example.com")
+            .resolve("channels")
+            .resolve("whatsapp")
+            .resolve("email-owner");
         assertTrue(Files.exists(runtimeDir.resolve("bindings.json")));
 
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
-                () -> service.createChannel(upsertRequest("bad-owner", "whatsapp"), "../admin"));
+            () -> service.createChannel(upsertRequest("bad-owner", "whatsapp"), "../admin"));
         assertTrue(error.getMessage().contains("ownerUserId"));
         assertFalse(Files.exists(gatewayRoot.resolve("channels").resolve("whatsapp").resolve("bad-owner")));
     }
@@ -278,21 +280,18 @@ public class ChannelConfigServiceTest {
     public void invalidConfigChannelIdIsIgnored() throws Exception {
         Path invalidConfigDir = gatewayRoot.resolve("channels").resolve("whatsapp").resolve("bad-channel");
         Files.createDirectories(invalidConfigDir);
-        Files.writeString(invalidConfigDir.resolve("config.json"), MAPPER.writeValueAsString(Map.of(
-                "id", "../bad-channel",
-                "name", "Bad Channel",
-                "type", "whatsapp",
-                "enabled", true,
-                "defaultAgentId", "fo-copilot",
-                "ownerUserId", "admin",
-                "createdAt", "2026-05-06T00:00:00Z",
-                "updatedAt", "2026-05-06T00:00:00Z",
-                "config", Map.of("authStateDir", "auth")
-        )), StandardCharsets.UTF_8);
+        Files.writeString(invalidConfigDir.resolve("config.json"),
+            MAPPER.writeValueAsString(Map.of("id", "../bad-channel", "name", "Bad Channel", "type", "whatsapp",
+                "enabled", true, "defaultAgentId", "fo-copilot", "ownerUserId", "admin", "createdAt",
+                "2026-05-06T00:00:00Z", "updatedAt", "2026-05-06T00:00:00Z", "config", Map.of("authStateDir", "auth"))),
+            StandardCharsets.UTF_8);
 
         assertTrue(service.listChannels().isEmpty());
-        assertFalse(Files.exists(gatewayRoot.resolve("users").resolve("admin").resolve("channels")
-                .resolve("whatsapp").resolve("bad-channel")));
+        assertFalse(Files.exists(gatewayRoot.resolve("users")
+            .resolve("admin")
+            .resolve("channels")
+            .resolve("whatsapp")
+            .resolve("bad-channel")));
     }
 
     /**
@@ -308,16 +307,18 @@ public class ChannelConfigServiceTest {
         ChannelRuntimeStorageService runtimeStorageService = new ChannelRuntimeStorageService(properties);
 
         ChannelBindingService bindingService = new ChannelBindingService(service, runtimeStorageService);
-        bindingService.ensureConversationBinding(
-                "whatsapp-main", "default", "+8613800000000", "+8613800000000",
-                null, "direct");
+        bindingService.ensureConversationBinding("whatsapp-main", "default", "+8613800000000", "+8613800000000", null,
+            "direct");
 
         ChannelDedupService dedupService = new ChannelDedupService(service, runtimeStorageService);
         assertTrue(dedupService.markIfNew("whatsapp-main", "message-1"));
 
         Path configDir = gatewayRoot.resolve("channels").resolve("whatsapp").resolve("whatsapp-main");
-        Path runtimeDir = gatewayRoot.resolve("users").resolve("admin").resolve("channels")
-                .resolve("whatsapp").resolve("whatsapp-main");
+        Path runtimeDir = gatewayRoot.resolve("users")
+            .resolve("admin")
+            .resolve("channels")
+            .resolve("whatsapp")
+            .resolve("whatsapp-main");
 
         assertFalse(Files.exists(configDir.resolve("bindings.json")));
         assertFalse(Files.exists(configDir.resolve("inbound-dedup.json")));
@@ -338,13 +339,16 @@ public class ChannelConfigServiceTest {
         ChannelRuntimeStorageService runtimeStorageService = new ChannelRuntimeStorageService(properties);
         WhatsAppWebLoginService loginService = new WhatsAppWebLoginService(service, runtimeStorageService);
 
-        IllegalStateException error = assertThrows(IllegalStateException.class,
-                () -> loginService.startLogin("whatsapp-main"));
+        IllegalStateException error =
+            assertThrows(IllegalStateException.class, () -> loginService.startLogin("whatsapp-main"));
         assertTrue(error.getMessage().contains("WhatsApp Web helper not found"));
 
         Path configDir = gatewayRoot.resolve("channels").resolve("whatsapp").resolve("whatsapp-main");
-        Path runtimeDir = gatewayRoot.resolve("users").resolve("admin").resolve("channels")
-                .resolve("whatsapp").resolve("whatsapp-main");
+        Path runtimeDir = gatewayRoot.resolve("users")
+            .resolve("admin")
+            .resolve("channels")
+            .resolve("whatsapp")
+            .resolve("whatsapp-main");
 
         assertFalse(Files.exists(configDir.resolve("auth")));
         assertFalse(Files.exists(configDir.resolve("inbox")));
@@ -371,47 +375,24 @@ public class ChannelConfigServiceTest {
         ChannelDedupService dedupService = new ChannelDedupService(service, runtimeStorageService);
         SessionBridgeService sessionBridgeService = mock(SessionBridgeService.class);
         WhatsAppWebLoginService loginService = mock(WhatsAppWebLoginService.class);
-        WhatsAppMessagePumpService pumpService = new WhatsAppMessagePumpService(
-                service,
-                runtimeStorageService,
-                dedupService,
-                sessionBridgeService,
-                loginService
-        );
+        WhatsAppMessagePumpService pumpService = new WhatsAppMessagePumpService(service, runtimeStorageService,
+            dedupService, sessionBridgeService, loginService);
 
-        when(sessionBridgeService.sendConversationText(
-                eq("whatsapp-main"),
-                eq("admin"),
-                eq("default"),
-                eq("+8613800000000"),
-                eq("+8613800000000"),
-                eq(null),
-                eq("direct"),
-                anyString()
-        )).thenReturn(Mono.just(new ChannelReplyResult(
-                "whatsapp-main",
-                "default",
-                "+8613800000000",
-                "+8613800000000",
-                null,
-                "direct",
-                "admin",
-                "fo-copilot",
-                "session-1",
-                "reply from agent"
-        )));
+        when(sessionBridgeService.sendConversationText(eq("whatsapp-main"), eq("admin"), eq("default"),
+            eq("+8613800000000"), eq("+8613800000000"), eq(null), eq("direct"), anyString()))
+            .thenReturn(Mono.just(new ChannelReplyResult("whatsapp-main", "default", "+8613800000000", "+8613800000000",
+                null, "direct", "admin", "fo-copilot", "session-1", "reply from agent")));
 
         Path configDir = gatewayRoot.resolve("channels").resolve("whatsapp").resolve("whatsapp-main");
-        Path runtimeDir = gatewayRoot.resolve("users").resolve("admin").resolve("channels")
-                .resolve("whatsapp").resolve("whatsapp-main");
+        Path runtimeDir = gatewayRoot.resolve("users")
+            .resolve("admin")
+            .resolve("channels")
+            .resolve("whatsapp")
+            .resolve("whatsapp-main");
         Path inboxDir = runtimeDir.resolve("inbox");
         Files.createDirectories(inboxDir);
-        Files.writeString(inboxDir.resolve("message-1.json"), MAPPER.writeValueAsString(Map.of(
-                "messageId", "message-1",
-                "peerId", "+8613800000000",
-                "conversationId", "+8613800000000",
-                "text", "hello"
-        )), StandardCharsets.UTF_8);
+        Files.writeString(inboxDir.resolve("message-1.json"), MAPPER.writeValueAsString(Map.of("messageId", "message-1",
+            "peerId", "+8613800000000", "conversationId", "+8613800000000", "text", "hello")), StandardCharsets.UTF_8);
 
         pumpService.pumpInbox();
 
@@ -425,8 +406,8 @@ public class ChannelConfigServiceTest {
         assertTrue(Files.readString(runtimeDir.resolve("inbound-dedup.json")).contains("message-1"));
         assertTrue(Files.exists(runtimeDir.resolve("processed").resolve("message-1-processed.json")));
         try (var stream = Files.list(runtimeDir.resolve("outbox").resolve("pending"))) {
-            Optional<Path> outboxFile = stream.filter(path -> path.getFileName().toString().endsWith(
-                    ".json")).findFirst();
+            Optional<Path> outboxFile =
+                stream.filter(path -> path.getFileName().toString().endsWith(".json")).findFirst();
             assertTrue(outboxFile.isPresent());
             assertTrue(Files.readString(outboxFile.get()).contains("reply from agent"));
         }
@@ -445,13 +426,13 @@ public class ChannelConfigServiceTest {
         ChannelRuntimeStorageService runtimeStorageService = new ChannelRuntimeStorageService(properties);
         WeChatLoginService loginService = new WeChatLoginService(service, runtimeStorageService);
 
-        IllegalStateException error = assertThrows(IllegalStateException.class,
-                () -> loginService.startLogin("wechat-main"));
+        IllegalStateException error =
+            assertThrows(IllegalStateException.class, () -> loginService.startLogin("wechat-main"));
         assertTrue(error.getMessage().contains("WeChat helper not found"));
 
         Path configDir = gatewayRoot.resolve("channels").resolve("wechat").resolve("wechat-main");
-        Path runtimeDir = gatewayRoot.resolve("users").resolve("admin").resolve("channels")
-                .resolve("wechat").resolve("wechat-main");
+        Path runtimeDir =
+            gatewayRoot.resolve("users").resolve("admin").resolve("channels").resolve("wechat").resolve("wechat-main");
 
         assertFalse(Files.exists(configDir.resolve("auth")));
         assertFalse(Files.exists(configDir.resolve("inbox")));
@@ -465,14 +446,7 @@ public class ChannelConfigServiceTest {
     }
 
     private ChannelUpsertRequest upsertRequest(String id, String type) {
-        return new ChannelUpsertRequest(
-                id,
-                id,
-                type,
-                true,
-                "fo-copilot",
-                new ChannelConnectionConfig("connected", "auth", "old",
-                        "old", "old", "+1", "wxid", "Tester")
-        );
+        return new ChannelUpsertRequest(id, id, type, true, "fo-copilot",
+            new ChannelConnectionConfig("connected", "auth", "old", "old", "old", "+1", "wxid", "Tester"));
     }
 }

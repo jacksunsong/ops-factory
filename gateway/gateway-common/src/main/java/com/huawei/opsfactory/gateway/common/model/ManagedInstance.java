@@ -15,19 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ManagedInstance {
 
-    /**
-     * Runtime status of a managed instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
-     */
-    public enum Status {
-        STARTING,
-        RUNNING,
-        STOPPED,
-        ERROR
-    }
-
     private final String agentId;
 
     private final String userId;
@@ -37,6 +24,9 @@ public class ManagedInstance {
     private final long pid;
 
     private final String secretKey;
+
+    /** Sessions that have been resumed (provider+extensions loaded) on this instance. */
+    private final Set<String> resumedSessions = ConcurrentHashMap.newKeySet();
 
     private volatile Status status;
 
@@ -48,14 +38,15 @@ public class ManagedInstance {
 
     private transient Process process;
 
-    /** Sessions that have been resumed (provider+extensions loaded) on this instance. */
-    private final Set<String> resumedSessions = ConcurrentHashMap.newKeySet();
-
     /**
      * Creates a managed instance descriptor.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param agentId agent instance identifier
+     * @param userId user identifier
+     * @param port allocated port number
+     * @param pid native process identifier
+     * @param process underlying OS process
+     * @param secretKey secret key for authenticating with the goosed instance
      */
     public ManagedInstance(String agentId, String userId, int port, long pid, Process process, String secretKey) {
         this.agentId = agentId;
@@ -69,9 +60,20 @@ public class ManagedInstance {
     }
 
     /**
+     * Builds a composite key from the given agent and user identifiers.
+     *
+     * @param agentId agent identifier
+     * @param userId user identifier
+     * @return composite key in the format agentId:userId
+     */
+    public static String buildKey(String agentId, String userId) {
+        return agentId + ":" + userId;
+    }
+
+    /**
      * Gets the agent identifier of this managed instance.
      *
-     * @return the result
+     * @return agent identifier
      */
     public String getAgentId() {
         return agentId;
@@ -80,7 +82,7 @@ public class ManagedInstance {
     /**
      * Gets the user identifier of this managed instance.
      *
-     * @return the result
+     * @return user identifier
      */
     public String getUserId() {
         return userId;
@@ -89,7 +91,7 @@ public class ManagedInstance {
     /**
      * Gets the port number assigned to this managed instance.
      *
-     * @return the result
+     * @return allocated port number
      */
     public int getPort() {
         return port;
@@ -98,7 +100,7 @@ public class ManagedInstance {
     /**
      * Gets the process identifier (PID) of this managed instance.
      *
-     * @return the result
+     * @return native process identifier
      */
     public long getPid() {
         return pid;
@@ -107,7 +109,7 @@ public class ManagedInstance {
     /**
      * Gets the secret key used for authenticating with this managed instance.
      *
-     * @return the result
+     * @return secret key string
      */
     public String getSecretKey() {
         return secretKey;
@@ -116,7 +118,7 @@ public class ManagedInstance {
     /**
      * Gets the current status of this managed instance.
      *
-     * @return the result
+     * @return current instance status
      */
     public Status getStatus() {
         return status;
@@ -125,7 +127,7 @@ public class ManagedInstance {
     /**
      * Sets the status of this managed instance.
      *
-     * @param status the status parameter
+     * @param status new status to set
      */
     public void setStatus(Status status) {
         this.status = status;
@@ -134,7 +136,7 @@ public class ManagedInstance {
     /**
      * Gets the timestamp of the last activity on this managed instance.
      *
-     * @return the result
+     * @return timestamp in milliseconds of the last activity
      */
     public long getLastActivity() {
         return lastActivity;
@@ -150,7 +152,7 @@ public class ManagedInstance {
     /**
      * Gets the underlying process of this managed instance.
      *
-     * @return the result
+     * @return the underlying OS process
      */
     public Process getProcess() {
         return process;
@@ -159,7 +161,7 @@ public class ManagedInstance {
     /**
      * Marks a session as resumed on this instance.
      *
-     * @param sessionId the sessionId parameter
+     * @param sessionId session identifier to mark as resumed
      */
     public void markSessionResumed(String sessionId) {
         resumedSessions.add(sessionId);
@@ -168,7 +170,7 @@ public class ManagedInstance {
     /**
      * Removes the session from the resumed sessions set.
      *
-     * @param sessionId the sessionId parameter
+     * @param sessionId session identifier to remove from the resumed set
      */
     public void unmarkSessionResumed(String sessionId) {
         if (sessionId != null) {
@@ -179,8 +181,8 @@ public class ManagedInstance {
     /**
      * Checks whether the given session has already been resumed on this instance.
      *
-     * @param sessionId the sessionId parameter
-     * @return the result
+     * @param sessionId session identifier to check
+     * @return true if the session has been resumed on this instance
      */
     public boolean isSessionResumed(String sessionId) {
         return sessionId != null && resumedSessions.contains(sessionId);
@@ -189,7 +191,7 @@ public class ManagedInstance {
     /**
      * Gets the number of times this managed instance has been restarted.
      *
-     * @return the result
+     * @return number of times the instance has been restarted
      */
     public int getRestartCount() {
         return restartCount;
@@ -198,7 +200,7 @@ public class ManagedInstance {
     /**
      * Sets the restart count for this managed instance.
      *
-     * @param restartCount the restartCount parameter
+     * @param restartCount new restart count value
      */
     public void setRestartCount(int restartCount) {
         this.restartCount = restartCount;
@@ -214,7 +216,7 @@ public class ManagedInstance {
     /**
      * Gets the timestamp of the last restart.
      *
-     * @return the result
+     * @return timestamp in milliseconds of the last restart
      */
     public long getLastRestartTime() {
         return lastRestartTime;
@@ -223,7 +225,7 @@ public class ManagedInstance {
     /**
      * Sets the timestamp of the last restart.
      *
-     * @param lastRestartTime the lastRestartTime parameter
+     * @param lastRestartTime timestamp in milliseconds of the last restart
      */
     public void setLastRestartTime(long lastRestartTime) {
         this.lastRestartTime = lastRestartTime;
@@ -232,20 +234,22 @@ public class ManagedInstance {
     /**
      * Gets the composite key for this managed instance.
      *
-     * @return the result
+     * @return composite key in the format agentId:userId
      */
     public String getKey() {
         return buildKey(agentId, userId);
     }
 
     /**
-     * Builds a composite key from the given agent and user identifiers.
+     * Runtime status of a managed instance.
      *
-     * @param agentId the agentId parameter
-     * @param userId the userId parameter
-     * @return the result
+     * @author x00000000
+     * @since 2026-05-09
      */
-    public static String buildKey(String agentId, String userId) {
-        return agentId + ":" + userId;
+    public enum Status {
+        STARTING,
+        RUNNING,
+        STOPPED,
+        ERROR
     }
 }

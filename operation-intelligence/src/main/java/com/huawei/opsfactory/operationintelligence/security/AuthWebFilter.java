@@ -37,18 +37,18 @@ public class AuthWebFilter implements WebFilter {
 
     private final OperationIntelligenceProperties properties;
 
-/**
- * Auth Web Filter.
- *
- * @param properties the properties
- */
+    /**
+     * Auth Web Filter.
+     *
+     * @param properties the properties
+     */
     public AuthWebFilter(OperationIntelligenceProperties properties) {
         this.properties = properties;
     }
 
-/**
- * {@inheritDoc}
- */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();

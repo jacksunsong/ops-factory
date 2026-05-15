@@ -35,7 +35,9 @@ public class FileAttachmentHookTest {
     public TemporaryFolder tempFolder = new TemporaryFolder();
 
     private AgentConfigService agentConfigService;
+
     private FileAttachmentHook hook;
+
     private Path usersDir;
 
     /**
@@ -59,9 +61,7 @@ public class FileAttachmentHookTest {
     public void testNoUserMessage_passthrough() {
         String body = "{\"other\": \"data\"}";
         HookContext ctx = new HookContext(body, "agent1", "user1");
-        StepVerifier.create(hook.process(ctx))
-                .expectNext(ctx)
-                .verifyComplete();
+        StepVerifier.create(hook.process(ctx)).expectNext(ctx).verifyComplete();
     }
 
     /**
@@ -71,9 +71,7 @@ public class FileAttachmentHookTest {
     public void testNoContent_passthrough() {
         String body = "{\"user_message\": {\"text\": \"hello\"}}";
         HookContext ctx = new HookContext(body, "agent1", "user1");
-        StepVerifier.create(hook.process(ctx))
-                .expectNext(ctx)
-                .verifyComplete();
+        StepVerifier.create(hook.process(ctx)).expectNext(ctx).verifyComplete();
     }
 
     /**
@@ -83,9 +81,7 @@ public class FileAttachmentHookTest {
     public void testNonArrayContent_passthrough() {
         String body = "{\"user_message\": {\"content\": \"plain text\"}}";
         HookContext ctx = new HookContext(body, "agent1", "user1");
-        StepVerifier.create(hook.process(ctx))
-                .expectNext(ctx)
-                .verifyComplete();
+        StepVerifier.create(hook.process(ctx)).expectNext(ctx).verifyComplete();
     }
 
     /**
@@ -95,9 +91,7 @@ public class FileAttachmentHookTest {
     public void testNoFilePaths_passthrough() {
         String body = "{\"user_message\": {\"content\": [{\"type\": \"text\", \"text\": \"no paths here\"}]}}";
         HookContext ctx = new HookContext(body, "agent1", "user1");
-        StepVerifier.create(hook.process(ctx))
-                .expectNext(ctx)
-                .verifyComplete();
+        StepVerifier.create(hook.process(ctx)).expectNext(ctx).verifyComplete();
     }
 
     /**
@@ -114,13 +108,11 @@ public class FileAttachmentHookTest {
         Files.writeString(validFile, "content");
 
         String filePath = validFile.toAbsolutePath().normalize().toString();
-        String body = "{\"user_message\": {\"content\": [{\"type\": \"text\", \"text\": \"See file " +
-                filePath + "\"}]}}";
+        String body =
+            "{\"user_message\": {\"content\": [{\"type\": \"text\", \"text\": \"See file " + filePath + "\"}]}}";
         HookContext ctx = new HookContext(body, "agent1", "user1");
 
-        StepVerifier.create(hook.process(ctx))
-                .expectNext(ctx)
-                .verifyComplete();
+        StepVerifier.create(hook.process(ctx)).expectNext(ctx).verifyComplete();
     }
 
     /**
@@ -141,12 +133,10 @@ public class FileAttachmentHookTest {
         String body = "{\"user_message\": {\"content\": [{\"type\": \"text\", \"text\": \"See " + filePath + "\"}]}}";
         HookContext ctx = new HookContext(body, "agent1", "user1");
 
-        StepVerifier.create(hook.process(ctx))
-                .expectErrorSatisfies(e -> {
-                    assertTrue(e instanceof ResponseStatusException);
-                    assertEquals(HttpStatus.FORBIDDEN, ((ResponseStatusException) e).getStatusCode());
-                })
-                .verify();
+        StepVerifier.create(hook.process(ctx)).expectErrorSatisfies(e -> {
+            assertTrue(e instanceof ResponseStatusException);
+            assertEquals(HttpStatus.FORBIDDEN, ((ResponseStatusException) e).getStatusCode());
+        }).verify();
     }
 
     /**
@@ -160,17 +150,15 @@ public class FileAttachmentHookTest {
         Path agentsDir = usersDir.resolve("user1").resolve("agents");
         Files.createDirectories(agentsDir);
 
-        String filePath = agentsDir.resolve("agent1").resolve("nonexistent.txt")
-                .toAbsolutePath().normalize().toString();
+        String filePath =
+            agentsDir.resolve("agent1").resolve("nonexistent.txt").toAbsolutePath().normalize().toString();
         String body = "{\"user_message\": {\"content\": [{\"type\": \"text\", \"text\": \"See " + filePath + "\"}]}}";
         HookContext ctx = new HookContext(body, "agent1", "user1");
 
-        StepVerifier.create(hook.process(ctx))
-                .expectErrorSatisfies(e -> {
-                    assertTrue(e instanceof ResponseStatusException);
-                    assertEquals(HttpStatus.NOT_FOUND, ((ResponseStatusException) e).getStatusCode());
-                })
-                .verify();
+        StepVerifier.create(hook.process(ctx)).expectErrorSatisfies(e -> {
+            assertTrue(e instanceof ResponseStatusException);
+            assertEquals(HttpStatus.NOT_FOUND, ((ResponseStatusException) e).getStatusCode());
+        }).verify();
     }
 
     /**
@@ -181,9 +169,7 @@ public class FileAttachmentHookTest {
         // Image type content should be skipped
         String body = "{\"user_message\": {\"content\": [{\"type\": \"image\", \"data\": \"abc123\"}]}}";
         HookContext ctx = new HookContext(body, "agent1", "user1");
-        StepVerifier.create(hook.process(ctx))
-                .expectNext(ctx)
-                .verifyComplete();
+        StepVerifier.create(hook.process(ctx)).expectNext(ctx).verifyComplete();
     }
 
     /**
@@ -192,9 +178,7 @@ public class FileAttachmentHookTest {
     @Test
     public void testInvalidJson_passthrough() {
         HookContext ctx = new HookContext("not valid json", "agent1", "user1");
-        StepVerifier.create(hook.process(ctx))
-                .expectNext(ctx)
-                .verifyComplete();
+        StepVerifier.create(hook.process(ctx)).expectNext(ctx).verifyComplete();
     }
 
     /**
@@ -204,8 +188,6 @@ public class FileAttachmentHookTest {
     public void testEmptyContentArray_passthrough() {
         String body = "{\"user_message\": {\"content\": []}}";
         HookContext ctx = new HookContext(body, "agent1", "user1");
-        StepVerifier.create(hook.process(ctx))
-                .expectNext(ctx)
-                .verifyComplete();
+        StepVerifier.create(hook.process(ctx)).expectNext(ctx).verifyComplete();
     }
 }

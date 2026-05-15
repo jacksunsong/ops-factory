@@ -41,8 +41,7 @@ public class BusinessServiceController {
     /**
      * Creates the business service controller instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param businessServiceService service handling business service CRUD operations
      */
     public BusinessServiceController(BusinessServiceService businessServiceService) {
         this.businessServiceService = businessServiceService;
@@ -51,11 +50,11 @@ public class BusinessServiceController {
     /**
      * Lists business services, optionally filtered by group, host, or keyword.
      *
-     * @param groupId the groupId parameter
-     * @param hostId the hostId parameter
-     * @param keyword the keyword parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param groupId optional group identifier filter
+     * @param hostId optional host identifier filter
+     * @param keyword optional keyword for full-text search
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting a map with "businessServices" list
      */
     @GetMapping
     public Mono<Map<String, Object>> listBusinessServices(
@@ -79,9 +78,9 @@ public class BusinessServiceController {
     /**
      * Gets a business service by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id business service identifier
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity containing the business service or 404
      */
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getBusinessService(@PathVariable("id") String id,
@@ -106,9 +105,9 @@ public class BusinessServiceController {
     /**
      * Gets a business service with its associated hosts resolved.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id business service identifier
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity containing the resolved business service or 404
      */
     @GetMapping("/{id}/resolved")
     public Mono<ResponseEntity<Map<String, Object>>> getResolved(@PathVariable("id") String id,
@@ -133,9 +132,9 @@ public class BusinessServiceController {
     /**
      * Lists hosts associated with a business service.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id business service identifier
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting a map with "hosts" list
      */
     @GetMapping("/{id}/hosts")
     public Mono<Map<String, Object>> getHosts(@PathVariable("id") String id, ServerWebExchange exchange) {
@@ -151,9 +150,9 @@ public class BusinessServiceController {
     /**
      * Gets the topology data for a business service.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id business service identifier
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting a map with topology data
      */
     @GetMapping("/{id}/topology")
     public Mono<Map<String, Object>> getTopology(@PathVariable("id") String id, ServerWebExchange exchange) {
@@ -165,9 +164,9 @@ public class BusinessServiceController {
     /**
      * Creates a new business service.
      *
-     * @param request the request parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param request request body containing business service fields
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with created business service or 400
      */
     @PostMapping
     public Mono<ResponseEntity<Map<String, Object>>> createBusinessService(@RequestBody Map<String, Object> request,
@@ -192,10 +191,10 @@ public class BusinessServiceController {
     /**
      * Updates a business service by ID.
      *
-     * @param id the id parameter
-     * @param request the request parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id business service identifier
+     * @param request request body containing updated fields
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with updated business service or 404
      */
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateBusinessService(@PathVariable("id") String id,
@@ -220,9 +219,9 @@ public class BusinessServiceController {
     /**
      * Deletes a business service by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id business service identifier
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with success status or 404
      */
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteBusinessService(@PathVariable("id") String id,
@@ -245,8 +244,8 @@ public class BusinessServiceController {
     /**
      * Migrates business data from the legacy business field to the business service table.
      *
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting a map with migration result counts
      */
     @PostMapping("/migrate")
     public Mono<Map<String, Object>> migrate(ServerWebExchange exchange) {

@@ -4,11 +4,12 @@
 
 package com.huawei.opsfactory.gateway.service;
 
-import com.huawei.opsfactory.gateway.config.GatewayProperties;
-import org.junit.Test;
-
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
+import org.junit.Test;
 
 /**
  * Test coverage for Langfuse Service.

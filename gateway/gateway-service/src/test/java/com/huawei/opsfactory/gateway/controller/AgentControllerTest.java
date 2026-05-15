@@ -4,6 +4,9 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+
 import com.huawei.opsfactory.gateway.common.model.AgentRegistryEntry;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.huawei.opsfactory.gateway.filter.AuthWebFilter;
@@ -11,6 +14,7 @@ import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.process.InstanceManager;
 import com.huawei.opsfactory.gateway.process.PrewarmService;
 import com.huawei.opsfactory.gateway.service.AgentConfigService;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -27,9 +31,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
 
 /**
  * Test coverage for Agent Controller.
@@ -58,32 +59,40 @@ public class AgentControllerTest {
      */
     @Test
     public void testListAgents() {
-        when(agentConfigService.getRegistry()).thenReturn(List.of(
-                new AgentRegistryEntry("agent1", "Agent One"),
-                new AgentRegistryEntry("agent2", "Agent Two")
-        ));
+        when(agentConfigService.getRegistry()).thenReturn(
+            List.of(new AgentRegistryEntry("agent1", "Agent One"), new AgentRegistryEntry("agent2", "Agent Two")));
         when(agentConfigService.loadAgentConfigYaml("agent1"))
-                .thenReturn(Map.of("GOOSE_PROVIDER", "openai", "GOOSE_MODEL", "gpt-4o"));
+            .thenReturn(Map.of("GOOSE_PROVIDER", "openai", "GOOSE_MODEL", "gpt-4o"));
         when(agentConfigService.loadAgentConfigYaml("agent2"))
-                .thenReturn(Map.of("GOOSE_PROVIDER", "anthropic", "GOOSE_MODEL", "claude-3"));
-        when(agentConfigService.listSkills("agent1")).thenReturn(List.of(
-                Map.of("name", "brainstorming", "description", "Brainstorm ideas", "path", "skills/brainstorming")));
+            .thenReturn(Map.of("GOOSE_PROVIDER", "anthropic", "GOOSE_MODEL", "claude-3"));
+        when(agentConfigService.listSkills("agent1")).thenReturn(List
+            .of(Map.of("name", "brainstorming", "description", "Brainstorm ideas", "path", "skills/brainstorming")));
         when(agentConfigService.listSkills("agent2")).thenReturn(Collections.emptyList());
 
-        webTestClient.get().uri("/gateway/agents")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "alice")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.agents[0].id").isEqualTo("agent1")
-                .jsonPath("$.agents[0].name").isEqualTo("Agent One")
-                .jsonPath("$.agents[0].sysOnly").doesNotExist()
-                .jsonPath("$.agents[0].provider").isEqualTo("openai")
-                .jsonPath("$.agents[0].skills.length()").isEqualTo(1)
-                .jsonPath("$.agents[0].skills[0].name").isEqualTo("brainstorming")
-                .jsonPath("$.agents[0].skills[0].description").isEqualTo("Brainstorm ideas")
-                .jsonPath("$.agents[1].id").isEqualTo("agent2");
+        webTestClient.get()
+            .uri("/gateway/agents")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "alice")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.agents[0].id")
+            .isEqualTo("agent1")
+            .jsonPath("$.agents[0].name")
+            .isEqualTo("Agent One")
+            .jsonPath("$.agents[0].sysOnly")
+            .doesNotExist()
+            .jsonPath("$.agents[0].provider")
+            .isEqualTo("openai")
+            .jsonPath("$.agents[0].skills.length()")
+            .isEqualTo(1)
+            .jsonPath("$.agents[0].skills[0].name")
+            .isEqualTo("brainstorming")
+            .jsonPath("$.agents[0].skills[0].description")
+            .isEqualTo("Brainstorm ideas")
+            .jsonPath("$.agents[1].id")
+            .isEqualTo("agent2");
     }
 
     /**
@@ -93,13 +102,16 @@ public class AgentControllerTest {
     public void testListAgents_empty() {
         when(agentConfigService.getRegistry()).thenReturn(List.of());
 
-        webTestClient.get().uri("/gateway/agents")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "alice")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.agents.length()").isEqualTo(0);
+        webTestClient.get()
+            .uri("/gateway/agents")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "alice")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.agents.length()")
+            .isEqualTo(0);
     }
 
     /**
@@ -116,16 +128,20 @@ public class AgentControllerTest {
         agent.put("model", "gpt-4o");
         when(agentConfigService.createAgent(eq("new-agent"), eq("New Agent"))).thenReturn(agent);
 
-        webTestClient.post().uri("/gateway/agents")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"id\": \"new-agent\", \"name\": \"New Agent\"}")
-                .exchange()
-                .expectStatus().isCreated()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.agent.id").isEqualTo("new-agent");
+        webTestClient.post()
+            .uri("/gateway/agents")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("{\"id\": \"new-agent\", \"name\": \"New Agent\"}")
+            .exchange()
+            .expectStatus()
+            .isCreated()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.agent.id")
+            .isEqualTo("new-agent");
     }
 
     /**
@@ -133,13 +149,15 @@ public class AgentControllerTest {
      */
     @Test
     public void testCreateAgent_nonAdminForbidden() {
-        webTestClient.post().uri("/gateway/agents")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"id\": \"new-agent\", \"name\": \"New Agent\"}")
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.post()
+            .uri("/gateway/agents")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("{\"id\": \"new-agent\", \"name\": \"New Agent\"}")
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 
     /**
@@ -147,13 +165,15 @@ public class AgentControllerTest {
      */
     @Test
     public void testCreateAgent_missingId() {
-        webTestClient.post().uri("/gateway/agents")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"name\": \"New Agent\"}")
-                .exchange()
-                .expectStatus().isBadRequest();
+        webTestClient.post()
+            .uri("/gateway/agents")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("{\"name\": \"New Agent\"}")
+            .exchange()
+            .expectStatus()
+            .isBadRequest();
     }
 
     /**
@@ -166,13 +186,16 @@ public class AgentControllerTest {
         Mockito.doNothing().when(instanceManager).stopAllForAgent("agent1");
         Mockito.doNothing().when(agentConfigService).deleteAgent("agent1");
 
-        webTestClient.delete().uri("/gateway/agents/agent1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true);
+        webTestClient.delete()
+            .uri("/gateway/agents/agent1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true);
     }
 
     /**
@@ -180,11 +203,13 @@ public class AgentControllerTest {
      */
     @Test
     public void testDeleteAgent_nonAdminForbidden() {
-        webTestClient.delete().uri("/gateway/agents/agent1")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.delete()
+            .uri("/gateway/agents/agent1")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 
     /**
@@ -192,20 +217,26 @@ public class AgentControllerTest {
      */
     @Test
     public void testGetSkills_asAdmin() {
-        when(agentConfigService.listSkills("agent1")).thenReturn(List.of(
-                Map.of("name", "brainstorming", "description", "Brainstorm ideas", "path", "skills/brainstorming"),
+        when(agentConfigService.listSkills("agent1")).thenReturn(
+            List.of(Map.of("name", "brainstorming", "description", "Brainstorm ideas", "path", "skills/brainstorming"),
                 Map.of("name", "analysis", "description", "Analyze data", "path", "skills/analysis")));
 
-        webTestClient.get().uri("/gateway/agents/agent1/skills")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.skills[0].name").isEqualTo("brainstorming")
-                .jsonPath("$.skills[0].description").isEqualTo("Brainstorm ideas")
-                .jsonPath("$.skills[1].name").isEqualTo("analysis")
-                .jsonPath("$.skills[1].description").isEqualTo("Analyze data");
+        webTestClient.get()
+            .uri("/gateway/agents/agent1/skills")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.skills[0].name")
+            .isEqualTo("brainstorming")
+            .jsonPath("$.skills[0].description")
+            .isEqualTo("Brainstorm ideas")
+            .jsonPath("$.skills[1].name")
+            .isEqualTo("analysis")
+            .jsonPath("$.skills[1].description")
+            .isEqualTo("Analyze data");
     }
 
     /**
@@ -213,8 +244,7 @@ public class AgentControllerTest {
      */
     @Test
     public void testGetConfig_asAdmin() {
-        when(agentConfigService.findAgent("agent1"))
-                .thenReturn(new AgentRegistryEntry("agent1", "Agent One"));
+        when(agentConfigService.findAgent("agent1")).thenReturn(new AgentRegistryEntry("agent1", "Agent One"));
         when(agentConfigService.readAgentsMd("agent1")).thenReturn("# Agent One\n");
         Map<String, Object> config = new HashMap<>();
         config.put("GOOSE_PROVIDER", "anthropic");
@@ -222,15 +252,20 @@ public class AgentControllerTest {
         when(agentConfigService.loadAgentConfigYaml("agent1")).thenReturn(config);
         when(agentConfigService.getAgentsDir()).thenReturn(java.nio.file.Path.of("/tmp/agents"));
 
-        webTestClient.get().uri("/gateway/agents/agent1/config")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.agentsMd").isEqualTo("# Agent One\n")
-                .jsonPath("$.provider").isEqualTo("anthropic")
-                .jsonPath("$.model").isEqualTo("claude-3");
+        webTestClient.get()
+            .uri("/gateway/agents/agent1/config")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.agentsMd")
+            .isEqualTo("# Agent One\n")
+            .jsonPath("$.provider")
+            .isEqualTo("anthropic")
+            .jsonPath("$.model")
+            .isEqualTo("claude-3");
     }
 
     /**
@@ -240,19 +275,21 @@ public class AgentControllerTest {
      */
     @Test
     public void testUpdateConfig_asAdmin() throws Exception {
-        when(agentConfigService.findAgent("agent1"))
-                .thenReturn(new AgentRegistryEntry("agent1", "Agent One"));
+        when(agentConfigService.findAgent("agent1")).thenReturn(new AgentRegistryEntry("agent1", "Agent One"));
         Mockito.doNothing().when(agentConfigService).writeAgentsMd("agent1", "# Updated\n");
 
-        webTestClient.put().uri("/gateway/agents/agent1/config")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"agentsMd\": \"# Updated\\n\"}")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true);
+        webTestClient.put()
+            .uri("/gateway/agents/agent1/config")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("{\"agentsMd\": \"# Updated\\n\"}")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true);
     }
 
     /**
@@ -260,13 +297,15 @@ public class AgentControllerTest {
      */
     @Test
     public void testUpdateConfig_nonAdminForbidden() {
-        webTestClient.put().uri("/gateway/agents/agent1/config")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"agentsMd\": \"# Updated\"}")
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.put()
+            .uri("/gateway/agents/agent1/config")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("{\"agentsMd\": \"# Updated\"}")
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 
     /**
@@ -274,13 +313,15 @@ public class AgentControllerTest {
      */
     @Test
     public void testCreateAgent_missingName() {
-        webTestClient.post().uri("/gateway/agents")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"id\": \"new-agent\"}")
-                .exchange()
-                .expectStatus().isBadRequest();
+        webTestClient.post()
+            .uri("/gateway/agents")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("{\"id\": \"new-agent\"}")
+            .exchange()
+            .expectStatus()
+            .isBadRequest();
     }
 
     /**
@@ -288,13 +329,15 @@ public class AgentControllerTest {
      */
     @Test
     public void testCreateAgent_blankId() {
-        webTestClient.post().uri("/gateway/agents")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"id\": \"   \", \"name\": \"New Agent\"}")
-                .exchange()
-                .expectStatus().isBadRequest();
+        webTestClient.post()
+            .uri("/gateway/agents")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("{\"id\": \"   \", \"name\": \"New Agent\"}")
+            .exchange()
+            .expectStatus()
+            .isBadRequest();
     }
 
     /**
@@ -305,15 +348,17 @@ public class AgentControllerTest {
     @Test
     public void testCreateAgent_duplicateReturns400() throws Exception {
         when(agentConfigService.createAgent(eq("dup-agent"), eq("Dup Agent")))
-                .thenThrow(new IllegalArgumentException("Agent already exists"));
+            .thenThrow(new IllegalArgumentException("Agent already exists"));
 
-        webTestClient.post().uri("/gateway/agents")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"id\": \"dup-agent\", \"name\": \"Dup Agent\"}")
-                .exchange()
-                .expectStatus().isBadRequest();
+        webTestClient.post()
+            .uri("/gateway/agents")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("{\"id\": \"dup-agent\", \"name\": \"Dup Agent\"}")
+            .exchange()
+            .expectStatus()
+            .isBadRequest();
     }
 
     /**
@@ -324,18 +369,22 @@ public class AgentControllerTest {
     @Test
     public void testCreateAgent_ioFailureReturns500() throws Exception {
         when(agentConfigService.createAgent(eq("io-agent"), eq("IO Agent")))
-                .thenThrow(new IOException("disk full"));
+            .thenThrow(new IllegalStateException("disk full"));
 
-        webTestClient.post().uri("/gateway/agents")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue("{\"id\": \"io-agent\", \"name\": \"IO Agent\"}")
-                .exchange()
-                .expectStatus().is5xxServerError()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error").isEqualTo("Failed to create agent");
+        webTestClient.post()
+            .uri("/gateway/agents")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("{\"id\": \"io-agent\", \"name\": \"IO Agent\"}")
+            .exchange()
+            .expectStatus()
+            .is5xxServerError()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false)
+            .jsonPath("$.error")
+            .isEqualTo("Failed to create agent");
     }
 
     /**
@@ -343,11 +392,13 @@ public class AgentControllerTest {
      */
     @Test
     public void testGetSkills_nonAdminForbidden() {
-        webTestClient.get().uri("/gateway/agents/agent1/skills")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.get()
+            .uri("/gateway/agents/agent1/skills")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 
     /**
@@ -355,11 +406,13 @@ public class AgentControllerTest {
      */
     @Test
     public void testGetConfig_nonAdminForbidden() {
-        webTestClient.get().uri("/gateway/agents/agent1/config")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.get()
+            .uri("/gateway/agents/agent1/config")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 
     /**
@@ -370,12 +423,15 @@ public class AgentControllerTest {
         // listAgents does not require admin, just auth
         when(agentConfigService.getRegistry()).thenReturn(List.of());
 
-        webTestClient.get().uri("/gateway/agents")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.agents").isArray();
+        webTestClient.get()
+            .uri("/gateway/agents")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.agents")
+            .isArray();
     }
 }

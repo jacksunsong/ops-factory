@@ -4,27 +4,29 @@ import { useTranslation } from 'react-i18next'
 import { useAgentConfig } from '../hooks/useAgentConfig'
 import { useToast } from '../../../platform/providers/ToastContext'
 import { McpSection } from '../components/mcp'
+import { BasicInfoSection } from '../components/info'
+import { ModelConfigSection } from '../components/model'
 import { SkillMarketDrawer, SkillSection } from '../components/skill'
 import { PromptsSection } from '../components/prompt'
 import { MemorySection } from '../components/memory'
-import Button from '../../../platform/ui/primitives/Button'
 import PageBackLink from '../../../platform/ui/primitives/PageBackLink'
 import { useGoosed } from '../../../platform/providers/GoosedContext'
+import type { AgentModelConfig, CreateProviderRequest, UpdateProviderRequest } from '../../../../types/agentConfig'
 import type { SkillEntry } from '../../../../types/skill'
 import '../styles/agents.css'
 
-type ConfigTab = 'overview' | 'prompts' | 'mcp' | 'skills' | 'memory'
+type ConfigTab = 'basic' | 'model' | 'prompts' | 'mcp' | 'skills' | 'memory'
 
 export default function AgentConfigure() {
     const { t } = useTranslation()
     const { agentId } = useParams<{ agentId: string }>()
     const navigate = useNavigate()
-    const { config, isLoading, error, fetchConfig, updateConfig } = useAgentConfig()
+    const { config, isLoading, error, fetchConfig, updateConfig, updateModelConfig, createProvider, updateProvider } = useAgentConfig()
     const { showToast } = useToast()
     const { refreshAgents } = useGoosed()
 
     // Tab state
-    const [activeTab, setActiveTab] = useState<ConfigTab>('overview')
+    const [activeTab, setActiveTab] = useState<ConfigTab>('basic')
     const [isSkillMarketOpen, setIsSkillMarketOpen] = useState(false)
     const [skillRefreshKey, setSkillRefreshKey] = useState(0)
     const [installedSkills, setInstalledSkills] = useState<SkillEntry[]>([])
@@ -60,19 +62,61 @@ export default function AgentConfigure() {
         }
     }, [activeTab])
 
-    const handleSavePrompt = async () => {
-        if (!agentId) return
+    const handleSavePrompt = async (nextAgentsMd?: string) => {
+        if (!agentId) return false
         setIsSavingPrompt(true)
 
-        const result = await updateConfig(agentId, { agentsMd })
+        const content = nextAgentsMd ?? agentsMd
+        const result = await updateConfig(agentId, { agentsMd: content })
 
         if (result.success) {
+            setAgentsMd(content)
             showToast('success', t('agentConfigure.promptSaved'))
+            setIsSavingPrompt(false)
+            return true
         } else {
             showToast('error', result.error || t('agentConfigure.promptSaveFailed'))
         }
 
         setIsSavingPrompt(false)
+        return false
+    }
+
+    const handleSaveModelConfig = async (updates: AgentModelConfig) => {
+        if (!agentId) return false
+        const result = await updateModelConfig(agentId, updates)
+        if (result.success) {
+            showToast('success', t('agentConfigure.modelConfigSaved'))
+            await fetchConfig(agentId)
+            await refreshAgents()
+            return true
+        }
+        showToast('error', result.error || t('agentConfigure.modelConfigSaveFailed'))
+        return false
+    }
+
+    const handleCreateProvider = async (provider: CreateProviderRequest) => {
+        if (!agentId) return false
+        const result = await createProvider(agentId, provider)
+        if (result.success) {
+            showToast('success', t('agentConfigure.providerCreated'))
+            await fetchConfig(agentId)
+            return true
+        }
+        showToast('error', result.error || t('agentConfigure.providerCreateFailed'))
+        return false
+    }
+
+    const handleUpdateProvider = async (providerName: string, provider: UpdateProviderRequest) => {
+        if (!agentId) return false
+        const result = await updateProvider(agentId, providerName, provider)
+        if (result.success) {
+            showToast('success', t('agentConfigure.providerUpdated'))
+            await fetchConfig(agentId)
+            return true
+        }
+        showToast('error', result.error || t('agentConfigure.providerUpdateFailed'))
+        return false
     }
 
     if (isLoading) {
@@ -97,7 +141,8 @@ export default function AgentConfigure() {
     }
 
     const tabs: { key: ConfigTab; label: string }[] = [
-        { key: 'overview', label: t('configTabs.overview') },
+        { key: 'basic', label: t('configTabs.basic') },
+        { key: 'model', label: t('configTabs.model') },
         { key: 'prompts', label: t('configTabs.prompts') },
         { key: 'mcp', label: t('configTabs.mcp') },
         { key: 'skills', label: t('configTabs.skills') },
@@ -134,40 +179,27 @@ export default function AgentConfigure() {
 
                     {/* Tab Content */}
                     <div className="agent-configure-content">
-                        {activeTab === 'overview' && (
-                            <section className="agent-configure-section">
-                                <div className="agent-configure-section-header">
-                                    <div className="agent-configure-section-copy">
-                                        <h2 className="agent-configure-section-title">{t('agentConfigure.agentPromptTitle')}</h2>
-                                        <p className="agent-configure-section-desc">
-                                            {t('agentConfigure.agentPromptDesc')}
-                                        </p>
-                                    </div>
-                                    <div className="agent-configure-actions agent-configure-actions-top">
-                                        <Button
-                                            variant="primary"
-                                            size="sm"
-                                            onClick={handleSavePrompt}
-                                            disabled={isSavingPrompt}
-                                        >
-                                            {isSavingPrompt ? t('agentConfigure.saving') : t('agentConfigure.savePrompt')}
-                                        </Button>
-                                    </div>
-                                </div>
-                                <div className="agent-prompt-editor">
-                                    <textarea
-                                        value={agentsMd}
-                                        onChange={(e) => setAgentsMd(e.target.value)}
-                                        placeholder={t('agentConfigure.promptPlaceholder')}
-                                        rows={15}
-                                    />
-                                </div>
-                            </section>
+                        {activeTab === 'basic' && (
+                            <BasicInfoSection config={config} />
+                        )}
+
+                        {activeTab === 'model' && (
+                            <ModelConfigSection
+                                config={config}
+                                onSave={handleSaveModelConfig}
+                                onCreateProvider={handleCreateProvider}
+                                onUpdateProvider={handleUpdateProvider}
+                            />
                         )}
 
                         {activeTab === 'prompts' && (
                             <section className="agent-configure-section">
-                                <PromptsSection agentId={agentId || null} />
+                                <PromptsSection
+                                    agentId={agentId || null}
+                                    agentsMd={agentsMd}
+                                    isSavingPrompt={isSavingPrompt}
+                                    onSavePrompt={handleSavePrompt}
+                                />
                             </section>
                         )}
 

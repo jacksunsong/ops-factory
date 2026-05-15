@@ -47,21 +47,21 @@ public class DvAuthService {
 
     private final ConcurrentHashMap<String, WebClient> clientCache = new ConcurrentHashMap<>();
 
-/**
- * Dv Auth Service.
- *
- * @param sslFactory the sslFactory
- */
+    /**
+     * Dv Auth Service.
+     *
+     * @param sslFactory the sslFactory
+     */
     public DvAuthService(DvSslContextFactory sslFactory) {
         this.sslFactory = sslFactory;
     }
 
-/**
- * Gets the ssotoken.
- *
- * @param env the env
- * @return the result
- */
+    /**
+     * Gets the ssotoken.
+     *
+     * @param env the env
+     * @return the result
+     */
     public synchronized TokenInfo getSSOToken(DvEnvironmentInfo env) {
         String cacheKey = env.getServerUrl() + ":" + env.getUtmUser();
         TokenInfo cached = tokenCache.get(cacheKey);
@@ -73,12 +73,12 @@ public class DvAuthService {
         return newToken;
     }
 
-/**
- * build Auth Headers.
- *
- * @param env the env
- * @return the result
- */
+    /**
+     * build Auth Headers.
+     *
+     * @param env the env
+     * @return the result
+     */
     public Map<String, String> buildAuthHeaders(DvEnvironmentInfo env) {
         String cacheKey = env.getServerUrl() + ":" + env.getUtmUser();
         TokenInfo info = tokenCache.get(cacheKey);
@@ -90,9 +90,9 @@ public class DvAuthService {
         return headers;
     }
 
-/**
- * clear Cache.
- */
+    /**
+     * clear Cache.
+     */
     public void clearCache() {
         tokenCache.clear();
     }
@@ -154,9 +154,9 @@ public class DvAuthService {
         }
     }
 
-/**
- * shutdown.
- */
+    /**
+     * shutdown.
+     */
     @PreDestroy
     public void shutdown() {
         clientCache.clear();

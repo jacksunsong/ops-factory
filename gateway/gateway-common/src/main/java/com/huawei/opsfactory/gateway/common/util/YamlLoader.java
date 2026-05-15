@@ -27,8 +27,8 @@ public final class YamlLoader {
     /**
      * Loads a YAML file as a map and returns an empty map when the file is absent.
      *
-     * @param path the path parameter
-     * @return the result
+     * @param path path to the YAML file
+     * @return parsed key-value map, or empty map if the file does not exist
      */
     public static Map<String, Object> load(Path path) {
         if (!Files.exists(path)) {
@@ -48,10 +48,10 @@ public final class YamlLoader {
     /**
      * Returns a string value from a map, or the default when absent.
      *
-     * @param map the map parameter
-     * @param key the key parameter
-     * @param defaultValue the defaultValue parameter
-     * @return the result
+     * @param map source map to read from
+     * @param key key to look up
+     * @param defaultValue fallback value when the key is missing
+     * @return the string value associated with the key, or the default
      */
     public static String getString(Map<String, Object> map, String key, String defaultValue) {
         Object val = map.get(key);
@@ -61,10 +61,10 @@ public final class YamlLoader {
     /**
      * Returns an integer value from a map, or the default when absent or invalid.
      *
-     * @param map the map parameter
-     * @param key the key parameter
-     * @param defaultValue the defaultValue parameter
-     * @return the result
+     * @param map source map to read from
+     * @param key key to look up
+     * @param defaultValue fallback value when the key is missing or not a number
+     * @return the integer value associated with the key, or the default
      */
     public static int getInt(Map<String, Object> map, String key, int defaultValue) {
         Object val = map.get(key);

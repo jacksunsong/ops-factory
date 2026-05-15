@@ -54,9 +54,6 @@ public class InternalRuntimeSourceController {
 
     /**
      * Creates the internal runtime source controller.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public InternalRuntimeSourceController(InstanceManager instanceManager, AgentConfigService agentConfigService,
         LangfuseService langfuseService, GatewayProperties gatewayProperties, MetricsBuffer metricsBuffer) {
@@ -85,8 +82,8 @@ public class InternalRuntimeSourceController {
     /**
      * Returns system-level information including uptime, agent count, and configuration.
      *
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param exchange returns system-level information including uptime, agent count, and configuration
+     * @return system-level information including uptime, agent count, and configuration
      */
     @GetMapping("/system")
     public Map<String, Object> system(ServerWebExchange exchange) {
@@ -111,8 +108,8 @@ public class InternalRuntimeSourceController {
     /**
      * Returns the current status of all managed goosed instances.
      *
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param exchange returns the current status of all managed goosed instances
+     * @return the current status of all managed goosed instances
      */
     @GetMapping("/instances")
     public Map<String, Object> instances(ServerWebExchange exchange) {
@@ -155,8 +152,8 @@ public class InternalRuntimeSourceController {
     /**
      * Returns aggregated metrics including request counts, latency, throughput, and time series data.
      *
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param exchange returns aggregated metrics including request counts, latency, throughput, and time series data
+     * @return aggregated metrics including request counts, latency, throughput, and time series data
      */
     @GetMapping("/metrics")
     public Map<String, Object> metrics(ServerWebExchange exchange) {

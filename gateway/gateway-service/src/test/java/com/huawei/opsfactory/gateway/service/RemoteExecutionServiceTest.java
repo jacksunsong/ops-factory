@@ -4,7 +4,14 @@
 
 package com.huawei.opsfactory.gateway.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -13,15 +20,10 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
-
-import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Test coverage for Remote Execution Service.
@@ -47,6 +49,7 @@ public class RemoteExecutionServiceTest {
     private ClusterTypeService clusterTypeService;
 
     private RemoteExecutionService remoteExecutionService;
+
     private GatewayProperties properties;
 
     /**
@@ -55,9 +58,8 @@ public class RemoteExecutionServiceTest {
     @Before
     public void setUp() {
         properties = new GatewayProperties();
-        remoteExecutionService = new RemoteExecutionService(
-                hostService, commandWhitelistService, properties,
-                clusterService, clusterTypeService);
+        remoteExecutionService = new RemoteExecutionService(hostService, commandWhitelistService, properties,
+            clusterService, clusterTypeService);
     }
 
     // ── execute: host not found ──────────────────────────────────
@@ -68,7 +70,7 @@ public class RemoteExecutionServiceTest {
     @Test
     public void testExecute_hostNotFound() {
         when(hostService.getHostWithCredential("nonexistent"))
-                .thenThrow(new IllegalArgumentException("Host not found: nonexistent"));
+            .thenThrow(new IllegalArgumentException("Host not found: nonexistent"));
 
         Map<String, Object> result = remoteExecutionService.execute("nonexistent", "ps -ef", 30);
 
@@ -93,8 +95,7 @@ public class RemoteExecutionServiceTest {
         host.put("credential", "secret");
         when(hostService.getHostWithCredential("host-1")).thenReturn(host);
 
-        when(commandWhitelistService.validateCommand("rm -rf /"))
-                .thenReturn(List.of("rm"));
+        when(commandWhitelistService.validateCommand("rm -rf /")).thenReturn(List.of("rm"));
 
         Map<String, Object> result = remoteExecutionService.execute("host-1", "rm -rf /", 30);
 
@@ -147,8 +148,7 @@ public class RemoteExecutionServiceTest {
         when(hostService.getHostWithCredential("host-1")).thenReturn(host);
 
         // Command rejected - should NOT attempt SSH
-        when(commandWhitelistService.validateCommand("reboot"))
-                .thenReturn(List.of("reboot"));
+        when(commandWhitelistService.validateCommand("reboot")).thenReturn(List.of("reboot"));
 
         Map<String, Object> result = remoteExecutionService.execute("host-1", "reboot", 30);
 
@@ -304,8 +304,7 @@ public class RemoteExecutionServiceTest {
 
         // Whitelist should see the RESOLVED command (after variable replacement, before prefix)
         // "cd ${NSLB_HOME} && ls" -> "cd /opt/nslb && ls"
-        when(commandWhitelistService.validateCommand("cd /opt/nslb && ls"))
-                .thenReturn(List.of("cd"));
+        when(commandWhitelistService.validateCommand("cd /opt/nslb && ls")).thenReturn(List.of("cd"));
 
         Map<String, Object> result = remoteExecutionService.execute("host-1", "cd ${NSLB_HOME} && ls", 30);
 
@@ -344,8 +343,7 @@ public class RemoteExecutionServiceTest {
 
         // After replacement: "cd /opt/nslb && ls" - whitelisted
         // After prefix: "sudo -u nslb cd /opt/nslb && ls"
-        when(commandWhitelistService.validateCommand("cd /opt/nslb && ls"))
-                .thenReturn(List.of());
+        when(commandWhitelistService.validateCommand("cd /opt/nslb && ls")).thenReturn(List.of());
 
         Map<String, Object> result = remoteExecutionService.execute("host-1", "cd ${NSLB_HOME} && ls", 5);
 
@@ -402,8 +400,7 @@ public class RemoteExecutionServiceTest {
         host.put("clusterId", "cluster-1");
         when(hostService.getHostWithCredential("host-1")).thenReturn(host);
 
-        when(clusterService.getCluster("cluster-1"))
-                .thenThrow(new IllegalArgumentException("Cluster not found"));
+        when(clusterService.getCluster("cluster-1")).thenThrow(new IllegalArgumentException("Cluster not found"));
 
         // Command should still work without prefix/vars
         when(commandWhitelistService.validateCommand("ls")).thenReturn(List.of());

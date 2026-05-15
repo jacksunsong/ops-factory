@@ -4,12 +4,19 @@
 
 package com.huawei.opsfactory.gateway.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.springframework.core.io.Resource;
-import com.huawei.opsfactory.gateway.config.GatewayProperties;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -18,12 +25,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test coverage for File Service.
@@ -112,8 +113,7 @@ public class FileServiceTest {
      */
     @Test
     public void testListFiles_nonExistentDir() throws IOException {
-        List<Map<String, Object>> files = fileService.listFiles(
-                tempFolder.getRoot().toPath().resolve("nonexistent"));
+        List<Map<String, Object>> files = fileService.listFiles(tempFolder.getRoot().toPath().resolve("nonexistent"));
         assertTrue(files.isEmpty());
     }
 
@@ -135,8 +135,7 @@ public class FileServiceTest {
      */
     @Test
     public void testResolveFile_traversalAttack() {
-        Resource resource = fileService.resolveFile(
-                tempFolder.getRoot().toPath(), "../../../etc/passwd");
+        Resource resource = fileService.resolveFile(tempFolder.getRoot().toPath(), "../../../etc/passwd");
         assertNull(resource);
     }
 
@@ -145,8 +144,7 @@ public class FileServiceTest {
      */
     @Test
     public void testResolveFile_nonExistent() {
-        Resource resource = fileService.resolveFile(
-                tempFolder.getRoot().toPath(), "missing.txt");
+        Resource resource = fileService.resolveFile(tempFolder.getRoot().toPath(), "missing.txt");
         assertNull(resource);
     }
 
@@ -202,10 +200,8 @@ public class FileServiceTest {
         boolean updated = fileService.updateTextFile(tempFolder.getRoot().toPath(), "notes.md", "new");
 
         assertTrue(updated);
-        assertEquals(
-                "new",
-                Files.readString(tempFolder.getRoot().toPath().resolve("notes.md"), StandardCharsets.UTF_8)
-        );
+        assertEquals("new",
+            Files.readString(tempFolder.getRoot().toPath().resolve("notes.md"), StandardCharsets.UTF_8));
     }
 
     /**

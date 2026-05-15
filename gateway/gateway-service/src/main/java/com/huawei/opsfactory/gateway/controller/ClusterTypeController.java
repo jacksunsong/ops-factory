@@ -40,8 +40,7 @@ public class ClusterTypeController {
     /**
      * Creates the cluster type controller instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param clusterTypeService service handling cluster type CRUD operations
      */
     public ClusterTypeController(ClusterTypeService clusterTypeService) {
         this.clusterTypeService = clusterTypeService;
@@ -50,8 +49,8 @@ public class ClusterTypeController {
     /**
      * Lists all cluster type definitions.
      *
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting a map with "clusterTypes" list
      */
     @GetMapping
     public Mono<Map<String, Object>> listClusterTypes(ServerWebExchange exchange) {
@@ -67,9 +66,9 @@ public class ClusterTypeController {
     /**
      * Gets a cluster type by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id cluster type identifier
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity containing the cluster type or 404
      */
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getClusterType(@PathVariable("id") String id,
@@ -94,9 +93,9 @@ public class ClusterTypeController {
     /**
      * Creates a new cluster type.
      *
-     * @param request the request parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param request request body containing cluster type fields
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with created cluster type or 400
      */
     @PostMapping
     public Mono<ResponseEntity<Map<String, Object>>> createClusterType(@RequestBody Map<String, Object> request,
@@ -121,10 +120,10 @@ public class ClusterTypeController {
     /**
      * Updates a cluster type by ID.
      *
-     * @param id the id parameter
-     * @param request the request parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id cluster type identifier
+     * @param request request body containing updated fields
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with updated cluster type or 404
      */
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateClusterType(@PathVariable("id") String id,
@@ -149,9 +148,9 @@ public class ClusterTypeController {
     /**
      * Deletes a cluster type by ID.
      *
-     * @param id the id parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param id cluster type identifier
+     * @param exchange current HTTP exchange carrying user context
+     * @return Mono emitting ResponseEntity with success status or 404
      */
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteClusterType(@PathVariable("id") String id,

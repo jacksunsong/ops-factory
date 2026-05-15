@@ -51,8 +51,7 @@ public class ClusterService {
     /**
      * Creates the cluster service instance.
      *
-     * @author x00000000
-     * @since 2026-05-09
+     * @param properties gateway configuration properties
      */
     public ClusterService(GatewayProperties properties) {
         this.properties = properties;
@@ -61,7 +60,7 @@ public class ClusterService {
     /**
      * Sets the cluster relation service via lazy injection.
      *
-     * @param clusterRelationService the clusterRelationService parameter
+     * @param clusterRelationService service managing cluster relation edges
      */
     @Lazy
     @Autowired
@@ -89,9 +88,9 @@ public class ClusterService {
     /**
      * List clusters with optional filters.
      *
-     * @param groupId filter by group ID (null = no filter)
-     * @param type filter by cluster type (null = no filter)
-     * @return the result
+     * @param groupId optional group identifier filter (null for no filter)
+     * @param type optional cluster type filter (null for no filter)
+     * @return list of cluster maps matching the filters
      */
     public List<Map<String, Object>> listClusters(String groupId, String type) {
         List<Map<String, Object>> clusters = new ArrayList<>();
@@ -132,8 +131,8 @@ public class ClusterService {
     /**
      * Gets a cluster by its ID.
      *
-     * @param id the id parameter
-     * @return the result
+     * @param id cluster identifier
+     * @return cluster data map
      */
     public Map<String, Object> getCluster(String id) {
         Path file = clustersDir.resolve(id + ".json");
@@ -147,7 +146,7 @@ public class ClusterService {
     /**
      * Returns the distinct cluster types across all clusters.
      *
-     * @return the result
+     * @return distinct cluster type names across all clusters
      */
     public List<String> getClusterTypes() {
         LinkedHashSet<String> types = new LinkedHashSet<>();
@@ -164,8 +163,8 @@ public class ClusterService {
     /**
      * Creates a new cluster from the provided field map.
      *
-     * @param body the body parameter
-     * @return the result
+     * @param body field map for the new cluster
+     * @return the created cluster map with generated id and timestamps
      */
     public Map<String, Object> createCluster(Map<String, Object> body) {
         String id = UUID.randomUUID().toString();
@@ -190,9 +189,9 @@ public class ClusterService {
     /**
      * Updates an existing cluster with the provided field map.
      *
-     * @param id the id parameter
-     * @param body the body parameter
-     * @return the result
+     * @param id cluster identifier
+     * @param body field map with updated values
+     * @return the updated cluster map
      */
     public Map<String, Object> updateCluster(String id, Map<String, Object> body) {
         Path file = clustersDir.resolve(id + ".json");
@@ -229,7 +228,7 @@ public class ClusterService {
     /**
      * Delete a cluster. Rejects if the cluster has hosts.
      *
-     * @param id the id parameter
+     * @param id entity identifier
      * @param hostService used to check for hosts in this cluster
      * @return true if deleted
      */
@@ -263,7 +262,7 @@ public class ClusterService {
      * Force-delete a cluster: deletes all hosts in the cluster first, then the cluster itself.
      * Host deletion cascades to their relations automatically.
      *
-     * @param id the id parameter
+     * @param id cluster identifier
      * @param hostService used to delete hosts in this cluster
      * @return true if deleted
      */

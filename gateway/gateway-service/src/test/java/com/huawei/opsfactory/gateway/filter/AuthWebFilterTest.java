@@ -4,17 +4,19 @@
 
 package com.huawei.opsfactory.gateway.filter;
 
+import static org.junit.Assert.assertEquals;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
+
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.WebFilterChain;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  * Test coverage for Auth Web Filter.
@@ -24,6 +26,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class AuthWebFilterTest {
     private AuthWebFilter filter;
+
     private GatewayProperties properties;
 
     /**
@@ -45,8 +48,7 @@ public class AuthWebFilterTest {
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         WebFilterChain chain = ex -> Mono.empty();
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
     }
 
     /**
@@ -58,8 +60,7 @@ public class AuthWebFilterTest {
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         WebFilterChain chain = ex -> Mono.empty();
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
     }
 
     /**
@@ -67,14 +68,12 @@ public class AuthWebFilterTest {
      */
     @Test
     public void testValidSecretKeyInHeader() {
-        MockServerHttpRequest request = MockServerHttpRequest.get("/agents")
-                .header("x-secret-key", "test-secret")
-                .build();
+        MockServerHttpRequest request =
+            MockServerHttpRequest.get("/agents").header("x-secret-key", "test-secret").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         WebFilterChain chain = ex -> Mono.empty();
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
     }
 
     /**
@@ -86,8 +85,7 @@ public class AuthWebFilterTest {
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         WebFilterChain chain = ex -> Mono.empty();
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
     }
 
     /**
@@ -95,14 +93,12 @@ public class AuthWebFilterTest {
      */
     @Test
     public void testInvalidSecretKeyReturns401() {
-        MockServerHttpRequest request = MockServerHttpRequest.get("/agents")
-                .header("x-secret-key", "wrong-key")
-                .build();
+        MockServerHttpRequest request =
+            MockServerHttpRequest.get("/agents").header("x-secret-key", "wrong-key").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         WebFilterChain chain = ex -> Mono.empty();
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
     }
@@ -116,8 +112,7 @@ public class AuthWebFilterTest {
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
 
         WebFilterChain chain = ex -> Mono.empty();
-        StepVerifier.create(filter.filter(exchange, chain))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
 
         assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
     }

@@ -4,11 +4,14 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
+import static org.mockito.Mockito.when;
+
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.huawei.opsfactory.gateway.filter.AuthWebFilter;
 import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.CommandWhitelistService;
 import com.huawei.opsfactory.gateway.service.RemoteExecutionService;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,8 +25,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.mockito.Mockito.when;
 
 /**
  * Test coverage for Remote Exec Controller.
@@ -57,16 +58,20 @@ public class RemoteExecControllerTest {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("command", "ps -ef");
 
-        webTestClient.post().uri("/gateway/remote/execute")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isBadRequest()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error").isEqualTo("hostId is required");
+        webTestClient.post()
+            .uri("/gateway/remote/execute")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false)
+            .jsonPath("$.error")
+            .isEqualTo("hostId is required");
     }
 
     /**
@@ -78,15 +83,18 @@ public class RemoteExecControllerTest {
         body.put("hostId", "  ");
         body.put("command", "ps -ef");
 
-        webTestClient.post().uri("/gateway/remote/execute")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isBadRequest()
-                .expectBody()
-                .jsonPath("$.error").isEqualTo("hostId is required");
+        webTestClient.post()
+            .uri("/gateway/remote/execute")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .jsonPath("$.error")
+            .isEqualTo("hostId is required");
     }
 
     /**
@@ -97,16 +105,20 @@ public class RemoteExecControllerTest {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("hostId", "host-1");
 
-        webTestClient.post().uri("/gateway/remote/execute")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isBadRequest()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error").isEqualTo("command is required");
+        webTestClient.post()
+            .uri("/gateway/remote/execute")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false)
+            .jsonPath("$.error")
+            .isEqualTo("command is required");
     }
 
     /**
@@ -118,15 +130,18 @@ public class RemoteExecControllerTest {
         body.put("hostId", "host-1");
         body.put("command", "  ");
 
-        webTestClient.post().uri("/gateway/remote/execute")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isBadRequest()
-                .expectBody()
-                .jsonPath("$.error").isEqualTo("command is required");
+        webTestClient.post()
+            .uri("/gateway/remote/execute")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isBadRequest()
+            .expectBody()
+            .jsonPath("$.error")
+            .isEqualTo("command is required");
     }
 
     // ── execute: success ─────────────────────────────────────────
@@ -149,18 +164,24 @@ public class RemoteExecControllerTest {
         body.put("hostId", "host-1");
         body.put("command", "ps -ef");
 
-        webTestClient.post().uri("/gateway/remote/execute")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.hostId").isEqualTo("host-1")
-                .jsonPath("$.exitCode").isEqualTo(0)
-                .jsonPath("$.output").isEqualTo("rcpa  1234  1  0  Mar27 ?  00:05:23 /rcpa/openas")
-                .jsonPath("$.duration").isEqualTo(1250);
+        webTestClient.post()
+            .uri("/gateway/remote/execute")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.hostId")
+            .isEqualTo("host-1")
+            .jsonPath("$.exitCode")
+            .isEqualTo(0)
+            .jsonPath("$.output")
+            .isEqualTo("rcpa  1234  1  0  Mar27 ?  00:05:23 /rcpa/openas")
+            .jsonPath("$.duration")
+            .isEqualTo(1250);
     }
 
     /**
@@ -182,15 +203,18 @@ public class RemoteExecControllerTest {
         body.put("command", "ls");
         body.put("timeout", 60);
 
-        webTestClient.post().uri("/gateway/remote/execute")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.exitCode").isEqualTo(0);
+        webTestClient.post()
+            .uri("/gateway/remote/execute")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.exitCode")
+            .isEqualTo(0);
     }
 
     // ── execute: whitelist rejection ─────────────────────────────
@@ -218,15 +242,18 @@ public class RemoteExecControllerTest {
         body.put("hostId", "host-1");
         body.put("command", "rm -rf /");
 
-        webTestClient.post().uri("/gateway/remote/execute")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.exitCode").isEqualTo(-1);
+        webTestClient.post()
+            .uri("/gateway/remote/execute")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.exitCode")
+            .isEqualTo(-1);
     }
 
     /**
@@ -253,16 +280,20 @@ public class RemoteExecControllerTest {
         body.put("hostId", "host-1");
         body.put("command", "rm -rf /");
 
-        webTestClient.post().uri("/gateway/remote/execute")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isForbidden()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error").isEqualTo("Command rejected by whitelist");
+        webTestClient.post()
+            .uri("/gateway/remote/execute")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isForbidden()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false)
+            .jsonPath("$.error")
+            .isEqualTo("Command rejected by whitelist");
     }
 
     // ── execute: host not found ──────────────────────────────────
@@ -285,15 +316,18 @@ public class RemoteExecControllerTest {
         body.put("hostId", "nonexistent");
         body.put("command", "ls");
 
-        webTestClient.post().uri("/gateway/remote/execute")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.exitCode").isEqualTo(-1);
+        webTestClient.post()
+            .uri("/gateway/remote/execute")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody()
+            .jsonPath("$.exitCode")
+            .isEqualTo(-1);
     }
 
     /**
@@ -301,23 +335,26 @@ public class RemoteExecControllerTest {
      */
     @Test
     public void testExecute_unexpectedFailure_isSanitized() {
-        when(remoteExecutionService.execute("host-1", "ls", 30))
-                .thenThrow(new RuntimeException("SSH stack trace"));
+        when(remoteExecutionService.execute("host-1", "ls", 30)).thenThrow(new RuntimeException("SSH stack trace"));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("hostId", "host-1");
         body.put("command", "ls");
 
-        webTestClient.post().uri("/gateway/remote/execute")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().is5xxServerError()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(false)
-                .jsonPath("$.error").isEqualTo("Internal server error");
+        webTestClient.post()
+            .uri("/gateway/remote/execute")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .is5xxServerError()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(false)
+            .jsonPath("$.error")
+            .isEqualTo("Internal server error");
     }
 
     // ── Auth tests ───────────────────────────────────────────────
@@ -331,12 +368,14 @@ public class RemoteExecControllerTest {
         body.put("hostId", "host-1");
         body.put("command", "ls");
 
-        webTestClient.post().uri("/gateway/remote/execute")
-                .header("x-user-id", "admin")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isUnauthorized();
+        webTestClient.post()
+            .uri("/gateway/remote/execute")
+            .header("x-user-id", "admin")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isUnauthorized();
     }
 
     /**
@@ -348,12 +387,14 @@ public class RemoteExecControllerTest {
         body.put("hostId", "host-1");
         body.put("command", "ls");
 
-        webTestClient.post().uri("/gateway/remote/execute")
-                .header("x-secret-key", "test")
-                .header("x-user-id", "regular-user")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .exchange()
-                .expectStatus().isForbidden();
+        webTestClient.post()
+            .uri("/gateway/remote/execute")
+            .header("x-secret-key", "test")
+            .header("x-user-id", "regular-user")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(body)
+            .exchange()
+            .expectStatus()
+            .isForbidden();
     }
 }

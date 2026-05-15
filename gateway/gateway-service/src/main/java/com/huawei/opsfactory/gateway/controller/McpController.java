@@ -26,7 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 
-import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -50,9 +49,6 @@ public class McpController {
 
     /**
      * Creates the mcp controller instance.
-     *
-     * @author x00000000
-     * @since 2026-05-09
      */
     public McpController(InstanceManager instanceManager, GoosedProxy goosedProxy,
         AgentConfigService agentConfigService) {
@@ -64,8 +60,8 @@ public class McpController {
     /**
      * Lists MCP extensions configured on the agent's system instance.
      *
-     * @param agentId the agentId parameter
-     * @param exchange the exchange parameter
+     * @param agentId agentId
+     * @param exchange exchange
      * @return the result
      */
     @GetMapping
@@ -80,10 +76,10 @@ public class McpController {
     /**
      * Creates a new MCP extension on the agent's system instance and recycles running instances.
      *
-     * @param agentId the agentId parameter
-     * @param body the body parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId agentId
+     * @param body body
+     * @param exchange exchange
+     * @return a new MCP extension
      */
     @PostMapping
     public Mono<String> createMcpExtension(@PathVariable("agentId") String agentId, @RequestBody String body,
@@ -113,9 +109,9 @@ public class McpController {
     /**
      * Deletes an MCP extension by name and recycles running instances.
      *
-     * @param agentId the agentId parameter
-     * @param name the name parameter
-     * @param exchange the exchange parameter
+     * @param agentId agent identifier
+     * @param name name value
+     * @param exchange server web exchange
      * @return the result
      */
     @DeleteMapping("/{name}")
@@ -143,10 +139,10 @@ public class McpController {
     /**
      * Gets the settings for a specific MCP extension.
      *
-     * @param agentId the agentId parameter
-     * @param name the name parameter
-     * @param exchange the exchange parameter
-     * @return the result
+     * @param agentId agent identifier
+     * @param name name value
+     * @param exchange server web exchange
+     * @return the settings for a specific MCP extension
      */
     @GetMapping("/{name}/settings")
     public Mono<ResponseEntity<Map<String, Object>>> getMcpSettings(@PathVariable("agentId") String agentId,
@@ -168,7 +164,7 @@ public class McpController {
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.<String, Object> of());
                 }
                 return ResponseEntity.ok(settings);
-            } catch (IOException e) {
+            } catch (IllegalStateException e) {
                 if (hasConfigBackedSettings(name)) {
                     return ResponseEntity.ok(emptyKnowledgeSettings(name));
                 }
@@ -182,10 +178,10 @@ public class McpController {
     /**
      * Updates the settings for a specific MCP extension.
      *
-     * @param agentId the agentId parameter
-     * @param name the name parameter
-     * @param body the body parameter
-     * @param exchange the exchange parameter
+     * @param agentId the settings for a specific MCP extension
+     * @param name the settings for a specific MCP extension
+     * @param body the settings for a specific MCP extension
+     * @param exchange the settings for a specific MCP extension
      * @return the result
      */
     @PutMapping("/{name}/settings")
@@ -199,7 +195,7 @@ public class McpController {
             } catch (IllegalArgumentException e) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.<String, Object> of("code", "RESOURCE_NOT_FOUND", "message", e.getMessage()));
-            } catch (IOException e) {
+            } catch (IllegalStateException e) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.<String, Object> of("code", "SETTINGS_WRITE_FAILED", "message",
                         "Failed to write MCP settings"));
