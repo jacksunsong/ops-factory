@@ -73,7 +73,7 @@ export function CreateAgentModal({
     }, [name, id, isValidId, userId, t, onCreated, onClose])
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-overlay">
             <div className="modal" onClick={(event) => event.stopPropagation()}>
                 <div className="modal-header">
                     <h2 className="modal-title">{t('agents.createAgentTitle')}</h2>

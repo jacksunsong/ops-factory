@@ -126,7 +126,7 @@ function CreateKnowledgeModal({
     }, [description, name, onClose, onCreated, showToast, t])
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-overlay">
             <div className="modal" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2 className="modal-title">{t('knowledge.createTitle')}</h2>
