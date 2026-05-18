@@ -5,17 +5,16 @@
 package com.huawei.opsfactory.operationintelligence.controller;
 
 import com.huawei.opsfactory.operationintelligence.qos.model.CallChainTree;
+import com.huawei.opsfactory.operationintelligence.qos.model.QueryCallChainRequest;
 import com.huawei.opsfactory.operationintelligence.service.CallChainService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
@@ -23,7 +22,6 @@ import reactor.core.publisher.Mono;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.core.io.buffer.DataBufferUtils;
 
 /**
  * Call Chain Controller.
@@ -57,40 +55,46 @@ public class CallChainController {
     /**
      * Query call chain.
      *
-     * @param req the request body
+     * @param request the request body
      * @return the call chain tree
      */
     @PostMapping("/query")
-    public Mono<ResponseEntity<Map<String, Object>>> queryCallChain(@RequestBody Map<String, Object> req) {
+    public Mono<ResponseEntity<Map<String, Object>>> queryCallChain(@RequestBody QueryCallChainRequest request) {
         return Mono.fromCallable(() -> {
-            // Parse solutionType
-            String solutionType = (String) req.get("solutionType");
-            if (solutionType == null || solutionType.isBlank()) {
+            // Validate request
+            if (request.getSolutionType() == null || request.getSolutionType().isBlank()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "solutionType is required");
             }
 
-            // Parse conditions array
-            List<Map<String, String>> conditions = (List<Map<String, String>>) req.get("condition");
-            if (conditions == null || conditions.isEmpty()) {
+            if (request.getCondition() == null || request.getCondition().isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "condition is required and must not be empty");
             }
 
             // Validate condition has required fields
-            for (Map<String, String> condition : conditions) {
-                if (condition.get("conditionKey") == null || condition.get("conditionValue") == null) {
+            for (QueryCallChainRequest.Condition condition : request.getCondition()) {
+                if (condition.getConditionKey() == null || condition.getConditionValue() == null) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Each condition must have conditionKey and conditionValue");
                 }
             }
 
-            // Parse time range
-            long startTime = parseLong(req.get("startTime"));
-            long endTime = parseLong(req.get("endTime"));
+            // Validate time range
+            validateTimeRange(request.getStartTime(), request.getEndTime());
 
-            validateTimeRange(startTime, endTime);
+            // Convert to internal format
+            List<Map<String, String>> conditions = request.getCondition().stream()
+                .map(c -> {
+                    Map<String, String> map = new LinkedHashMap<>();
+                    map.put("conditionKey", c.getConditionKey());
+                    map.put("conditionValue", c.getConditionValue());
+                    return map;
+                })
+                .toList();
 
             // Query call chain
-            CallChainTree tree = callChainService.queryCallChain(solutionType, conditions, startTime, endTime).block();
+            CallChainTree tree = callChainService.queryCallChain(
+                request.getSolutionType(), conditions,
+                request.getStartTime(), request.getEndTime()).block();
 
             // Build response
             Map<String, Object> response = new LinkedHashMap<>();
@@ -102,37 +106,6 @@ public class CallChainController {
 
             return ResponseEntity.ok(response);
         }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic());
-    }
-
-    /**
-     * Import chain type configurations.
-     *
-     * @param file the uploaded file
-     * @return the import result
-     */
-    @PostMapping("/config/chain-type")
-    public Mono<ResponseEntity<Map<String, Object>>> importChainTypeConfigs(@RequestPart("file") FilePart file) {
-        return DataBufferUtils.join(file.content())
-            .map(dataBuffer -> {
-                try {
-                    byte[] bytes = new byte[dataBuffer.readableByteCount()];
-                    dataBuffer.read(bytes);
-                    org.springframework.core.io.buffer.DataBufferUtils.release(dataBuffer);
-
-                    String content = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
-                    int count = callChainService.importChainTypeConfigs(content);
-
-                    Map<String, Object> response = new LinkedHashMap<>();
-                    response.put("message", "Chain type configs imported successfully");
-                    response.put("count", count);
-
-                    return ResponseEntity.ok(response);
-                } catch (Exception e) {
-                    log.error("Failed to import chain type configs: {}", e.getMessage(), e);
-                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Failed to import chain type configs: " + e.getMessage());
-                }
-            });
     }
 
     /**
@@ -167,11 +140,9 @@ public class CallChainController {
             try {
                 return Long.parseLong((String) val);
             } catch (NumberFormatException e) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Invalid numeric value: " + val);
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid numeric value");
             }
         }
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-            "Invalid numeric value: " + val);
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid numeric value");
     }
 }

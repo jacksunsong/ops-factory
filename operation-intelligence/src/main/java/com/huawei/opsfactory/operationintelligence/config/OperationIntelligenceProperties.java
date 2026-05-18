@@ -760,6 +760,8 @@ public class OperationIntelligenceProperties {
     public static class CallChain {
         private boolean enabled = true;
         private int querySize = 100;
+        private int queryLimit = 10000;
+        private long requestTimeoutMs = 60000;
         private long maxTimeRangeMs = 1800000;
         private long rotationIntervalMs = 3600000;
         private long normalizeDataRetentionDays = 90;
@@ -799,6 +801,42 @@ public class OperationIntelligenceProperties {
          */
         public void setQuerySize(int querySize) {
             this.querySize = querySize;
+        }
+
+        /**
+         * Gets the query limit.
+         *
+         * @return the query limit
+         */
+        public int getQueryLimit() {
+            return queryLimit;
+        }
+
+        /**
+         * Sets the query limit.
+         *
+         * @param queryLimit the query limit
+         */
+        public void setQueryLimit(int queryLimit) {
+            this.queryLimit = queryLimit;
+        }
+
+        /**
+         * Gets the request timeout ms.
+         *
+         * @return the request timeout ms
+         */
+        public long getRequestTimeoutMs() {
+            return requestTimeoutMs;
+        }
+
+        /**
+         * Sets the request timeout ms.
+         *
+         * @param requestTimeoutMs the request timeout ms
+         */
+        public void setRequestTimeoutMs(long requestTimeoutMs) {
+            this.requestTimeoutMs = requestTimeoutMs;
         }
 
         /**

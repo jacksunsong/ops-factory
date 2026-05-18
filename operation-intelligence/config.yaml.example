@@ -38,6 +38,8 @@ operation-intelligence:
   call-chain:
     enabled: true
     query-size: 100
+    query-limit: 10000
+    request-timeout-ms: 60000
     max-time-range-ms: 1800000            # 30 minutes (max query time range)
     rotation-interval-ms: 3600000         # 1 hour (data file rotation)
     normalize-data-retention-days: 90     # data retention days

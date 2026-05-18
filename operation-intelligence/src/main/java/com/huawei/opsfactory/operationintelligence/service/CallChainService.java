@@ -22,7 +22,6 @@ import reactor.core.scheduler.Schedulers;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -122,13 +121,12 @@ public class CallChainService {
             log.info("No entry logs found for query");
             return createEmptyTree(chainType, conditions, startTime, endTime);
         }
-
         // Extract TraceIDs
         Set<String> traceIds = entryLogs.stream()
             .map(TraceLogRecord::getTraceId)
             .collect(Collectors.toSet());
 
-        log.info("Found {} unique TraceIDs: {}", traceIds.size(), traceIds);
+        log.info("Found {} unique TraceIDs", traceIds.size());
 
         // Fetch complete call chains for each TraceID
         List<TraceLogRecord> allLogs = new ArrayList<>(entryLogs);
@@ -222,7 +220,7 @@ public class CallChainService {
         allLogs.addAll(initialLogs);
 
         // Check if we hit the limit and need time splitting
-        if (initialLogs.size() >= 10000) {
+        if (initialLogs.size() >= properties.getCallChain().getQueryLimit()) {
             log.warn("Query returned {} results (at limit), applying time splitting", initialLogs.size());
             List<TimeSplitStrategy.TimeRange> ranges = timeSplitStrategy.splitIfNeeded(startTime, endTime, initialLogs.size());
 
@@ -232,7 +230,7 @@ public class CallChainService {
                 allLogs.addAll(rangeLogs);
 
                 // If still hitting limit, further degrade
-                if (rangeLogs.size() >= 10000 && timeSplitStrategy.canDegradeFurther(range.duration())) {
+                if (rangeLogs.size() >= properties.getCallChain().getQueryLimit() && timeSplitStrategy.canDegradeFurther(range.duration())) {
                     long degradedSplitMs = timeSplitStrategy.getNextDegradeSplitMs(range.duration());
                     List<TimeSplitStrategy.TimeRange> degradedRanges = timeSplitStrategy.split(
                         range.startTime(), range.endTime(), degradedSplitMs);

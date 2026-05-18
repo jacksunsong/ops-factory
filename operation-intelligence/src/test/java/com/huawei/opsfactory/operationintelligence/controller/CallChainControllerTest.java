@@ -5,6 +5,7 @@
 package com.huawei.opsfactory.operationintelligence.controller;
 
 import com.huawei.opsfactory.operationintelligence.qos.model.CallChainTree;
+import com.huawei.opsfactory.operationintelligence.qos.model.QueryCallChainRequest;
 import com.huawei.opsfactory.operationintelligence.service.CallChainService;
 
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -57,12 +57,14 @@ class CallChainControllerTest {
         when(callChainService.queryCallChain(anyString(), anyList(), anyLong(), anyLong()))
             .thenReturn(Mono.just(tree));
 
-        Map<String, Object> request = Map.of(
-            "solutionType", "DigitalCRM.sit",
-            "condition", List.of(Map.of("conditionKey", "menuId", "conditionValue", "604015020")),
-            "startTime", 1746057600000L,
-            "endTime", 1746058000000L
-        );
+        QueryCallChainRequest request = new QueryCallChainRequest();
+        request.setSolutionType("DigitalCRM.sit");
+        QueryCallChainRequest.Condition condition = new QueryCallChainRequest.Condition();
+        condition.setConditionKey("menuId");
+        condition.setConditionValue("604015020");
+        request.setCondition(List.of(condition));
+        request.setStartTime(1746057600000L);
+        request.setEndTime(1746058000000L);
 
         webClient.post()
             .uri("/operation-intelligence/call-chain/query")
@@ -78,11 +80,13 @@ class CallChainControllerTest {
 
     @Test
     void testQueryCallChainMissingSolutionType() {
-        Map<String, Object> request = Map.of(
-            "condition", List.of(Map.of("conditionKey", "menuId", "conditionValue", "604015020")),
-            "startTime", 1746057600000L,
-            "endTime", 1746662400000L
-        );
+        QueryCallChainRequest request = new QueryCallChainRequest();
+        QueryCallChainRequest.Condition condition = new QueryCallChainRequest.Condition();
+        condition.setConditionKey("menuId");
+        condition.setConditionValue("604015020");
+        request.setCondition(List.of(condition));
+        request.setStartTime(1746057600000L);
+        request.setEndTime(1746662400000L);
 
         webClient.post()
             .uri("/operation-intelligence/call-chain/query")
@@ -95,12 +99,11 @@ class CallChainControllerTest {
 
     @Test
     void testQueryCallChainMissingCondition() {
-        Map<String, Object> request = Map.of(
-            "solutionType", "DigitalCRM.sit",
-            "condition", List.of(),
-            "startTime", 1746057600000L,
-            "endTime", 1746058000000L
-        );
+        QueryCallChainRequest request = new QueryCallChainRequest();
+        request.setSolutionType("DigitalCRM.sit");
+        request.setCondition(List.of());
+        request.setStartTime(1746057600000L);
+        request.setEndTime(1746058000000L);
 
         webClient.post()
             .uri("/operation-intelligence/call-chain/query")
@@ -113,12 +116,14 @@ class CallChainControllerTest {
 
     @Test
     void testQueryCallChainInvalidTimeRange() {
-        Map<String, Object> request = Map.of(
-            "solutionType", "DigitalCRM.sit",
-            "condition", List.of(Map.of("conditionKey", "menuId", "conditionValue", "604015020")),
-            "startTime", 1746662400000L,
-            "endTime", 1746057600000L
-        );
+        QueryCallChainRequest request = new QueryCallChainRequest();
+        request.setSolutionType("DigitalCRM.sit");
+        QueryCallChainRequest.Condition condition = new QueryCallChainRequest.Condition();
+        condition.setConditionKey("menuId");
+        condition.setConditionValue("604015020");
+        request.setCondition(List.of(condition));
+        request.setStartTime(1746662400000L);
+        request.setEndTime(1746057600000L);
 
         webClient.post()
             .uri("/operation-intelligence/call-chain/query")
@@ -131,12 +136,14 @@ class CallChainControllerTest {
 
     @Test
     void testQueryCallChainNoAuth() {
-        Map<String, Object> request = Map.of(
-            "solutionType", "DigitalCRM.sit",
-            "condition", List.of(Map.of("conditionKey", "menuId", "conditionValue", "604015020")),
-            "startTime", 1746057600000L,
-            "endTime", 1746662400000L
-        );
+        QueryCallChainRequest request = new QueryCallChainRequest();
+        request.setSolutionType("DigitalCRM.sit");
+        QueryCallChainRequest.Condition condition = new QueryCallChainRequest.Condition();
+        condition.setConditionKey("menuId");
+        condition.setConditionValue("604015020");
+        request.setCondition(List.of(condition));
+        request.setStartTime(1746057600000L);
+        request.setEndTime(1746662400000L);
 
         webClient.post()
             .uri("/operation-intelligence/call-chain/query")

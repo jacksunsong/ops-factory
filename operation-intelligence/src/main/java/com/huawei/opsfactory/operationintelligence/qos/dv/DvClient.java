@@ -60,6 +60,12 @@ public class DvClient {
 
     private final OperationIntelligenceProperties properties;
 
+    private final int maxConnections;
+
+    private final Duration requestTimeout;
+
+    private final int queryLimit;
+
     private final ConcurrentHashMap<String, WebClient> clientCache = new ConcurrentHashMap<>();
 
     private final ConcurrentHashMap<String, ConnectionProvider> providerCache = new ConcurrentHashMap<>();
@@ -76,6 +82,10 @@ public class DvClient {
         this.authService = authService;
         this.sslFactory = sslFactory;
         this.properties = properties;
+
+        this.maxConnections = 10;
+        this.requestTimeout = Duration.ofSeconds(60);
+        this.queryLimit = properties.getCallChain().getQueryLimit();
     }
 
     /**
@@ -142,7 +152,7 @@ public class DvClient {
                 .retrieve()
                 .bodyToMono(String.class)
                 .subscribeOn(Schedulers.boundedElastic())
-                .block(Duration.ofSeconds(60));
+                .block(requestTimeout);
 
             if (response == null || response.isBlank()) {
                 return Collections.emptyList();
@@ -204,7 +214,7 @@ public class DvClient {
                 .retrieve()
                 .bodyToMono(String.class)
                 .subscribeOn(Schedulers.boundedElastic())
-                .block(Duration.ofSeconds(60));
+                .block(requestTimeout);
 
             if (response == null || response.isBlank()) {
                 return Collections.emptyList();
@@ -249,7 +259,7 @@ public class DvClient {
                 .retrieve()
                 .bodyToMono(String.class)
                 .subscribeOn(Schedulers.boundedElastic())
-                .block(Duration.ofSeconds(60));
+                .block(requestTimeout);
 
             if (response == null || response.isBlank()) {
                 return Collections.emptyList();
@@ -281,7 +291,7 @@ public class DvClient {
                 if (retryCount > MAX_RETRIES) {
                     break;
                 }
-                long delayMs = (long) Math.pow(2, retryCount) * 1000;
+                long delayMs = (1L << retryCount) * 1000;
                 log.warn("{} failed, retry {}/{} in {}ms: {}", operationName, retryCount, MAX_RETRIES, delayMs,
                     e.getMessage());
                 try {
@@ -300,11 +310,12 @@ public class DvClient {
         return clientCache.computeIfAbsent(env.getServerUrl(), url -> {
             SslContext sslContext =
                 sslFactory.createSslContext(env.getCrtContent(), env.getCrtFileName(), env.isStrictSsl());
-            ConnectionProvider provider = ConnectionProvider.builder("dv-" + url.hashCode()).maxConnections(10).build();
+            ConnectionProvider provider = ConnectionProvider.builder("dv-" + url.hashCode())
+                .maxConnections(maxConnections).build();
             providerCache.put(url, provider);
             HttpClient httpClient = HttpClient.create(provider)
                 .secure(t -> t.sslContext(sslContext).handshakeTimeout(Duration.ofSeconds(10)))
-                .responseTimeout(Duration.ofSeconds(60));
+                .responseTimeout(requestTimeout);
             return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
         });
     }
@@ -525,7 +536,7 @@ public class DvClient {
                 .retrieve()
                 .bodyToMono(String.class)
                 .subscribeOn(Schedulers.boundedElastic())
-                .block(Duration.ofSeconds(60));
+                .block(requestTimeout);
 
             if (response == null || response.isBlank()) {
                 return Collections.emptyList();
@@ -554,7 +565,7 @@ public class DvClient {
 
             String jsonBody = MAPPER.writeValueAsString(body);
 
-            log.info("[TraceLog Request] URL: {}, Body: {}", url, jsonBody);
+            log.info("[TraceLog Request] URL: {}, TraceId: {}", url, traceId);
 
             String response = webClient.post()
                 .uri(url)
@@ -563,17 +574,17 @@ public class DvClient {
                 .retrieve()
                 .onStatus(
                     status -> !status.is2xxSuccessful(),
-                    clientResponse -> {
-                        return clientResponse.bodyToMono(String.class)
-                            .defaultIfEmpty("No error body")
-                            .map(errorBody -> new RuntimeException("DV returned " + clientResponse.statusCode() + ": " + errorBody));
-                    }
+                    clientResponse -> clientResponse.bodyToMono(String.class)
+                        .map(errorBody -> {
+                            log.error("DV request failed with status {}", clientResponse.statusCode());
+                            return new RuntimeException("DV request failed with status " + clientResponse.statusCode());
+                        })
                 )
                 .bodyToMono(String.class)
                 .subscribeOn(Schedulers.boundedElastic())
-                .block(Duration.ofSeconds(60));
+                .block(requestTimeout);
 
-            log.info("[TraceLog Response] URL: {}, Response: {}", url, response);
+            log.info("[TraceLog Response] URL: {}, Status: {}", url, response != null && !response.isBlank() ? "OK" : "Empty");
 
             if (response == null || response.isBlank()) {
                 return Collections.emptyList();
