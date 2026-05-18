@@ -28,9 +28,9 @@ operation-intelligence:
     #    env-name: "DigitalCRM SIT"
     #    agent-solution-type: "DigitalCRM"
     #    product-type-name: "DigitalCRM"
-    #    server-url: "https://10.44.212.216:26335"
-    #    utm-user: "admin"
-    #    utm-password: "changeit"
+    #    server-url: "https://YOUR_DV_SERVER:26335"
+    #    utm-user: "YOUR_USER_HERE"
+    #    utm-password: "${DV_PASSWORD}"  # 使用环境变量或加密密码
     #    crt-content: ""                       # Base64 encoded certificate
     #    crt-file-name: "client.jks"
     #    strict-ssl: false                       # reject insecure SSL fallback (default: true)

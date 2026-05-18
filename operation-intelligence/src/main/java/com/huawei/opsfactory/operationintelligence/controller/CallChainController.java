@@ -60,52 +60,46 @@ public class CallChainController {
      */
     @PostMapping("/query")
     public Mono<ResponseEntity<Map<String, Object>>> queryCallChain(@RequestBody QueryCallChainRequest request) {
-        return Mono.fromCallable(() -> {
-            // Validate request
-            if (request.getSolutionType() == null || request.getSolutionType().isBlank()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "solutionType is required");
+        // 验证在响应式流外部完成（快速同步操作）
+        if (request.getSolutionType() == null || request.getSolutionType().isBlank()) {
+            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "solutionType is required"));
+        }
+
+        if (request.getCondition() == null || request.getCondition().isEmpty()) {
+            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "condition is required and must not be empty"));
+        }
+
+        for (QueryCallChainRequest.Condition condition : request.getCondition()) {
+            if (condition.getConditionKey() == null || condition.getConditionValue() == null) {
+                return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Each condition must have conditionKey and conditionValue"));
             }
+        }
 
-            if (request.getCondition() == null || request.getCondition().isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "condition is required and must not be empty");
-            }
+        validateTimeRange(request.getStartTime(), request.getEndTime());
 
-            // Validate condition has required fields
-            for (QueryCallChainRequest.Condition condition : request.getCondition()) {
-                if (condition.getConditionKey() == null || condition.getConditionValue() == null) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Each condition must have conditionKey and conditionValue");
-                }
-            }
+        // 转换为内部格式
+        List<Map<String, String>> conditions = request.getCondition().stream()
+            .map(c -> {
+                Map<String, String> map = new LinkedHashMap<>();
+                map.put("conditionKey", c.getConditionKey());
+                map.put("conditionValue", c.getConditionValue());
+                return map;
+            })
+            .toList();
 
-            // Validate time range
-            validateTimeRange(request.getStartTime(), request.getEndTime());
-
-            // Convert to internal format
-            List<Map<String, String>> conditions = request.getCondition().stream()
-                .map(c -> {
-                    Map<String, String> map = new LinkedHashMap<>();
-                    map.put("conditionKey", c.getConditionKey());
-                    map.put("conditionValue", c.getConditionValue());
-                    return map;
-                })
-                .toList();
-
-            // Query call chain
-            CallChainTree tree = callChainService.queryCallChain(
-                request.getSolutionType(), conditions,
-                request.getStartTime(), request.getEndTime()).block();
-
-            // Build response
-            Map<String, Object> response = new LinkedHashMap<>();
-            response.put("chainType", tree.getChainType());
-            response.put("conditions", tree.getConditions());
-            response.put("totalCount", tree.getTotalCount());
-            response.put("queryTimeRange", tree.getQueryTimeRange());
-            response.put("flows", tree.getFlows());
-
-            return ResponseEntity.ok(response);
-        }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic());
+        // 响应式链式调用：查询 -> 转换 -> 返回
+        return callChainService.queryCallChain(request.getSolutionType(), conditions,
+                request.getStartTime(), request.getEndTime())
+            .map(tree -> {
+                Map<String, Object> response = new LinkedHashMap<>();
+                response.put("chainType", tree.getChainType());
+                response.put("conditions", tree.getConditions());
+                response.put("totalCount", tree.getTotalCount());
+                response.put("queryTimeRange", tree.getQueryTimeRange());
+                response.put("flows", tree.getFlows());
+                return ResponseEntity.ok(response);
+            });
     }
 
     /**
@@ -127,22 +121,5 @@ public class CallChainController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "time range must not exceed " + maxMinutes + " minutes");
         }
-    }
-
-    /**
-     * Parse long from object.
-     */
-    private long parseLong(Object val) {
-        if (val instanceof Number) {
-            return ((Number) val).longValue();
-        }
-        if (val instanceof String) {
-            try {
-                return Long.parseLong((String) val);
-            } catch (NumberFormatException e) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid numeric value");
-            }
-        }
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid numeric value");
     }
 }
