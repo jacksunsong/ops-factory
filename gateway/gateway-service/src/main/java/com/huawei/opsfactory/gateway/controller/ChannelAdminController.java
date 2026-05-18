@@ -79,7 +79,6 @@ public class ChannelAdminController {
      */
     @GetMapping
     public Mono<Map<String, Object>> listChannels(ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = currentUserId(exchange);
         return Mono.fromCallable(() -> Map.<String, Object> of("channels", channelConfigService.listChannels(userId)))
             .subscribeOn(Schedulers.boundedElastic());
@@ -94,7 +93,6 @@ public class ChannelAdminController {
      */
     @GetMapping("/{channelId}")
     public Mono<ResponseEntity<ChannelDetail>> getChannel(@PathVariable("channelId") String channelId, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = currentUserId(exchange);
         return Mono.fromCallable(() -> {
             ChannelDetail detail = channelConfigService.getChannel(channelId, userId);
@@ -115,7 +113,6 @@ public class ChannelAdminController {
     @PostMapping
     public Mono<ResponseEntity<Map<String, Object>>> createChannel(@RequestBody ChannelUpsertRequest request,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String ownerUserId = currentUserId(exchange);
         return Mono.fromCallable(() -> {
             try {
@@ -140,7 +137,6 @@ public class ChannelAdminController {
     @PutMapping("/{channelId}")
     public Mono<ResponseEntity<Map<String, Object>>> updateChannel(@PathVariable("channelId") String channelId,
         @RequestBody ChannelUpsertRequest request, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = currentUserId(exchange);
         return Mono.fromCallable(() -> {
             try {
@@ -188,7 +184,6 @@ public class ChannelAdminController {
     @DeleteMapping("/{channelId}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteChannel(@PathVariable("channelId") String channelId,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 channelConfigService.deleteChannel(channelId);
@@ -209,7 +204,6 @@ public class ChannelAdminController {
     @GetMapping("/{channelId}/bindings")
     public Mono<ResponseEntity<Map<String, Object>>> listBindings(@PathVariable("channelId") String channelId,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = currentUserId(exchange);
         return Mono.fromCallable(() -> {
             try {
@@ -231,7 +225,6 @@ public class ChannelAdminController {
     @GetMapping("/{channelId}/events")
     public Mono<ResponseEntity<Map<String, Object>>> listEvents(@PathVariable("channelId") String channelId,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = currentUserId(exchange);
         return Mono.fromCallable(() -> {
             try {
@@ -253,7 +246,6 @@ public class ChannelAdminController {
     @PostMapping("/{channelId}/verify")
     public Mono<ResponseEntity<Map<String, Object>>> verifyChannel(@PathVariable("channelId") String channelId,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = currentUserId(exchange);
         return Mono.fromCallable(() -> {
             try {
@@ -275,7 +267,6 @@ public class ChannelAdminController {
     @PostMapping("/{channelId}/probe")
     public Mono<ResponseEntity<Map<String, Object>>> probeChannel(@PathVariable("channelId") String channelId,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = currentUserId(exchange);
         return Mono.fromCallable(() -> channelConfigService.getChannel(channelId, userId))
             .subscribeOn(Schedulers.boundedElastic())
@@ -301,7 +292,6 @@ public class ChannelAdminController {
     @GetMapping("/{channelId}/login-state")
     public Mono<ResponseEntity<Map<String, Object>>> getLoginState(@PathVariable("channelId") String channelId,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = currentUserId(exchange);
         return Mono.fromCallable(() -> {
             try {
@@ -334,7 +324,6 @@ public class ChannelAdminController {
     @PostMapping("/{channelId}/login")
     public Mono<ResponseEntity<Map<String, Object>>> startLogin(@PathVariable("channelId") String channelId,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = currentUserId(exchange);
         return Mono.fromCallable(() -> {
             try {
@@ -367,7 +356,6 @@ public class ChannelAdminController {
     @PostMapping("/{channelId}/logout")
     public Mono<ResponseEntity<Map<String, Object>>> logout(@PathVariable("channelId") String channelId,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = currentUserId(exchange);
         return Mono.fromCallable(() -> {
             try {
@@ -431,7 +419,6 @@ public class ChannelAdminController {
     @PostMapping("/{channelId}/self-test")
     public Mono<ResponseEntity<Map<String, Object>>> runSelfTest(@PathVariable("channelId") String channelId,
         @RequestBody ChannelSelfTestRequest request, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = currentUserId(exchange);
         return Mono.fromCallable(() -> {
             try {
@@ -459,7 +446,6 @@ public class ChannelAdminController {
 
     private Mono<ResponseEntity<Map<String, Object>>> setEnabled(String channelId, boolean enabled,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = currentUserId(exchange);
         return Mono.fromCallable(() -> {
             try {

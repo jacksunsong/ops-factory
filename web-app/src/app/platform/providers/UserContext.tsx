@@ -1,17 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
-import { runtime, isAdminUser } from '../../../config/runtime'
+
 import { getUrlParam } from '../../../utils/urlParams'
 import { updateLoggingContext } from '../logging/context'
-import { trackedFetch } from '../logging/requestClient'
 
 const STORAGE_KEY = 'opsfactory:userId'
 
-export type UserRole = 'admin' | 'user'
-
 interface UserContextType {
     userId: string | null
-    role: UserRole | null
     login: (username: string) => void
     logout: () => void
 }
@@ -52,7 +47,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(STORAGE_KEY, fallbackUserId)
         return fallbackUserId
     })
-    const [role, setRole] = useState<UserRole | null>(null)
 
     useEffect(() => {
         const urlUserId = getUrlParam('uid') || getUrlParam('userId')
@@ -64,37 +58,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
     }, [userId])
 
-    const fetchRole = useCallback(async (uid: string) => {
-        try {
-            const res = await trackedFetch(`${runtime.GATEWAY_URL}/me`, {
-                category: 'request',
-                name: 'request.send',
-                headers: {
-                    'x-secret-key': runtime.GATEWAY_SECRET_KEY,
-                    'x-user-id': uid,
-                },
-                signal: AbortSignal.timeout(5000),
-            })
-            if (res.ok) {
-                const data = await res.json()
-                setRole(data.role ?? 'user')
-            } else {
-                setRole('user')
-            }
-        } catch {
-            setRole('user')
-        }
-    }, [])
-
     useEffect(() => {
         if (userId) {
             updateLoggingContext({ userId })
-            fetchRole(userId)
         } else {
             updateLoggingContext({ userId: undefined })
-            setRole(null)
         }
-    }, [userId, fetchRole])
+    }, [userId])
 
     const login = useCallback((username: string) => {
         const trimmed = username.trim()
@@ -106,11 +76,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const logout = useCallback(() => {
         localStorage.removeItem(STORAGE_KEY)
         setUserId(null)
-        setRole(null)
     }, [])
 
     return (
-        <UserContext.Provider value={{ userId, role, login, logout }}>
+        <UserContext.Provider value={{ userId, login, logout }}>
             {children}
         </UserContext.Provider>
     )
@@ -126,16 +95,5 @@ export function useUser(): UserContextType {
 
 /** User identity is resolved from URL, cookie, localStorage, or the default runtime user. */
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-    return <>{children}</>
-}
-
-/** Redirect to / if not admin */
-export function AdminRoute({ children }: { children: ReactNode }) {
-    const { userId, role } = useUser()
-
-    if (role !== null && !isAdminUser(userId, role)) {
-        return <Navigate to="/" replace />
-    }
-
     return <>{children}</>
 }

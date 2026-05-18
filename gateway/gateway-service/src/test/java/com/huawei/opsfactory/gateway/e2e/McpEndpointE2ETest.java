@@ -67,17 +67,22 @@ public class McpEndpointE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Returns the mcp extensions non admin returns403.
+     * Returns the mcp extensions non admin succeeds.
      */
     @Test
-    public void getMcpExtensions_nonAdmin_returns403() {
+    public void getMcpExtensions_nonAdmin_succeeds() {
+        when(goosedProxy.proxy(any(), any(), eq(9999), eq("/config/extensions"), any())).thenReturn(Mono.empty());
+
         webClient.get()
             .uri("/gateway/agents/test-agent/mcp")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "alice")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
+
+        verify(instanceManager).getOrSpawn("test-agent", "admin");
+        verify(goosedProxy).proxy(any(), any(), eq(9999), eq("/config/extensions"), any());
     }
 
     /**
@@ -112,33 +117,47 @@ public class McpEndpointE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Executes the create mcp extension non admin returns403 operation.
+     * Executes the create mcp extension non admin attempts proxy operation.
      */
     @Test
-    public void createMcpExtension_nonAdmin_returns403() {
+    public void createMcpExtension_nonAdmin_attemptsProxy() {
+        WebClient mockWebClient = WebClient.builder().build();
+        when(goosedProxy.getWebClient()).thenReturn(mockWebClient);
+
+        // Will fail with 5xx because there's no real goosed to proxy to.
+        // The test verifies the non-admin guard passes and the controller attempts the proxy.
         webClient.post()
             .uri("/gateway/agents/test-agent/mcp")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "alice")
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue("{\"name\":\"test-mcp\"}")
+            .bodyValue("{\"name\":\"test-mcp\",\"type\":\"stdio\"}")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .is5xxServerError();
+
+        verify(instanceManager).getOrSpawn("test-agent", "admin");
     }
 
     /**
-     * Executes the delete mcp extension non admin returns403 operation.
+     * Executes the delete mcp extension non admin attempts proxy operation.
      */
     @Test
-    public void deleteMcpExtension_nonAdmin_returns403() {
+    public void deleteMcpExtension_nonAdmin_attemptsProxy() {
+        WebClient mockWebClient = WebClient.builder().build();
+        when(goosedProxy.getWebClient()).thenReturn(mockWebClient);
+
+        // Will fail with 5xx because there's no real goosed to proxy to.
+        // The test verifies the non-admin guard passes and the controller attempts the proxy.
         webClient.delete()
             .uri("/gateway/agents/test-agent/mcp/my-extension")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "bob")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .is5xxServerError();
+
+        verify(instanceManager).getOrSpawn("test-agent", "admin");
     }
 
     /**

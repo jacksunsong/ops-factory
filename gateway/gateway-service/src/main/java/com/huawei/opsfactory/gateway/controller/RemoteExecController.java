@@ -4,7 +4,6 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.CommandWhitelistService;
 import com.huawei.opsfactory.gateway.service.RemoteExecutionService;
 
@@ -54,7 +53,6 @@ public class RemoteExecController {
     @PostMapping("/execute")
     public Mono<ResponseEntity<Map<String, Object>>> execute(@RequestBody Map<String, Object> request,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
 
         String hostId = (String) request.get("hostId");
         String command = (String) request.get("command");
@@ -113,7 +111,6 @@ public class RemoteExecController {
     @PostMapping("/check-risk")
     public Mono<ResponseEntity<Map<String, Object>>> checkRisk(@RequestBody Map<String, Object> request,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
 
         String command = (String) request.get("command");
         if (command == null || command.isBlank()) {

@@ -5,7 +5,7 @@ const schedulerModule: AppModule = {
     id: 'scheduler',
     owner: 'platform',
     routes: [
-        { id: 'scheduler.index', path: '/scheduler', component: ScheduledActionsPage, access: 'admin' },
+        { id: 'scheduler.index', path: '/scheduler', component: ScheduledActionsPage, access: 'authenticated' },
     ],
     navItems: [
         {

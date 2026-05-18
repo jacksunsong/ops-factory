@@ -4,7 +4,6 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.AgentSkillInstallService;
 import com.huawei.opsfactory.gateway.service.SkillInstallConflictException;
 
@@ -56,7 +55,6 @@ public class AgentSkillController {
     @PostMapping("/{agentId}/skills/install")
     public Mono<ResponseEntity<Map<String, Object>>> installSkill(@PathVariable("agentId") String agentId,
         @RequestBody Map<String, String> body, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String skillId = body.get("skillId");
         return Mono.fromCallable(() -> ResponseEntity.ok(installService.install(agentId, skillId)))
             .onErrorResume(SkillInstallConflictException.class, e -> Mono.just(conflict(e.getMessage())))
@@ -78,7 +76,6 @@ public class AgentSkillController {
     @DeleteMapping("/{agentId}/skills/{skillId}")
     public Mono<ResponseEntity<Map<String, Object>>> uninstallSkill(@PathVariable("agentId") String agentId,
         @PathVariable("skillId") String skillId, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> ResponseEntity.ok(installService.uninstall(agentId, skillId)))
             .onErrorResume(IllegalArgumentException.class, e -> Mono.just(badRequest(e.getMessage())))
             .onErrorMap(Exception.class,

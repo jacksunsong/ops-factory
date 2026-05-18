@@ -153,10 +153,15 @@ public class AgentEndpointE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Executes the create agent non admin returns403 operation.
+     * Executes the create agent non admin succeeds operation.
+     *
+     * @throws Exception if the operation fails
      */
     @Test
-    public void createAgent_nonAdmin_returns403() {
+    public void createAgent_nonAdmin_succeeds() throws Exception {
+        when(agentConfigService.createAgent("test", "Test"))
+            .thenReturn(Map.of("id", "test", "name", "Test", "provider", "openai", "model", "gpt-4o"));
+
         webClient.post()
             .uri("/gateway/agents")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
@@ -165,7 +170,14 @@ public class AgentEndpointE2ETest extends BaseE2ETest {
             .bodyValue("{\"id\":\"test\",\"name\":\"Test\"}")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isCreated()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.agent.id")
+            .isEqualTo("test")
+            .jsonPath("$.agent.name")
+            .isEqualTo("Test");
     }
 
     /**
@@ -263,17 +275,28 @@ public class AgentEndpointE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Executes the delete agent non admin returns403 operation.
+     * Executes the delete agent non admin succeeds operation.
+     *
+     * @throws Exception if the operation fails
      */
     @Test
-    public void deleteAgent_nonAdmin_returns403() {
+    public void deleteAgent_nonAdmin_succeeds() throws Exception {
+        doNothing().when(instanceManager).stopAllForAgent("test-agent");
+        doNothing().when(agentConfigService).deleteAgent("test-agent");
+
         webClient.delete()
             .uri("/gateway/agents/test-agent")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "bob")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true);
+
+        verify(instanceManager).stopAllForAgent("test-agent");
+        verify(agentConfigService).deleteAgent("test-agent");
     }
 
     /**
@@ -325,17 +348,28 @@ public class AgentEndpointE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Executes the list skills non admin returns403 operation.
+     * Executes the list skills non admin succeeds operation.
      */
     @Test
-    public void listSkills_nonAdmin_returns403() {
+    public void listSkills_nonAdmin_succeeds() {
+        when(agentConfigService.listSkills("universal-agent")).thenReturn(
+            List.of(Map.of("name", "brainstorming", "description", "Brainstorm ideas", "path", "skills/brainstorming"),
+                Map.of("name", "coding", "description", "Code assistance", "path", "skills/coding")));
+
         webClient.get()
             .uri("/gateway/agents/universal-agent/skills")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "alice")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk()
+            .expectBody()
+            .jsonPath("$.skills.length()")
+            .isEqualTo(2)
+            .jsonPath("$.skills[0].name")
+            .isEqualTo("brainstorming")
+            .jsonPath("$.skills[1].name")
+            .isEqualTo("coding");
     }
 
     /**
@@ -368,17 +402,32 @@ public class AgentEndpointE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Returns the config non admin returns403.
+     * Returns the config non admin succeeds.
      */
     @Test
-    public void getConfig_nonAdmin_returns403() {
+    public void getConfig_nonAdmin_succeeds() {
+        when(agentConfigService.findAgent("universal-agent"))
+            .thenReturn(new AgentRegistryEntry("universal-agent", "Universal Agent"));
+        when(agentConfigService.loadAgentConfigYaml("universal-agent"))
+            .thenReturn(Map.of("GOOSE_PROVIDER", "openai", "GOOSE_MODEL", "gpt-4o"));
+        when(agentConfigService.readAgentsMd("universal-agent"))
+            .thenReturn("# Universal Agent\nA general purpose agent.");
+        when(agentConfigService.getAgentsDir()).thenReturn(Path.of("/tmp/agents"));
+
         webClient.get()
             .uri("/gateway/agents/universal-agent/config")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "bob")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk()
+            .expectBody()
+            .jsonPath("$.agentsMd")
+            .isEqualTo("# Universal Agent\nA general purpose agent.")
+            .jsonPath("$.provider")
+            .isEqualTo("openai")
+            .jsonPath("$.model")
+            .isEqualTo("gpt-4o");
     }
 
     /**
@@ -436,19 +485,30 @@ public class AgentEndpointE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Executes the update config non admin returns403 operation.
+     * Executes the update config non admin succeeds operation.
+     *
+     * @throws Exception if the operation fails
      */
     @Test
-    public void updateConfig_nonAdmin_returns403() {
+    public void updateConfig_nonAdmin_succeeds() throws Exception {
+        when(agentConfigService.findAgent("universal-agent"))
+            .thenReturn(new AgentRegistryEntry("universal-agent", "Universal Agent"));
+        doNothing().when(agentConfigService).writeAgentsMd(eq("universal-agent"), anyString());
+
         webClient.put()
             .uri("/gateway/agents/universal-agent/config")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "alice")
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue("{\"agentsMd\":\"hacked\"}")
+            .bodyValue("{\"agentsMd\":\"updated content\"}")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true);
+
+        verify(agentConfigService).writeAgentsMd("universal-agent", "updated content");
     }
 
     /**

@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useGoosed } from '../../../platform/providers/GoosedContext'
-import { useUser } from '../../../platform/providers/UserContext'
 import Button from '../../../platform/ui/primitives/Button'
 import PageHeader from '../../../platform/ui/primitives/PageHeader'
 import CardGrid from '../../../platform/ui/cards/CardGrid'
@@ -67,9 +66,7 @@ function getAgentStatusLabel(status: string | undefined, t: (key: string) => str
 export default function Agents() {
     const { t } = useTranslation()
     const { agents, isConnected, error, refreshAgents } = useGoosed()
-    const { role } = useUser()
     const navigate = useNavigate()
-    const isAdmin = role === 'admin'
     const [showCreateModal, setShowCreateModal] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
     const [searchTerm, setSearchTerm] = useState('')
@@ -97,14 +94,14 @@ export default function Agents() {
             <PageHeader
                 title={t('agents.title')}
                 subtitle={t('agents.subtitle')}
-                action={isAdmin ? (
+                action={(
                     <Button
                         variant="primary"
                         onClick={() => setShowCreateModal(true)}
                     >
                         {t('agents.createAgent')}
                     </Button>
-                ) : undefined}
+                )}
             />
 
             {error && (
@@ -165,7 +162,7 @@ export default function Agents() {
                                             { label: t('agents.skills'), value: skills.length },
                                             { label: t('agents.mcp'), value: <McpCount agentId={agent.id} /> },
                                         ]}
-                                        footer={isAdmin ? (
+                                        footer={(
                                             <ResourceCardActionGroup>
                                                 <ResourceCardConfigureAction
                                                     onClick={() => navigate(`/agents/${agent.id}/configure`)}
@@ -176,7 +173,7 @@ export default function Agents() {
                                                     label={t('agents.deleteAgent')}
                                                 />
                                             </ResourceCardActionGroup>
-                                        ) : undefined}
+                                        )}
                                     />
                                 )
                             })}

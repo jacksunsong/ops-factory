@@ -9,7 +9,7 @@ const businessIntelligenceModule: AppModule = {
             id: 'business-intelligence.index',
             path: '/business-intelligence',
             component: BusinessIntelligencePage,
-            access: 'admin',
+            access: 'authenticated',
         },
     ],
     navItems: [

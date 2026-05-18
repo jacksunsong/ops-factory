@@ -4,7 +4,6 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.CommandWhitelistService;
 
 import reactor.core.publisher.Mono;
@@ -53,7 +52,6 @@ public class CommandWhitelistController {
      */
     @GetMapping({"", "/"})
     public Mono<Map<String, Object>> getWhitelist(ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             Map<String, Object> whitelist = commandWhitelistService.getWhitelist();
             return whitelist;
@@ -70,7 +68,6 @@ public class CommandWhitelistController {
     @PostMapping({"", "/"})
     public Mono<ResponseEntity<Map<String, Object>>> addCommand(@RequestBody Map<String, Object> request,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 commandWhitelistService.addCommand(request);
@@ -98,7 +95,6 @@ public class CommandWhitelistController {
     @PutMapping("/{pattern}")
     public Mono<ResponseEntity<Map<String, Object>>> updateCommand(@PathVariable("pattern") String pattern,
         @RequestBody Map<String, Object> request, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 commandWhitelistService.updateCommand(pattern, request);
@@ -125,7 +121,6 @@ public class CommandWhitelistController {
     @DeleteMapping("/{pattern}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteCommand(@PathVariable("pattern") String pattern,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 commandWhitelistService.deleteCommand(pattern);

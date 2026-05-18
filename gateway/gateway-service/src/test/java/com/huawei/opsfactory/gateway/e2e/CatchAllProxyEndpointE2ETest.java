@@ -84,31 +84,45 @@ public class CatchAllProxyEndpointE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Executes the user access to admin route returns403 operation.
+     * Executes the user access to admin route succeeds operation.
      */
     @Test
-    public void userAccessToAdminRoute_returns403() {
+    public void userAccessToAdminRoute_succeeds() {
+        ManagedInstance instance = new ManagedInstance("test-agent", "alice", 9000, 123L, null, "test-secret");
+        instance.setStatus(ManagedInstance.Status.RUNNING);
+        when(instanceManager.getOrSpawn("test-agent", "alice")).thenReturn(Mono.just(instance));
+        when(goosedProxy.proxy(any(), any(), eq(9000), eq("/schedules/list"), any())).thenReturn(Mono.empty());
+
         webClient.get()
             .uri("/gateway/agents/test-agent/schedules/list")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "alice")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
+
+        verify(goosedProxy).proxy(any(), any(), eq(9000), eq("/schedules/list"), any());
     }
 
     /**
-     * Executes the user access to config prompts returns403 operation.
+     * Executes the user access to config prompts succeeds operation.
      */
     @Test
-    public void userAccessToConfigPrompts_returns403() {
+    public void userAccessToConfigPrompts_succeeds() {
+        ManagedInstance instance = new ManagedInstance("test-agent", "bob", 9000, 123L, null, "test-secret");
+        instance.setStatus(ManagedInstance.Status.RUNNING);
+        when(instanceManager.getOrSpawn("test-agent", "bob")).thenReturn(Mono.just(instance));
+        when(goosedProxy.proxy(any(), any(), eq(9000), eq("/config/prompts"), any())).thenReturn(Mono.empty());
+
         webClient.get()
             .uri("/gateway/agents/test-agent/config/prompts")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "bob")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
+
+        verify(goosedProxy).proxy(any(), any(), eq(9000), eq("/config/prompts"), any());
     }
 
     /**

@@ -5,7 +5,7 @@ const operationIntelligenceModule: AppModule = {
     id: 'operation-intelligence',
     owner: 'platform',
     routes: [
-        { id: 'operation-intelligence.index', path: '/operation-intelligence', component: OperationIntelligencePage, access: 'admin' },
+        { id: 'operation-intelligence.index', path: '/operation-intelligence', component: OperationIntelligencePage, access: 'authenticated' },
     ],
     navItems: [
         {

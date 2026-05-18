@@ -4,7 +4,6 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.ClusterRelationService;
 
 import reactor.core.publisher.Mono;
@@ -57,7 +56,6 @@ public class ClusterRelationController {
     @GetMapping
     public Mono<Map<String, Object>> listRelations(
         @RequestParam(value = "clusterId", required = false) String clusterId, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             List<Map<String, Object>> relations = clusterRelationService.listRelations(clusterId);
             Map<String, Object> result = new LinkedHashMap<>();
@@ -76,7 +74,6 @@ public class ClusterRelationController {
     @GetMapping("/graph")
     public Mono<Map<String, Object>> getGraph(@RequestParam(value = "groupId", required = false) String groupId,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> clusterRelationService.getGraphData(groupId))
             .subscribeOn(Schedulers.boundedElastic());
     }
@@ -91,7 +88,6 @@ public class ClusterRelationController {
     @GetMapping("/clusters/{clusterId}/neighbors")
     public Mono<Map<String, Object>> getClusterNeighbors(@PathVariable("clusterId") String clusterId,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> clusterRelationService.getClusterNeighbors(clusterId))
             .subscribeOn(Schedulers.boundedElastic());
     }
@@ -106,7 +102,6 @@ public class ClusterRelationController {
     @GetMapping("/hosts/{hostId}/neighbors")
     public Mono<Map<String, Object>> getHostNeighbors(@PathVariable("hostId") String hostId,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> clusterRelationService.getHostNeighborsByCluster(hostId))
             .subscribeOn(Schedulers.boundedElastic());
     }
@@ -121,7 +116,6 @@ public class ClusterRelationController {
     @PostMapping
     public Mono<ResponseEntity<Map<String, Object>>> createRelation(@RequestBody Map<String, Object> request,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> relation = clusterRelationService.createRelation(request);
@@ -149,7 +143,6 @@ public class ClusterRelationController {
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateRelation(@PathVariable("id") String id,
         @RequestBody Map<String, Object> request, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> relation = clusterRelationService.updateRelation(id, request);
@@ -176,7 +169,6 @@ public class ClusterRelationController {
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteRelation(@PathVariable("id") String id,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             boolean deleted = clusterRelationService.deleteRelation(id);
             if (!deleted) {

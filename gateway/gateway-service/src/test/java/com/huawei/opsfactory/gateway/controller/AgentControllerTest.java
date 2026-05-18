@@ -145,10 +145,19 @@ public class AgentControllerTest {
     }
 
     /**
-     * Tests create agent non admin forbidden.
+     * Tests create agent succeeds for any authenticated user.
+     *
+     * @throws Exception if the operation fails
      */
     @Test
-    public void testCreateAgent_nonAdminForbidden() {
+    public void testCreateAgent_succeeds_forAnyUser() throws Exception {
+        Map<String, Object> agent = new HashMap<>();
+        agent.put("id", "new-agent");
+        agent.put("name", "New Agent");
+        agent.put("provider", "openai");
+        agent.put("model", "gpt-4o");
+        when(agentConfigService.createAgent(eq("new-agent"), eq("New Agent"))).thenReturn(agent);
+
         webTestClient.post()
             .uri("/gateway/agents")
             .header("x-secret-key", "test")
@@ -157,7 +166,12 @@ public class AgentControllerTest {
             .bodyValue("{\"id\": \"new-agent\", \"name\": \"New Agent\"}")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isCreated()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.agent.id")
+            .isEqualTo("new-agent");
     }
 
     /**
@@ -199,17 +213,23 @@ public class AgentControllerTest {
     }
 
     /**
-     * Tests delete agent non admin forbidden.
+     * Tests delete agent succeeds for any authenticated user.
      */
     @Test
-    public void testDeleteAgent_nonAdminForbidden() {
+    public void testDeleteAgent_succeeds_forAnyUser() {
+        Mockito.doNothing().when(instanceManager).stopAllForAgent("agent1");
+        Mockito.doNothing().when(agentConfigService).deleteAgent("agent1");
+
         webTestClient.delete()
             .uri("/gateway/agents/agent1")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true);
     }
 
     /**
@@ -293,19 +313,25 @@ public class AgentControllerTest {
     }
 
     /**
-     * Tests update config non admin forbidden.
+     * Tests update config succeeds for any authenticated user.
      */
     @Test
-    public void testUpdateConfig_nonAdminForbidden() {
+    public void testUpdateConfig_succeeds_forAnyUser() {
+        when(agentConfigService.findAgent("agent1")).thenReturn(new AgentRegistryEntry("agent1", "Agent One"));
+        Mockito.doNothing().when(agentConfigService).writeAgentsMd("agent1", "# Updated\n");
+
         webTestClient.put()
             .uri("/gateway/agents/agent1/config")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue("{\"agentsMd\": \"# Updated\"}")
+            .bodyValue("{\"agentsMd\": \"# Updated\\n\"}")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true);
     }
 
     /**
@@ -388,31 +414,59 @@ public class AgentControllerTest {
     }
 
     /**
-     * Tests get skills non admin forbidden.
+     * Tests get skills succeeds for any authenticated user.
      */
     @Test
-    public void testGetSkills_nonAdminForbidden() {
+    public void testGetSkills_succeeds_forAnyUser() {
+        when(agentConfigService.listSkills("agent1")).thenReturn(
+            List.of(Map.of("name", "brainstorming", "description", "Brainstorm ideas", "path", "skills/brainstorming"),
+                Map.of("name", "analysis", "description", "Analyze data", "path", "skills/analysis")));
+
         webTestClient.get()
             .uri("/gateway/agents/agent1/skills")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk()
+            .expectBody()
+            .jsonPath("$.skills[0].name")
+            .isEqualTo("brainstorming")
+            .jsonPath("$.skills[0].description")
+            .isEqualTo("Brainstorm ideas")
+            .jsonPath("$.skills[1].name")
+            .isEqualTo("analysis")
+            .jsonPath("$.skills[1].description")
+            .isEqualTo("Analyze data");
     }
 
     /**
-     * Tests get config non admin forbidden.
+     * Tests get config succeeds for any authenticated user.
      */
     @Test
-    public void testGetConfig_nonAdminForbidden() {
+    public void testGetConfig_succeeds_forAnyUser() {
+        when(agentConfigService.findAgent("agent1")).thenReturn(new AgentRegistryEntry("agent1", "Agent One"));
+        when(agentConfigService.readAgentsMd("agent1")).thenReturn("# Agent One\n");
+        Map<String, Object> config = new HashMap<>();
+        config.put("GOOSE_PROVIDER", "anthropic");
+        config.put("GOOSE_MODEL", "claude-3");
+        when(agentConfigService.loadAgentConfigYaml("agent1")).thenReturn(config);
+        when(agentConfigService.getAgentsDir()).thenReturn(java.nio.file.Path.of("/tmp/agents"));
+
         webTestClient.get()
             .uri("/gateway/agents/agent1/config")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk()
+            .expectBody()
+            .jsonPath("$.agentsMd")
+            .isEqualTo("# Agent One\n")
+            .jsonPath("$.provider")
+            .isEqualTo("anthropic")
+            .jsonPath("$.model")
+            .isEqualTo("claude-3");
     }
 
     /**

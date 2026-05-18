@@ -321,17 +321,19 @@ public class HostGroupControllerTest {
     }
 
     /**
-     * Tests list groups forbidden non admin.
+     * Tests list groups succeeds for any authenticated user.
      */
     @Test
-    public void testListGroups_forbidden_nonAdmin() {
+    public void testListGroups_succeeds_forAnyUser() {
+        when(hostGroupService.listGroups()).thenReturn(List.of());
+
         webTestClient.get()
             .uri("/gateway/host-groups/")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
     }
 
     // ── Helpers ────────────────────────────────────────────────────

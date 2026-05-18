@@ -72,10 +72,15 @@ public class AgentSkillControllerTest {
     }
 
     /**
-     * Executes the install skill non admin forbidden operation.
+     * Executes the install skill succeeds for any authenticated user.
+     *
+     * @throws Exception if the operation fails
      */
     @Test
-    public void installSkill_nonAdminForbidden() {
+    public void installSkill_succeeds_forAnyUser() throws Exception {
+        Mockito.when(installService.install("agent1", "log-analysis"))
+            .thenReturn(Map.of("success", true, "skill", Map.of("id", "log-analysis"), "restartRequired", true));
+
         webTestClient.post()
             .uri("/gateway/agents/agent1/skills/install")
             .header("x-secret-key", "test")
@@ -84,7 +89,14 @@ public class AgentSkillControllerTest {
             .bodyValue("{\"skillId\":\"log-analysis\"}")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.skill.id")
+            .isEqualTo("log-analysis")
+            .jsonPath("$.restartRequired")
+            .isEqualTo(true);
     }
 
     /**
@@ -138,16 +150,28 @@ public class AgentSkillControllerTest {
     }
 
     /**
-     * Executes the uninstall skill non admin forbidden operation.
+     * Executes the uninstall skill succeeds for any authenticated user.
+     *
+     * @throws Exception if the operation fails
      */
     @Test
-    public void uninstallSkill_nonAdminForbidden() {
+    public void uninstallSkill_succeeds_forAnyUser() throws Exception {
+        Mockito.when(installService.uninstall("agent1", "log-analysis"))
+            .thenReturn(Map.of("success", true, "skillId", "log-analysis", "restartRequired", true));
+
         webTestClient.delete()
             .uri("/gateway/agents/agent1/skills/log-analysis")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.skillId")
+            .isEqualTo("log-analysis")
+            .jsonPath("$.restartRequired")
+            .isEqualTo(true);
     }
 }

@@ -1,4 +1,3 @@
-import type { UserRole } from '../app/platform/providers/UserContext'
 import { trackedFetch } from '../app/platform/logging/requestClient'
 import { configureWebappLogging, type WebappLoggingRuntimeConfig } from '../app/platform/logging/settings'
 
@@ -184,10 +183,6 @@ async function loadRuntimeConfig(): Promise<RuntimeConfig> {
 export async function initializeRuntimeConfig(): Promise<void> {
     const config = await loadRuntimeConfig()
     setRuntimeConfig(config)
-}
-
-export function isAdminUser(_userId: string | null, role: UserRole | null): boolean {
-    return role === 'admin'
 }
 
 /** Build gateway request headers with secret key and optional user ID. */

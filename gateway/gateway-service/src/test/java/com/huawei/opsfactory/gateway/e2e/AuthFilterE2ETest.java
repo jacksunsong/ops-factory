@@ -97,10 +97,10 @@ public class AuthFilterE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Executes the me endpoint sys user returns sys operation.
+     * Executes the me endpoint sys user returns user role operation.
      */
     @Test
-    public void meEndpoint_sysUser_returnsSys() {
+    public void meEndpoint_sysUser_returnsUserRole() {
         webClient.get()
             .uri("/gateway/me")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
@@ -112,7 +112,7 @@ public class AuthFilterE2ETest extends BaseE2ETest {
             .jsonPath("$.userId")
             .isEqualTo("admin")
             .jsonPath("$.role")
-            .isEqualTo("admin");
+            .isEqualTo("user");
     }
 
     /**
@@ -155,24 +155,24 @@ public class AuthFilterE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Executes the admin endpoint regular user returns403 operation.
+     * Executes the admin endpoint regular user returns200 operation.
      */
     @Test
-    public void adminEndpoint_regularUser_returns403() {
+    public void adminEndpoint_regularUser_returns200() {
         webClient.get()
             .uri("/gateway/runtime-source/system")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "alice")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
     }
 
     /**
-     * Executes the admin endpoint no auth returns401before forbidden operation.
+     * Executes the admin endpoint no auth returns401 operation.
      */
     @Test
-    public void adminEndpoint_noAuth_returns401beforeForbidden() {
+    public void adminEndpoint_noAuth_returns401() {
         // Auth filter runs before user context filter
         webClient.get().uri("/gateway/runtime-source/system").exchange().expectStatus().isUnauthorized();
     }

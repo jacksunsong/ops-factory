@@ -5,8 +5,6 @@
 package com.huawei.opsfactory.gateway.filter;
 
 import com.huawei.opsfactory.gateway.common.constants.GatewayConstants;
-import com.huawei.opsfactory.gateway.common.model.UserRole;
-import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.huawei.opsfactory.gateway.process.PrewarmService;
 
 import reactor.core.publisher.Mono;
@@ -18,17 +16,12 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 /**
- * Web filter that resolves the authenticated user identity and role from request headers.
+ * Web filter that resolves the authenticated user identity from request headers.
  *
  * @author x00000000
  * @since 2026-05-09
@@ -42,35 +35,15 @@ public class UserContextFilter implements WebFilter {
 
     public static final String USER_ID_ATTR = "userId";
 
-    public static final String USER_ROLE_ATTR = "userRole";
-
     private final PrewarmService prewarmService;
-
-    private final GatewayProperties gatewayProperties;
-
-    // Cached set for fast lookup; refreshed when the underlying list changes.
-    private volatile Set<String> adminUserSet = Set.of();
-
-    private volatile List<String> cachedAdminList = List.of();
 
     /**
      * Creates the user context filter instance.
      *
      * @param prewarmService service for pre-warming agent instances
-     * @param gatewayProperties gateway configuration properties including admin user list
      */
-    public UserContextFilter(PrewarmService prewarmService, GatewayProperties gatewayProperties) {
+    public UserContextFilter(PrewarmService prewarmService) {
         this.prewarmService = prewarmService;
-        this.gatewayProperties = gatewayProperties;
-    }
-
-    private Set<String> resolveAdminUserSet() {
-        List<String> current = gatewayProperties.getAdminUsers();
-        if (current != cachedAdminList) {
-            cachedAdminList = current;
-            adminUserSet = current == null ? Set.of() : new HashSet<>(current);
-        }
-        return adminUserSet;
     }
 
     private static boolean isSystemEndpoint(String path) {
@@ -89,7 +62,7 @@ public class UserContextFilter implements WebFilter {
     }
 
     /**
-     * Resolves the authenticated user identity and role from request headers.
+     * Resolves the authenticated user identity from request headers.
      *
      * @param exchange current HTTP exchange
      * @param chain filter chain to continue processing
@@ -118,10 +91,7 @@ public class UserContextFilter implements WebFilter {
             return exchange.getResponse().setComplete();
         }
 
-        UserRole role = UserRole.fromUserId(userId, resolveAdminUserSet());
-
         exchange.getAttributes().put(USER_ID_ATTR, userId);
-        exchange.getAttributes().put(USER_ROLE_ATTR, role);
         ThreadContext.put("userId", userId);
 
         // Trigger pre-warm for authenticated users, except diagnostics that must not mutate runtime state.
@@ -130,20 +100,5 @@ public class UserContextFilter implements WebFilter {
         }
 
         return chain.filter(exchange);
-    }
-
-    /**
-     * Shared admin check — throws 403 if the current user is not an admin.
-     *
-     * @param exchange current HTTP exchange carrying user role attribute
-     */
-    public static void requireAdmin(ServerWebExchange exchange) {
-        UserRole role = exchange.getAttribute(USER_ROLE_ATTR);
-        if (role == null || !role.isAdmin()) {
-            LoggerFactory.getLogger(UserContextFilter.class)
-                .warn("Rejecting request path={} reason=admin-access-required userRole={}",
-                    exchange.getRequest().getURI().getPath(), role);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "admin access required");
-        }
     }
 }

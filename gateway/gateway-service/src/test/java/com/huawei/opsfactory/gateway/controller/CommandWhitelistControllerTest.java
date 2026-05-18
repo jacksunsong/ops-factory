@@ -230,26 +230,37 @@ public class CommandWhitelistControllerTest {
     }
 
     /**
-     * Tests get whitelist forbidden non admin.
+     * Tests get whitelist succeeds for any authenticated user.
      */
     @Test
-    public void testGetWhitelist_forbidden_nonAdmin() {
+    public void testGetWhitelist_succeeds_forAnyUser() {
+        Map<String, Object> whitelist = new LinkedHashMap<>();
+        whitelist.put("commands", List.of(Map.of("pattern", "ps", "description", "查看进程", "enabled", true)));
+        when(commandWhitelistService.getWhitelist()).thenReturn(whitelist);
+
         webTestClient.get()
             .uri("/gateway/command-whitelist/")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk()
+            .expectBody()
+            .jsonPath("$.commands")
+            .isArray()
+            .jsonPath("$.commands[0].pattern")
+            .isEqualTo("ps");
     }
 
     /**
-     * Tests add command forbidden non admin.
+     * Tests add command succeeds for any authenticated user.
      */
     @Test
-    public void testAddCommand_forbidden_nonAdmin() {
+    public void testAddCommand_succeeds_forAnyUser() {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("pattern", "test");
+        body.put("description", "Test command");
+        body.put("enabled", true);
 
         webTestClient.post()
             .uri("/gateway/command-whitelist/")
@@ -259,6 +270,9 @@ public class CommandWhitelistControllerTest {
             .bodyValue(body)
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isCreated()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true);
     }
 }

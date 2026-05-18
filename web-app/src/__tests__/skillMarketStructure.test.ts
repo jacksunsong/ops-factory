@@ -9,14 +9,14 @@ function read(path: string): string {
 }
 
 describe('skill market frontend structure', () => {
-    it('registers a first-level admin route and sidebar item', () => {
+    it('registers a first-level authenticated route and sidebar item', () => {
         const moduleSource = read('src/app/modules/skill-market/module.ts')
 
         expect(moduleSource).toContain("id: 'skill-market'")
         expect(moduleSource).toContain("path: '/skill-market'")
         expect(moduleSource).toContain("titleKey: 'sidebar.skillMarket'")
         expect(moduleSource).toContain("icon: 'skillMarket'")
-        expect(moduleSource).toContain("access: 'admin'")
+        expect(moduleSource).toContain("access: 'authenticated'")
     })
 
     it('declares runtime URL configuration for the service', () => {

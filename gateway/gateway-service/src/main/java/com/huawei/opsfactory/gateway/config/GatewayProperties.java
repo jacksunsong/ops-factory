@@ -64,8 +64,6 @@ public class GatewayProperties {
 
     private Knowledge knowledge = new Knowledge();
 
-    private List<String> adminUsers = List.of("admin");
-
     // ---- Getters / Setters ----
 
     /**
@@ -417,24 +415,6 @@ public class GatewayProperties {
      */
     public void setKnowledge(Knowledge knowledge) {
         this.knowledge = knowledge;
-    }
-
-    /**
-     * Returns the list of admin user IDs.
-     *
-     * @return the list of admin user IDs
-     */
-    public List<String> getAdminUsers() {
-        return adminUsers;
-    }
-
-    /**
-     * Sets the list of admin user IDs.
-     *
-     * @param adminUsers the list of admin user IDs
-     */
-    public void setAdminUsers(List<String> adminUsers) {
-        this.adminUsers = adminUsers;
     }
 
     /**

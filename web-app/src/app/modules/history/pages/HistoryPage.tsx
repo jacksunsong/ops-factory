@@ -14,7 +14,7 @@ import ListToolbar from '../../../platform/ui/list/ListToolbar'
 import ListWorkbench from '../../../platform/ui/list/ListWorkbench'
 import FilterSelect from '../../../platform/ui/filters/FilterSelect'
 import { buildChatSessionState } from '../../../platform/chat/chatRouteState'
-import { runtime, gatewayHeaders, isAdminUser, isScheduledSession } from '../../../../config/runtime'
+import { runtime, gatewayHeaders, isScheduledSession } from '../../../../config/runtime'
 import { trackedFetch } from '../../../platform/logging/requestClient'
 import RenameSessionDialog from '../components/RenameSessionDialog'
 import SessionList, { type SessionWithAgent } from '../components/SessionList'
@@ -88,7 +88,7 @@ export default function HistoryPage() {
     const navigate = useNavigate()
     const { showToast } = useToast()
     const { requestConfirm } = useConfirmDialog()
-    const { userId, role } = useUser()
+    const { userId } = useUser()
     const [searchParams, setSearchParams] = useSearchParams()
     const { getClient, agents, isConnected, error: connectionError } = useGoosed()
     const { markSessionRead, markSessionUnread } = useInbox()
@@ -115,7 +115,7 @@ export default function HistoryPage() {
 
     const [lastDeletedSessionId, setLastDeletedSessionId] = useState<string | null>(null)
     const [lastDeletedAt, setLastDeletedAt] = useState<number | null>(null)
-    const canTraceSessions = isAdminUser(userId, role)
+    const canTraceSessions = true
 
     const getSessionKey = useCallback((session: SessionWithAgent) => `${session.agentId || 'unknown'}:${session.id}`, [])
 

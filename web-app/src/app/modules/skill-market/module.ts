@@ -5,7 +5,7 @@ const skillMarketModule: AppModule = {
     id: 'skill-market',
     owner: 'platform',
     routes: [
-        { id: 'skill-market.index', path: '/skill-market', component: SkillMarketPage, access: 'admin' },
+        { id: 'skill-market.index', path: '/skill-market', component: SkillMarketPage, access: 'authenticated' },
     ],
     navItems: [
         {

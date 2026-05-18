@@ -6,8 +6,8 @@ const channelsModule: AppModule = {
     id: 'channels',
     owner: 'platform',
     routes: [
-        { id: 'channels.index', path: '/channels', component: ChannelsPage, access: 'admin' },
-        { id: 'channels.configure', path: '/channels/:channelId/configure', component: ChannelConfigurePage, access: 'admin', hidden: true },
+        { id: 'channels.index', path: '/channels', component: ChannelsPage, access: 'authenticated' },
+        { id: 'channels.configure', path: '/channels/:channelId/configure', component: ChannelConfigurePage, access: 'authenticated', hidden: true },
     ],
     navItems: [
         {

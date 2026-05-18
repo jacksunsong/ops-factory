@@ -6,8 +6,8 @@ const agentsModule: AppModule = {
     id: 'agents',
     owner: 'platform',
     routes: [
-        { id: 'agents.index', path: '/agents', component: AgentsPage, access: 'admin' },
-        { id: 'agents.configure', path: '/agents/:agentId/configure', component: AgentConfigurePage, access: 'admin', hidden: true },
+        { id: 'agents.index', path: '/agents', component: AgentsPage, access: 'authenticated' },
+        { id: 'agents.configure', path: '/agents/:agentId/configure', component: AgentConfigurePage, access: 'authenticated', hidden: true },
     ],
     navItems: [
         {

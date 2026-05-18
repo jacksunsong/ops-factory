@@ -84,7 +84,6 @@ public class HostController {
         @RequestParam(value = "businessServiceId", required = false) String businessServiceId,
         @RequestParam(value = "enabledOnly", required = false, defaultValue = "false") boolean enabledOnly,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
 
         return Mono.fromCallable(() -> {
             // Resolve disabled context once when enabledOnly is requested
@@ -159,7 +158,6 @@ public class HostController {
     @GetMapping("/by-ip")
     public Mono<ResponseEntity<Map<String, Object>>> getHostByIp(@RequestParam("ip") String ip,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             Map<String, Object> host = hostService.findByIp(ip);
             if (host == null) {
@@ -185,7 +183,6 @@ public class HostController {
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getHost(@PathVariable("id") String id,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             Map<String, Object> host;
             try {
@@ -219,7 +216,6 @@ public class HostController {
     @PostMapping({"", "/"})
     public Mono<ResponseEntity<Map<String, Object>>> createHost(@RequestBody Map<String, Object> request,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> host = hostService.createHost(request);
@@ -247,7 +243,6 @@ public class HostController {
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateHost(@PathVariable("id") String id,
         @RequestBody Map<String, Object> request, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> host = hostService.updateHost(id, request);
@@ -282,7 +277,6 @@ public class HostController {
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteHost(@PathVariable("id") String id,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             boolean deleted = hostService.deleteHost(id);
             if (!deleted) {
@@ -305,7 +299,6 @@ public class HostController {
      */
     @GetMapping("/tags")
     public Mono<Map<String, Object>> getTags(ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             List<String> tags = hostService.getAllTags();
             Map<String, Object> result = new LinkedHashMap<>();
@@ -323,7 +316,6 @@ public class HostController {
      */
     @PostMapping("/{id}/test")
     public Mono<Map<String, Object>> testConnectivity(@PathVariable("id") String id, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             long startedAt = System.currentTimeMillis();
             String userId = exchange.getAttribute(UserContextFilter.USER_ID_ATTR);

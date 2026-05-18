@@ -4,7 +4,6 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.BusinessServiceService;
 import com.huawei.opsfactory.gateway.service.HostRelationService;
 
@@ -73,7 +72,6 @@ public class HostRelationController {
         @RequestParam(value = "clusterId", required = false) String clusterId,
         @RequestParam(value = "sourceType", required = false) String sourceType,
         @RequestParam(value = "sourceId", required = false) String sourceId, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             List<Map<String, Object>> relations =
                 hostRelationService.listRelations(hostId, groupId, clusterId, sourceType, sourceId);
@@ -94,7 +92,6 @@ public class HostRelationController {
     @GetMapping("/graph")
     public Mono<Map<String, Object>> getGraph(@RequestParam(value = "groupId", required = false) String groupId,
         @RequestParam(value = "clusterId", required = false) String clusterId, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             Map<String, Object> graph = hostRelationService.getGraphData(groupId, clusterId);
             enrichWithBusinessServices(graph, groupId, clusterId);
@@ -112,7 +109,6 @@ public class HostRelationController {
     @GetMapping("/hosts/{hostId}/neighbors")
     public Mono<Map<String, Object>> getHostNeighbors(@PathVariable("hostId") String hostId,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> hostRelationService.getNeighbors(hostId))
             .subscribeOn(Schedulers.boundedElastic());
     }
@@ -127,7 +123,6 @@ public class HostRelationController {
     @PostMapping
     public Mono<ResponseEntity<Map<String, Object>>> createRelation(@RequestBody Map<String, Object> request,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> relation = hostRelationService.createRelation(request);
@@ -155,7 +150,6 @@ public class HostRelationController {
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateRelation(@PathVariable("id") String id,
         @RequestBody Map<String, Object> request, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> relation = hostRelationService.updateRelation(id, request);
@@ -182,7 +176,6 @@ public class HostRelationController {
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteRelation(@PathVariable("id") String id,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             boolean deleted = hostRelationService.deleteRelation(id);
             if (!deleted) {

@@ -4,7 +4,6 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.ClusterTypeService;
 
 import reactor.core.publisher.Mono;
@@ -54,7 +53,6 @@ public class ClusterTypeController {
      */
     @GetMapping
     public Mono<Map<String, Object>> listClusterTypes(ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             List<Map<String, Object>> types = clusterTypeService.listClusterTypes();
             Map<String, Object> result = new LinkedHashMap<>();
@@ -73,7 +71,6 @@ public class ClusterTypeController {
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getClusterType(@PathVariable("id") String id,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> ct = clusterTypeService.getClusterType(id);
@@ -100,7 +97,6 @@ public class ClusterTypeController {
     @PostMapping
     public Mono<ResponseEntity<Map<String, Object>>> createClusterType(@RequestBody Map<String, Object> request,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> ct = clusterTypeService.createClusterType(request);
@@ -128,7 +124,6 @@ public class ClusterTypeController {
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateClusterType(@PathVariable("id") String id,
         @RequestBody Map<String, Object> request, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> ct = clusterTypeService.updateClusterType(id, request);
@@ -155,7 +150,6 @@ public class ClusterTypeController {
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteClusterType(@PathVariable("id") String id,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             boolean deleted = clusterTypeService.deleteClusterType(id);
             if (!deleted) {

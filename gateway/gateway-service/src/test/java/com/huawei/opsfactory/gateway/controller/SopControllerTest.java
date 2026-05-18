@@ -329,24 +329,31 @@ public class SopControllerTest {
     }
 
     /**
-     * Tests list sops forbidden non admin.
+     * Tests list sops succeeds for any authenticated user.
      */
     @Test
-    public void testListSops_forbidden_nonAdmin() {
+    public void testListSops_succeeds_forAnyUser() {
+        when(sopService.listSops()).thenReturn(List.of());
+
         webTestClient.get()
             .uri("/gateway/sops/")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
     }
 
     /**
-     * Tests create sop forbidden non admin.
+     * Tests create sop succeeds for any authenticated user.
      */
     @Test
-    public void testCreateSop_forbidden_nonAdmin() {
+    public void testCreateSop_succeeds_forAnyUser() {
+        Map<String, Object> created = new LinkedHashMap<>();
+        created.put("id", "new-id");
+        created.put("name", "SOP");
+        when(sopService.createSop(any())).thenReturn(created);
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "SOP");
 
@@ -358,6 +365,6 @@ public class SopControllerTest {
             .bodyValue(body)
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isCreated();
     }
 }

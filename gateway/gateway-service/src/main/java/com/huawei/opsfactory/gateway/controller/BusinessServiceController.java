@@ -4,7 +4,6 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.BusinessServiceService;
 
 import reactor.core.publisher.Mono;
@@ -61,7 +60,6 @@ public class BusinessServiceController {
         @RequestParam(value = "groupId", required = false) String groupId,
         @RequestParam(value = "hostId", required = false) String hostId,
         @RequestParam(value = "keyword", required = false) String keyword, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             List<Map<String, Object>> services;
             if (keyword != null && !keyword.isEmpty()) {
@@ -85,7 +83,6 @@ public class BusinessServiceController {
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getBusinessService(@PathVariable("id") String id,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> bs = businessServiceService.getBusinessService(id);
@@ -112,7 +109,6 @@ public class BusinessServiceController {
     @GetMapping("/{id}/resolved")
     public Mono<ResponseEntity<Map<String, Object>>> getResolved(@PathVariable("id") String id,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> resolved = businessServiceService.getWithResolvedHosts(id);
@@ -138,7 +134,6 @@ public class BusinessServiceController {
      */
     @GetMapping("/{id}/hosts")
     public Mono<Map<String, Object>> getHosts(@PathVariable("id") String id, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             List<Map<String, Object>> hosts = businessServiceService.getHostsForBusinessService(id);
             Map<String, Object> result = new LinkedHashMap<>();
@@ -156,7 +151,6 @@ public class BusinessServiceController {
      */
     @GetMapping("/{id}/topology")
     public Mono<Map<String, Object>> getTopology(@PathVariable("id") String id, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> businessServiceService.getTopologyForBusinessService(id))
             .subscribeOn(Schedulers.boundedElastic());
     }
@@ -171,7 +165,6 @@ public class BusinessServiceController {
     @PostMapping
     public Mono<ResponseEntity<Map<String, Object>>> createBusinessService(@RequestBody Map<String, Object> request,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> bs = businessServiceService.createBusinessService(request);
@@ -199,7 +192,6 @@ public class BusinessServiceController {
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateBusinessService(@PathVariable("id") String id,
         @RequestBody Map<String, Object> request, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> bs = businessServiceService.updateBusinessService(id, request);
@@ -226,7 +218,6 @@ public class BusinessServiceController {
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteBusinessService(@PathVariable("id") String id,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             boolean deleted = businessServiceService.deleteBusinessService(id);
             if (!deleted) {
@@ -249,7 +240,6 @@ public class BusinessServiceController {
      */
     @PostMapping("/migrate")
     public Mono<Map<String, Object>> migrate(ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> businessServiceService.migrateFromBusinessField())
             .subscribeOn(Schedulers.boundedElastic());
     }

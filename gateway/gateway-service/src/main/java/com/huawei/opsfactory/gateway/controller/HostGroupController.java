@@ -4,7 +4,6 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.BusinessServiceService;
 import com.huawei.opsfactory.gateway.service.ClusterService;
 import com.huawei.opsfactory.gateway.service.HostGroupService;
@@ -70,7 +69,6 @@ public class HostGroupController {
     public Mono<Map<String, Object>> listGroups(
         @RequestParam(value = "enabledOnly", required = false, defaultValue = "false") boolean enabledOnly,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             List<Map<String, Object>> groups = hostGroupService.listGroups();
             if (enabledOnly) {
@@ -94,7 +92,6 @@ public class HostGroupController {
     public Mono<Map<String, Object>> getTree(
         @RequestParam(value = "enabledOnly", required = false, defaultValue = "false") boolean enabledOnly,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             List<Map<String, Object>> groups = hostGroupService.listGroups();
             List<Map<String, Object>> clusters = clusterService.listClusters(null, null);
@@ -121,7 +118,6 @@ public class HostGroupController {
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getGroup(@PathVariable("id") String id,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> group = hostGroupService.getGroup(id);
@@ -148,7 +144,6 @@ public class HostGroupController {
     @PostMapping({"", "/"})
     public Mono<ResponseEntity<Map<String, Object>>> createGroup(@RequestBody Map<String, Object> request,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> group = hostGroupService.createGroup(request);
@@ -176,7 +171,6 @@ public class HostGroupController {
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateGroup(@PathVariable("id") String id,
         @RequestBody Map<String, Object> request, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> group = hostGroupService.updateGroup(id, request);
@@ -205,7 +199,6 @@ public class HostGroupController {
     public Mono<ResponseEntity<Map<String, Object>>> deleteGroup(@PathVariable("id") String id,
         @RequestParam(value = "force", required = false, defaultValue = "false") boolean force,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 boolean deleted;

@@ -14,7 +14,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
-import com.huawei.opsfactory.gateway.common.model.UserRole;
 import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.process.InstanceManager;
 import com.huawei.opsfactory.gateway.proxy.GoosedProxy;
@@ -52,52 +51,31 @@ public class CatchAllProxyControllerTest {
     }
 
     /**
-     * Tests admin access to admin route proxies.
+     * Tests authenticated user access to any route proxies.
      */
     @Test
-    public void testAdminAccessToAdminRoute_proxies() {
+    public void testAuthenticatedAccess_proxies() {
         MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent/schedules/list").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
-        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin");
-
-        ManagedInstance instance = new ManagedInstance("test-agent", "admin", 9000, 123L, null, "test-secret");
-        when(instanceManager.getOrSpawn("test-agent", "admin")).thenReturn(Mono.just(instance));
-        when(goosedProxy.proxy(any(), any(), eq(9000), eq("/schedules/list"), any())).thenReturn(Mono.empty());
-
-        controller.catchAll(exchange).block();
-
-        verify(instanceManager).getOrSpawn("test-agent", "admin");
-        verify(goosedProxy).proxy(any(), any(), eq(9000), eq("/schedules/list"), any());
-    }
-
-    /**
-     * Tests user access to user accessible route allowed.
-     */
-    @Test
-    public void testUserAccessToUserAccessibleRoute_allowed() {
-        MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent/system_info").build();
-        MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.USER);
         exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "alice");
 
         ManagedInstance instance = new ManagedInstance("test-agent", "alice", 9000, 123L, null, "test-secret");
         when(instanceManager.getOrSpawn("test-agent", "alice")).thenReturn(Mono.just(instance));
-        when(goosedProxy.proxy(any(), any(), eq(9000), eq("/system_info"), any())).thenReturn(Mono.empty());
+        when(goosedProxy.proxy(any(), any(), eq(9000), eq("/schedules/list"), any())).thenReturn(Mono.empty());
 
         controller.catchAll(exchange).block();
 
         verify(instanceManager).getOrSpawn("test-agent", "alice");
+        verify(goosedProxy).proxy(any(), any(), eq(9000), eq("/schedules/list"), any());
     }
 
     /**
-     * Tests user access to ops gateway prefixed system info allowed.
+     * Tests user access to system info route proxies.
      */
     @Test
-    public void testUserAccessToOpsGatewayPrefixedSystemInfo_allowed() {
-        MockServerHttpRequest request = MockServerHttpRequest.get("/gateway/agents/test-agent/system_info").build();
+    public void testUserAccessToSystemInfo_proxies() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent/system_info").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.USER);
         exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "alice");
 
         ManagedInstance instance = new ManagedInstance("test-agent", "alice", 9000, 123L, null, "test-secret");
@@ -111,40 +89,22 @@ public class CatchAllProxyControllerTest {
     }
 
     /**
-     * Tests user access to status route allowed.
+     * Tests ops gateway prefixed system info proxies.
      */
     @Test
-    public void testUserAccessToStatusRoute_allowed() {
-        MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent/status").build();
+    public void testOpsGatewayPrefixedSystemInfo_proxies() {
+        MockServerHttpRequest request = MockServerHttpRequest.get("/gateway/agents/test-agent/system_info").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.USER);
         exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "alice");
 
         ManagedInstance instance = new ManagedInstance("test-agent", "alice", 9000, 123L, null, "test-secret");
         when(instanceManager.getOrSpawn("test-agent", "alice")).thenReturn(Mono.just(instance));
-        when(goosedProxy.proxy(any(), any(), eq(9000), eq("/status"), any())).thenReturn(Mono.empty());
+        when(goosedProxy.proxy(any(), any(), eq(9000), eq("/system_info"), any())).thenReturn(Mono.empty());
 
         controller.catchAll(exchange).block();
 
         verify(instanceManager).getOrSpawn("test-agent", "alice");
-    }
-
-    /**
-     * Tests user access to admin route returns403.
-     */
-    @Test
-    public void testUserAccessToAdminRoute_returns403() {
-        MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent/schedules/list").build();
-        MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.USER);
-        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "alice");
-
-        try {
-            controller.catchAll(exchange).block();
-            fail("Expected ResponseStatusException");
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
-        }
+        verify(goosedProxy).proxy(any(), any(), eq(9000), eq("/system_info"), any());
     }
 
     /**
@@ -154,7 +114,6 @@ public class CatchAllProxyControllerTest {
     public void testShortPath_returns404() {
         MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
         exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin");
 
         try {
@@ -172,7 +131,6 @@ public class CatchAllProxyControllerTest {
     public void testQueryStringForwarding() {
         MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent/schedules/list?limit=5").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
         exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin");
 
         ManagedInstance instance = new ManagedInstance("test-agent", "admin", 9000, 123L, null, "test-secret");
@@ -192,14 +150,11 @@ public class CatchAllProxyControllerTest {
         MockServerHttpRequest request =
             MockServerHttpRequest.get("/gateway/agents/test-agent/schedules/list?limit=5").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
         exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin");
 
         ManagedInstance instance = new ManagedInstance("test-agent", "admin", 9000, 123L, null, "test-secret");
         when(instanceManager.getOrSpawn("test-agent", "admin")).thenReturn(Mono.just(instance));
-        when(goosedProxy.proxy(any(), any(), eq(9000), eq(
-
-            "/schedules/list?limit=5"), any())).thenReturn(Mono.empty());
+        when(goosedProxy.proxy(any(), any(), eq(9000), eq("/schedules/list?limit=5"), any())).thenReturn(Mono.empty());
 
         controller.catchAll(exchange).block();
 
@@ -207,59 +162,21 @@ public class CatchAllProxyControllerTest {
     }
 
     /**
-     * Tests admin uses own user id.
+     * Tests user uses own user id for instance.
      */
     @Test
-    public void testAdminUsesOwnUserId() {
+    public void testUserUsesOwnUserId() {
         MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent/config/prompts").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
-        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin-user");
-
-        ManagedInstance instance = new ManagedInstance("test-agent", "admin-user", 9000, 123L, null, "test-secret");
-        when(instanceManager.getOrSpawn("test-agent", "admin-user")).thenReturn(Mono.just(instance));
-        when(goosedProxy.proxy(any(), any(), eq(9000), eq("/config/prompts"), any())).thenReturn(Mono.empty());
-
-        controller.catchAll(exchange).block();
-
-        verify(instanceManager).getOrSpawn("test-agent", "admin-user");
-    }
-
-    /**
-     * Tests user access to system info subpath allowed.
-     */
-    @Test
-    public void testUserAccessToSystemInfoSubpath_allowed() {
-        MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent/system_info/details").build();
-        MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.USER);
         exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "alice");
 
         ManagedInstance instance = new ManagedInstance("test-agent", "alice", 9000, 123L, null, "test-secret");
         when(instanceManager.getOrSpawn("test-agent", "alice")).thenReturn(Mono.just(instance));
-        when(goosedProxy.proxy(any(), any(), eq(9000), eq("/system_info/details"), any())).thenReturn(Mono.empty());
+        when(goosedProxy.proxy(any(), any(), eq(9000), eq("/config/prompts"), any())).thenReturn(Mono.empty());
 
         controller.catchAll(exchange).block();
 
         verify(instanceManager).getOrSpawn("test-agent", "alice");
-    }
-
-    /**
-     * Tests null role treated as non admin returns403 for admin route.
-     */
-    @Test
-    public void testNullRole_treatedAsNonAdmin_returns403ForAdminRoute() {
-        MockServerHttpRequest request = MockServerHttpRequest.get("/agents/test-agent/schedules/list").build();
-        MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        // No role attribute set
-        exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "alice");
-
-        try {
-            controller.catchAll(exchange).block();
-            fail("Expected ResponseStatusException");
-        } catch (ResponseStatusException ex) {
-            assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
-        }
     }
 
     /**
@@ -269,7 +186,6 @@ public class CatchAllProxyControllerTest {
     public void testRemovedLegacyReplyPath_returns404WithoutProxying() {
         MockServerHttpRequest request = MockServerHttpRequest.post("/agents/test-agent/reply").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
         exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin");
 
         try {
@@ -289,7 +205,6 @@ public class CatchAllProxyControllerTest {
     public void testRemovedLegacyAgentStopPath_returns404WithoutProxying() {
         MockServerHttpRequest request = MockServerHttpRequest.post("/agents/test-agent/agent/stop").build();
         MockServerWebExchange exchange = MockServerWebExchange.from(request);
-        exchange.getAttributes().put(UserContextFilter.USER_ROLE_ATTR, UserRole.ADMIN);
         exchange.getAttributes().put(UserContextFilter.USER_ID_ATTR, "admin");
 
         try {

@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react'
 
-export type AccessLevel = 'public' | 'authenticated' | 'admin'
+export type AccessLevel = 'public' | 'authenticated'
 
 export type NavGroupKey = 'primary' | 'business' | 'config' | 'monitoring'
 
@@ -57,7 +57,6 @@ export type NavActionItemDefinition = {
 export type NavItemDefinition = NavRouteItemDefinition | NavActionItemDefinition
 
 export type ModuleContext = {
-    isAdmin: boolean
     isAuthenticated: boolean
     userId?: string | null
 }

@@ -6,7 +6,6 @@ package com.huawei.opsfactory.gateway.controller;
 
 import com.huawei.opsfactory.gateway.common.model.ManagedInstance;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.monitoring.MetricsBuffer;
 import com.huawei.opsfactory.gateway.monitoring.MetricsSnapshot;
 import com.huawei.opsfactory.gateway.process.InstanceManager;
@@ -87,7 +86,6 @@ public class InternalRuntimeSourceController {
      */
     @GetMapping("/system")
     public Map<String, Object> system(ServerWebExchange exchange) {
-        requireAdmin(exchange);
         long uptimeMs = ManagementFactory.getRuntimeMXBean().getUptime();
         long idleTimeoutMs = gatewayProperties.getIdle().getTimeoutMinutes() * 60_000L;
 
@@ -113,7 +111,6 @@ public class InternalRuntimeSourceController {
      */
     @GetMapping("/instances")
     public Map<String, Object> instances(ServerWebExchange exchange) {
-        requireAdmin(exchange);
         List<ManagedInstance> allInstances = new ArrayList<>(instanceManager.getAllInstances());
         Map<String, List<Map<String, Object>>> grouped = allInstances.stream()
             .collect(
@@ -157,7 +154,6 @@ public class InternalRuntimeSourceController {
      */
     @GetMapping("/metrics")
     public Map<String, Object> metrics(ServerWebExchange exchange) {
-        requireAdmin(exchange);
         List<MetricsSnapshot> snapshots = metricsBuffer.getSnapshots(120);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("collectionIntervalSec", 30);
@@ -232,9 +228,5 @@ public class InternalRuntimeSourceController {
         result.put("series", series);
         result.put("agentMetrics", metricsBuffer.getAgentStats());
         return result;
-    }
-
-    private void requireAdmin(ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
     }
 }

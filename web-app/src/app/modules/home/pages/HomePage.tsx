@@ -25,7 +25,7 @@ export default function HomePage() {
     const { t } = useTranslation()
     const navigate = useNavigate()
     const { showToast } = useToast()
-    const { userId, role } = useUser()
+    const { userId } = useUser()
     const { getClient, agents, isConnected, error: connectionError } = useGoosed()
     const [isCreatingSession, setIsCreatingSession] = useState(false)
     const [diagnosisMessage, setDiagnosisMessage] = useState<string>('')
@@ -154,7 +154,7 @@ export default function HomePage() {
                     onAgentChange={setSelectedAgent}
                     modelInfo={modelInfo}
                     skills={selectedAgentSkills}
-                    onBrowseSkillMarket={role === 'admin' ? () => navigate('/skill-market') : undefined}
+                    onBrowseSkillMarket={() => navigate('/skill-market')}
                 />
             </div>
         </div>

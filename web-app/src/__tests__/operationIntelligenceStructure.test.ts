@@ -9,14 +9,14 @@ function read(path: string): string {
 }
 
 describe('operation intelligence frontend structure', () => {
-    it('registers an admin route and sidebar item', () => {
+    it('registers an authenticated route and sidebar item', () => {
         const moduleSource = read('src/app/modules/operation-intelligence/module.ts')
 
         expect(moduleSource).toContain("id: 'operation-intelligence'")
         expect(moduleSource).toContain("path: '/operation-intelligence'")
         expect(moduleSource).toContain("titleKey: 'sidebar.operationIntelligence'")
         expect(moduleSource).toContain("icon: 'businessIntelligence'")
-        expect(moduleSource).toContain("access: 'admin'")
+        expect(moduleSource).toContain("access: 'authenticated'")
     })
 
     it('declares runtime URL and secret configuration in code and examples', () => {

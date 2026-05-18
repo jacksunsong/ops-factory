@@ -58,17 +58,21 @@ public class RuntimeSourceEndpointE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Executes the system non admin returns403 operation.
+     * Executes the system non admin succeeds operation.
      */
     @Test
-    public void system_nonAdmin_returns403() {
+    public void system_nonAdmin_succeeds() {
+        when(agentConfigService.getRegistry()).thenReturn(List.of(new AgentRegistryEntry("agent-a", "Agent A")));
+        when(instanceManager.getAllInstances()).thenReturn(Collections.emptyList());
+        when(langfuseService.isConfigured()).thenReturn(false);
+
         webClient.get()
             .uri("/gateway/runtime-source/system")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "alice")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
     }
 
     /**
@@ -122,17 +126,19 @@ public class RuntimeSourceEndpointE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Executes the instances non admin returns403 operation.
+     * Executes the instances non admin succeeds operation.
      */
     @Test
-    public void instances_nonAdmin_returns403() {
+    public void instances_nonAdmin_succeeds() {
+        when(instanceManager.getAllInstances()).thenReturn(Collections.emptyList());
+
         webClient.get()
             .uri("/gateway/runtime-source/instances")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "bob")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
     }
 
     /**
@@ -197,17 +203,20 @@ public class RuntimeSourceEndpointE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Executes the metrics non admin returns403 operation.
+     * Executes the metrics non admin succeeds operation.
      */
     @Test
-    public void metrics_nonAdmin_returns403() {
+    public void metrics_nonAdmin_succeeds() {
+        when(metricsBuffer.getSnapshots(120)).thenReturn(Collections.emptyList());
+        when(metricsBuffer.getAgentStats()).thenReturn(Collections.emptyMap());
+
         webClient.get()
             .uri("/gateway/runtime-source/metrics")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
             .header(HEADER_USER_ID, "alice")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
     }
 
     /**

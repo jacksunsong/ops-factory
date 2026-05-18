@@ -4,7 +4,6 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
-import com.huawei.opsfactory.gateway.common.model.UserRole;
 import com.huawei.opsfactory.gateway.config.GatewayProperties;
 import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ServerWebExchange;
 
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -49,7 +47,7 @@ public class StatusController {
     }
 
     /**
-     * Returns the current user's identity and role.
+     * Returns the current user's identity.
      *
      * @param exchange current HTTP exchange carrying user context attributes
      * @return Mono emitting a map containing "userId" and "role"
@@ -57,9 +55,7 @@ public class StatusController {
     @GetMapping("/me")
     public Mono<Map<String, Object>> me(ServerWebExchange exchange) {
         String userId = exchange.getAttribute(UserContextFilter.USER_ID_ATTR);
-        UserRole role = exchange.getAttribute(UserContextFilter.USER_ROLE_ATTR);
-        return Mono.just(Map.of("userId", userId != null ? userId : "unknown", "role",
-            role != null ? role.name().toLowerCase(Locale.ROOT) : "user"));
+        return Mono.just(Map.of("userId", userId != null ? userId : "unknown", "role", "user"));
     }
 
     /**

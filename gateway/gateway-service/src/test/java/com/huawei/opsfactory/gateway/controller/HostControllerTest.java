@@ -406,24 +406,32 @@ public class HostControllerTest {
     }
 
     /**
-     * Tests list hosts forbidden non admin.
+     * Tests list hosts succeeds for any authenticated user.
      */
     @Test
-    public void testListHosts_forbidden_nonAdmin() {
+    public void testListHosts_succeeds_forAnyUser() {
+        when(hostService.listHosts(any())).thenReturn(List.of());
+
         webTestClient.get()
             .uri("/gateway/hosts/")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
     }
 
     /**
-     * Tests create host forbidden non admin.
+     * Tests create host succeeds for any authenticated user.
      */
     @Test
-    public void testCreateHost_forbidden_nonAdmin() {
+    public void testCreateHost_succeeds_forAnyUser() {
+        Map<String, Object> created = new LinkedHashMap<>();
+        created.put("id", "new-id");
+        created.put("name", "Host");
+        created.put("credential", "***");
+        when(hostService.createHost(any())).thenReturn(created);
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "Host");
 
@@ -435,6 +443,6 @@ public class HostControllerTest {
             .bodyValue(body)
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isCreated();
     }
 }

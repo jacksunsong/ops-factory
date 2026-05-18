@@ -89,17 +89,21 @@ public class InternalRuntimeSourceControllerTest {
     }
 
     /**
-     * Tests system non admin forbidden.
+     * Tests system succeeds for any authenticated user.
      */
     @Test
-    public void testSystem_nonAdminForbidden() {
+    public void testSystem_succeeds_forAnyUser() {
+        when(agentConfigService.getRegistry()).thenReturn(List.of());
+        when(instanceManager.getAllInstances()).thenReturn(List.of());
+        when(langfuseService.isConfigured()).thenReturn(false);
+
         webTestClient.get()
             .uri("/gateway/runtime-source/system")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
     }
 
     /**
@@ -140,17 +144,19 @@ public class InternalRuntimeSourceControllerTest {
     }
 
     /**
-     * Tests instances non admin forbidden.
+     * Tests instances succeeds for any authenticated user.
      */
     @Test
-    public void testInstances_nonAdminForbidden() {
+    public void testInstances_succeeds_forAnyUser() {
+        when(instanceManager.getAllInstances()).thenReturn(List.of());
+
         webTestClient.get()
             .uri("/gateway/runtime-source/instances")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
     }
 
     /**
@@ -249,16 +255,18 @@ public class InternalRuntimeSourceControllerTest {
     }
 
     /**
-     * Tests metrics non admin forbidden.
+     * Tests metrics succeeds for any authenticated user.
      */
     @Test
-    public void testMetrics_nonAdminForbidden() {
+    public void testMetrics_succeeds_forAnyUser() {
+        when(metricsBuffer.getSnapshots(120)).thenReturn(List.of());
+
         webTestClient.get()
             .uri("/gateway/runtime-source/metrics")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
     }
 }

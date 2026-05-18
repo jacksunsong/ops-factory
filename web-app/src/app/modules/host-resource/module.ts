@@ -5,7 +5,7 @@ const hostResourceModule: AppModule = {
     id: 'host-resource',
     owner: 'platform',
     routes: [
-        { id: 'host-resource.index', path: '/host-resource', component: HostResourcePage, access: 'admin' },
+        { id: 'host-resource.index', path: '/host-resource', component: HostResourcePage, access: 'authenticated' },
     ],
     navItems: [
         {

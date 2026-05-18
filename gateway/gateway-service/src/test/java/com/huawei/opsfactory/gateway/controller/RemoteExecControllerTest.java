@@ -379,10 +379,19 @@ public class RemoteExecControllerTest {
     }
 
     /**
-     * Tests execute forbidden non admin.
+     * Tests execute succeeds for any authenticated user.
      */
     @Test
-    public void testExecute_forbidden_nonAdmin() {
+    public void testExecute_succeeds_forAnyUser() {
+        Map<String, Object> execResult = new LinkedHashMap<>();
+        execResult.put("hostId", "host-1");
+        execResult.put("hostName", "Server1");
+        execResult.put("exitCode", 0);
+        execResult.put("output", "ok");
+        execResult.put("error", "");
+        execResult.put("duration", 100L);
+        when(remoteExecutionService.execute("host-1", "ls", 30)).thenReturn(execResult);
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("hostId", "host-1");
         body.put("command", "ls");
@@ -395,6 +404,6 @@ public class RemoteExecControllerTest {
             .bodyValue(body)
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
     }
 }

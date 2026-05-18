@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { useGoosed } from '../../../platform/providers/GoosedContext'
 import { useInbox } from '../../../platform/providers/InboxContext'
 import { useToast } from '../../../platform/providers/ToastContext'
-import { useUser } from '../../../platform/providers/UserContext'
 import {
     buildConsumedNewChatPath,
     buildChatSessionState,
@@ -68,8 +67,6 @@ export default function Chat() {
     const { getClient, agents, isConnected, error: goosedError } = useGoosed()
     const { markSessionRead } = useInbox()
     const { showToast } = useToast()
-    const { role } = useUser()
-    const isAdmin = role === 'admin'
 
     const routeResolution = useMemo(
         () => resolveChatRouteState(searchParams, location.state),
@@ -879,7 +876,7 @@ export default function Chat() {
                         modelInfo={modelInfo}
                         tokenState={tokenState}
                         skills={activeAgentSkills}
-                        onBrowseSkillMarket={isAdmin ? handleBrowseSkillMarket : undefined}
+                        onBrowseSkillMarket={handleBrowseSkillMarket}
                     />
                 </div>
             </div>

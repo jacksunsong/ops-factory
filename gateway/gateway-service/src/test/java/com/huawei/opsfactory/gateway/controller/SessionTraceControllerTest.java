@@ -71,16 +71,20 @@ public class SessionTraceControllerTest {
     }
 
     /**
-     * Tests start trace non admin forbidden.
+     * Tests start trace succeeds for any authenticated user.
      */
     @Test
-    public void testStartTrace_nonAdminForbidden() {
+    public void testStartTrace_succeeds_forAnyUser() {
+        when(traceService.startTrace("regular-user", "qa-agent", "20260429_2"))
+            .thenReturn(new TraceJobSnapshot("job-2", "running", "regular-user", "qa-agent", "20260429_2",
+                null, "trace collection running"));
+
         webTestClient.post()
             .uri("/gateway/agents/qa-agent/sessions/20260429_2/trace")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk();
     }
 }

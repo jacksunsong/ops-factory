@@ -409,24 +409,36 @@ public class BusinessServiceControllerTest {
     }
 
     /**
-     * Tests list business services forbidden non admin.
+     * Tests list business services succeeds for any authenticated user.
      */
     @Test
-    public void testListBusinessServices_forbidden_nonAdmin() {
+    public void testListBusinessServices_succeeds_forAnyUser() {
+        when(businessServiceService.listBusinessServices(isNull(), isNull())).thenReturn(List.of());
+
         webTestClient.get()
             .uri("/gateway/business-services")
             .header("x-secret-key", "test")
             .header("x-user-id", "regular-user")
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isOk()
+            .expectBody()
+            .jsonPath("$.businessServices")
+            .isArray()
+            .jsonPath("$.businessServices")
+            .isEmpty();
     }
 
     /**
-     * Tests create business service forbidden non admin.
+     * Tests create business service succeeds for any authenticated user.
      */
     @Test
-    public void testCreateBusinessService_forbidden_nonAdmin() {
+    public void testCreateBusinessService_succeeds_forAnyUser() {
+        Map<String, Object> created = new LinkedHashMap<>();
+        created.put("id", "new-id");
+        created.put("name", "Service");
+        when(businessServiceService.createBusinessService(any())).thenReturn(created);
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "Service");
 
@@ -438,6 +450,11 @@ public class BusinessServiceControllerTest {
             .bodyValue(body)
             .exchange()
             .expectStatus()
-            .isForbidden();
+            .isCreated()
+            .expectBody()
+            .jsonPath("$.success")
+            .isEqualTo(true)
+            .jsonPath("$.businessService.id")
+            .isEqualTo("new-id");
     }
 }

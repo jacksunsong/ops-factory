@@ -4,7 +4,6 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.SopService;
 
 import reactor.core.publisher.Mono;
@@ -58,7 +57,6 @@ public class SopController {
      */
     @GetMapping({"", "/"})
     public Mono<Map<String, Object>> listSops(ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             List<Map<String, Object>> sops = sopService.listSops();
             Map<String, Object> result = new LinkedHashMap<>();
@@ -76,7 +74,6 @@ public class SopController {
      */
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getSop(@PathVariable("id") String id, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             Map<String, Object> sop = sopService.getSop(id);
             if (sop == null) {
@@ -103,7 +100,6 @@ public class SopController {
     @PostMapping({"", "/"})
     public Mono<ResponseEntity<Map<String, Object>>> createSop(@RequestBody Map<String, Object> request,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> sop = sopService.createSop(request);
@@ -133,7 +129,6 @@ public class SopController {
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateSop(@PathVariable("id") String id,
         @RequestBody Map<String, Object> request, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> sop = sopService.updateSop(id, request);
@@ -166,7 +161,6 @@ public class SopController {
      */
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteSop(@PathVariable("id") String id, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             boolean deleted = sopService.deleteSop(id);
             if (!deleted) {

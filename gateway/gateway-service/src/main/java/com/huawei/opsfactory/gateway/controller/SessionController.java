@@ -210,7 +210,7 @@ public class SessionController {
         }
 
         return Flux.fromIterable(instanceManager.getAllInstances())
-            .filter(inst -> inst.getUserId().equals(userId) || GatewayConstants.SYSTEM_USER.equals(inst.getUserId()))
+            .filter(inst -> inst.getUserId().equals(userId))
             .filter(inst -> inst.getStatus() == ManagedInstance.Status.RUNNING)
             .flatMap(inst -> sessionService.getSessionsFromInstance(inst)
                 .map(json -> extractSessionsArray(json, inst.getAgentId())))

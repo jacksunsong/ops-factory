@@ -6,8 +6,8 @@ const knowledgeModule: AppModule = {
     id: 'knowledge',
     owner: 'platform',
     routes: [
-        { id: 'knowledge.index', path: '/knowledge', component: KnowledgePage, access: 'admin' },
-        { id: 'knowledge.configure', path: '/knowledge/:sourceId', component: KnowledgeConfigurePage, access: 'admin', hidden: true },
+        { id: 'knowledge.index', path: '/knowledge', component: KnowledgePage, access: 'authenticated' },
+        { id: 'knowledge.configure', path: '/knowledge/:sourceId', component: KnowledgeConfigurePage, access: 'authenticated', hidden: true },
     ],
     navItems: [
         {

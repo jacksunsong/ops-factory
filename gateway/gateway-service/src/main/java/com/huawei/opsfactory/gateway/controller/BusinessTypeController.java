@@ -4,7 +4,6 @@
 
 package com.huawei.opsfactory.gateway.controller;
 
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.service.BusinessTypeService;
 
 import reactor.core.publisher.Mono;
@@ -54,7 +53,6 @@ public class BusinessTypeController {
      */
     @GetMapping
     public Mono<Map<String, Object>> listBusinessTypes(ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             List<Map<String, Object>> types = businessTypeService.listBusinessTypes();
             Map<String, Object> result = new LinkedHashMap<>();
@@ -73,7 +71,6 @@ public class BusinessTypeController {
     @GetMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> getBusinessType(@PathVariable("id") String id,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> bt = businessTypeService.getBusinessType(id);
@@ -100,7 +97,6 @@ public class BusinessTypeController {
     @PostMapping
     public Mono<ResponseEntity<Map<String, Object>>> createBusinessType(@RequestBody Map<String, Object> request,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> bt = businessTypeService.createBusinessType(request);
@@ -128,7 +124,6 @@ public class BusinessTypeController {
     @PutMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> updateBusinessType(@PathVariable("id") String id,
         @RequestBody Map<String, Object> request, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> bt = businessTypeService.updateBusinessType(id, request);
@@ -155,7 +150,6 @@ public class BusinessTypeController {
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteBusinessType(@PathVariable("id") String id,
         ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             boolean deleted = businessTypeService.deleteBusinessType(id);
             if (!deleted) {

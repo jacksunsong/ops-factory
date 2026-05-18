@@ -5,7 +5,6 @@
 package com.huawei.opsfactory.gateway.controller;
 
 import com.huawei.opsfactory.gateway.common.model.AgentRegistryEntry;
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.process.InstanceManager;
 import com.huawei.opsfactory.gateway.service.AgentConfigService;
 
@@ -120,7 +119,6 @@ public class AgentController {
     @PostMapping
     public Mono<ResponseEntity<Map<String, Object>>> createAgent(@RequestBody Map<String, String> body,
         ServerWebExchange exchange) {
-        requireAdmin(exchange);
         String id = body.get("id");
         String name = body.get("name");
         if (id == null || id.isBlank()) {
@@ -153,7 +151,6 @@ public class AgentController {
      */
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteAgent(@PathVariable("id") String id, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         try {
             instanceManager.stopAllForAgent(id);
             agentConfigService.deleteAgent(id);
@@ -177,7 +174,6 @@ public class AgentController {
      */
     @GetMapping("/{id}/skills")
     public Mono<Map<String, Object>> listSkills(@PathVariable("id") String id, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         return Mono.just(Map.of("skills", agentConfigService.listSkills(id)));
     }
 
@@ -191,7 +187,6 @@ public class AgentController {
      */
     @GetMapping("/{id}/config")
     public Mono<ResponseEntity<Map<String, Object>>> getConfig(@PathVariable("id") String id, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         AgentRegistryEntry entry = agentConfigService.findAgent(id);
         if (entry == null) {
             return Mono.just(ResponseEntity.notFound().build());
@@ -223,7 +218,6 @@ public class AgentController {
     @PutMapping("/{id}/config")
     public Mono<ResponseEntity<Map<String, Object>>> updateConfig(@PathVariable("id") String id,
         @RequestBody Map<String, String> body, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         AgentRegistryEntry entry = agentConfigService.findAgent(id);
         if (entry == null) {
             Map<String, Object> errorBody = new LinkedHashMap<>();
@@ -253,7 +247,6 @@ public class AgentController {
     @PutMapping("/{id}/model-config")
     public Mono<ResponseEntity<Map<String, Object>>> updateModelConfig(@PathVariable("id") String id,
         @RequestBody Map<String, String> body, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         AgentRegistryEntry entry = agentConfigService.findAgent(id);
         if (entry == null) {
             return Mono.just(badAgent(id));
@@ -282,7 +275,6 @@ public class AgentController {
     @PostMapping("/{id}/providers")
     public Mono<ResponseEntity<Map<String, Object>>> createProvider(@PathVariable("id") String id,
         @RequestBody Map<String, Object> body, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         AgentRegistryEntry entry = agentConfigService.findAgent(id);
         if (entry == null) {
             return Mono.just(badAgent(id));
@@ -314,7 +306,6 @@ public class AgentController {
     public Mono<ResponseEntity<Map<String, Object>>> updateProvider(@PathVariable("id") String id,
         @PathVariable("providerName") String providerName, @RequestBody Map<String, Object> body,
         ServerWebExchange exchange) {
-        requireAdmin(exchange);
         AgentRegistryEntry entry = agentConfigService.findAgent(id);
         if (entry == null) {
             return Mono.just(badAgent(id));
@@ -348,7 +339,6 @@ public class AgentController {
      */
     @GetMapping("/{id}/memory")
     public Mono<ResponseEntity<Map<String, Object>>> listMemory(@PathVariable String id, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             List<Map<String, String>> files = agentConfigService.listMemoryFiles(id);
             return ResponseEntity.ok(Map.<String, Object> of("files", files));
@@ -367,7 +357,6 @@ public class AgentController {
     @GetMapping("/{id}/memory/{category}")
     public Mono<ResponseEntity<Map<String, Object>>> getMemoryFile(@PathVariable("id") String id,
         @PathVariable("category") String category, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         if (!isValidCategory(category)) {
             return badCategory();
         }
@@ -393,7 +382,6 @@ public class AgentController {
     @PutMapping("/{id}/memory/{category}")
     public Mono<ResponseEntity<Map<String, Object>>> putMemoryFile(@PathVariable("id") String id,
         @PathVariable("category") String category, @RequestBody Map<String, String> body, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         if (!isValidCategory(category)) {
             return badCategory();
         }
@@ -420,7 +408,6 @@ public class AgentController {
     @DeleteMapping("/{id}/memory/{category}")
     public Mono<ResponseEntity<Map<String, Object>>> deleteMemoryFile(@PathVariable("id") String id,
         @PathVariable("category") String category, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         if (!isValidCategory(category)) {
             return badCategory();
         }
@@ -433,9 +420,5 @@ public class AgentController {
                     .body(Map.<String, Object> of("success", (Object) false, "error", e.getMessage()));
             }
         }).subscribeOn(Schedulers.boundedElastic());
-    }
-
-    private void requireAdmin(ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
     }
 }

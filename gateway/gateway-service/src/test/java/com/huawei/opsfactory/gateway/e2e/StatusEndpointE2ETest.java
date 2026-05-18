@@ -29,10 +29,10 @@ public class StatusEndpointE2ETest extends BaseE2ETest {
     }
 
     /**
-     * Returns the me sys user returns sys.
+     * Returns the me sys user returns user role.
      */
     @Test
-    public void getMe_sysUser_returnsSys() {
+    public void getMe_sysUser_returnsUserRole() {
         webClient.get()
             .uri("/gateway/me")
             .header(HEADER_SECRET_KEY, SECRET_KEY)
@@ -44,7 +44,7 @@ public class StatusEndpointE2ETest extends BaseE2ETest {
             .jsonPath("$.userId")
             .isEqualTo("admin")
             .jsonPath("$.role")
-            .isEqualTo("admin");
+            .isEqualTo("user");
     }
 
     /**

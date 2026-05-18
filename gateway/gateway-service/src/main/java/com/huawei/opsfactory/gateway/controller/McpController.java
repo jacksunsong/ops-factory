@@ -5,7 +5,6 @@
 package com.huawei.opsfactory.gateway.controller;
 
 import com.huawei.opsfactory.gateway.common.constants.GatewayConstants;
-import com.huawei.opsfactory.gateway.filter.UserContextFilter;
 import com.huawei.opsfactory.gateway.process.InstanceManager;
 import com.huawei.opsfactory.gateway.proxy.GoosedProxy;
 import com.huawei.opsfactory.gateway.service.AgentConfigService;
@@ -66,7 +65,6 @@ public class McpController {
      */
     @GetMapping
     public Mono<Void> getMcpExtensions(@PathVariable("agentId") String agentId, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         // Route to the system instance
         return instanceManager.getOrSpawn(agentId, GatewayConstants.SYSTEM_USER)
             .flatMap(instance -> goosedProxy.proxy(exchange.getRequest(), exchange.getResponse(), instance.getPort(),
@@ -84,7 +82,6 @@ public class McpController {
     @PostMapping
     public Mono<String> createMcpExtension(@PathVariable("agentId") String agentId, @RequestBody String body,
         ServerWebExchange exchange) {
-        requireAdmin(exchange);
 
         // Persist config to the system instance, then recycle all agent instances so
         // subsequent requests start from a clean process with the updated config.
@@ -117,7 +114,6 @@ public class McpController {
     @DeleteMapping("/{name}")
     public Mono<String> deleteMcpExtension(@PathVariable("agentId") String agentId, @PathVariable("name") String name,
         ServerWebExchange exchange) {
-        requireAdmin(exchange);
         String path = "/config/extensions/" + name;
 
         return instanceManager.getOrSpawn(agentId, GatewayConstants.SYSTEM_USER).flatMap(sysInstance -> {
@@ -147,7 +143,6 @@ public class McpController {
     @GetMapping("/{name}/settings")
     public Mono<ResponseEntity<Map<String, Object>>> getMcpSettings(@PathVariable("agentId") String agentId,
         @PathVariable("name") String name, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 Map<String, Object> settings = agentConfigService.readMcpSettings(agentId, name);
@@ -187,7 +182,6 @@ public class McpController {
     @PutMapping("/{name}/settings")
     public Mono<ResponseEntity<Map<String, Object>>> putMcpSettings(@PathVariable("agentId") String agentId,
         @PathVariable("name") String name, @RequestBody Map<String, Object> body, ServerWebExchange exchange) {
-        requireAdmin(exchange);
         return Mono.fromCallable(() -> {
             try {
                 agentConfigService.writeMcpSettings(agentId, name, body);
@@ -201,10 +195,6 @@ public class McpController {
                         "Failed to write MCP settings"));
             }
         }).subscribeOn(Schedulers.boundedElastic());
-    }
-
-    private void requireAdmin(ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
     }
 
     private boolean hasConfigBackedSettings(String name) {

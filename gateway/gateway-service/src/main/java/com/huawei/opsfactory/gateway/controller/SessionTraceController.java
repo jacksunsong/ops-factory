@@ -60,7 +60,6 @@ public class SessionTraceController {
     @PostMapping(value = "/agents/{agentId}/sessions/{sessionId}/trace", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<TraceJobSnapshot> startTrace(@PathVariable("agentId") String agentId,
         @PathVariable("sessionId") String sessionId, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         String userId = exchange.getAttribute(UserContextFilter.USER_ID_ATTR);
         return Mono.fromSupplier(() -> traceService.startTrace(userId, agentId, sessionId));
     }
@@ -74,7 +73,6 @@ public class SessionTraceController {
      */
     @GetMapping(value = "/session-traces/{jobId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<TraceJobSnapshot> getTrace(@PathVariable("jobId") String jobId, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         return Mono.fromSupplier(() -> traceService.getJob(jobId));
     }
 
@@ -86,7 +84,6 @@ public class SessionTraceController {
      */
     @GetMapping("/session-traces/{jobId}/download")
     public Mono<Void> downloadTrace(@PathVariable("jobId") String jobId, ServerWebExchange exchange) {
-        UserContextFilter.requireAdmin(exchange);
         Path archive = traceService.getArchive(jobId);
         if (!Files.isRegularFile(archive)) {
             return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "trace archive not found"));

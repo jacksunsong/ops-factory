@@ -6,8 +6,8 @@ const controlCenterModule: AppModule = {
     id: 'control-center',
     owner: 'platform',
     routes: [
-        { id: 'control-center.index', path: '/control-center', component: ControlCenterPage, access: 'admin' },
-        { id: 'control-center.service', path: '/control-center/services/:serviceId', component: ManagedServiceDetailPage, access: 'admin', hidden: true },
+        { id: 'control-center.index', path: '/control-center', component: ControlCenterPage, access: 'authenticated' },
+        { id: 'control-center.service', path: '/control-center/services/:serviceId', component: ManagedServiceDetailPage, access: 'authenticated', hidden: true },
     ],
     navItems: [
         {

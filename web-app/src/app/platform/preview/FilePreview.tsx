@@ -13,7 +13,7 @@ import 'highlight.js/styles/github.css'
 import './FilePreview.css'
 import { inferFileType, needsTextContent } from '../../../utils/filePreview'
 import OnlyOfficePreview from './OnlyOfficePreview'
-import { runtime, gatewayHeaders, isAdminUser } from '../../../config/runtime'
+import { runtime, gatewayHeaders } from '../../../config/runtime'
 
 const MAX_LOG_LINE_NUMBER_LINES = 12000
 const MAX_LOG_LINE_NUMBER_CHARS = 1200000
@@ -196,7 +196,7 @@ export default function FilePreview({ embedded = false }: { embedded?: boolean }
         togglePreviewFullscreen,
         exitPreviewFullscreen,
     } = usePreview()
-    const { userId, role } = useUser()
+    const { userId } = useUser()
     const [copied, setCopied] = useState(false)
     const [showSource, setShowSource] = useState(false)
     const [isEditorOpen, setIsEditorOpen] = useState(false)
@@ -453,7 +453,7 @@ export default function FilePreview({ embedded = false }: { embedded?: boolean }
     const canDownload = !!getDownloadUrl()
     const displayType = previewFile ? inferFileType(previewFile) : ''
     const canEditContent = !!previewFile?.agentId && previewFile.content !== undefined && !!previewKind && needsTextContent(previewKind)
-    const canImportToKnowledge = isAdminUser(userId, role) && canDownload && !!previewFile?.agentId && !previewFile.path.startsWith('knowledge-document:')
+    const canImportToKnowledge = canDownload && !!previewFile?.agentId && !previewFile.path.startsWith('knowledge-document:')
     const canUseLineNumbers = !!previewFile?.content && shouldUseLineNumbers(previewFile.content, displayType, previewKind)
     const isLineNumberTextPreview = previewKind === 'code' && (displayType === 'txt' || displayType === 'log') && canUseLineNumbers
     const showLineNumberSource = canUseLineNumbers && (isLineNumberTextPreview || (previewKind === 'markdown' && showSource))
