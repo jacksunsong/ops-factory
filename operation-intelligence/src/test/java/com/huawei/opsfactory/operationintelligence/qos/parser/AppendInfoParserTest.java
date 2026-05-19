@@ -8,7 +8,8 @@ import com.huawei.opsfactory.operationintelligence.qos.model.TraceLogRecord;
 import com.huawei.opsfactory.operationintelligence.config.OperationIntelligenceProperties;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Map;
 
@@ -22,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * @author call-chain
  * @since 2026-05-14
  */
-@SpringBootTest
+@ExtendWith(MockitoExtension.class)
 class AppendInfoParserTest {
 
     private final AppendInfoParser parser = new AppendInfoParser();

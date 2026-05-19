@@ -129,7 +129,9 @@ public class CallChainService {
         log.info("Found {} unique TraceIDs", traceIds.size());
 
         // Fetch complete call chains for each TraceID
-        List<TraceLogRecord> allLogs = new ArrayList<>(entryLogs);
+        // entryLogs already contains entry logs (seqNo=1) from fetchEntryLogsWithSplit
+        // fetchByTraceId returns complete trace including entry logs, so don't add entryLogs to allLogs
+        List<TraceLogRecord> allLogs = new ArrayList<>();
         int querySize = properties.getCallChain().getQuerySize();
         for (String traceId : traceIds) {
             log.warn("Fetching logs for TraceID: {}", traceId);

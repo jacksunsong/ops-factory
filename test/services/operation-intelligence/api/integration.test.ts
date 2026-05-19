@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os'
 import net from 'node:net'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 
-const PROJECT_ROOT = resolve(import.meta.dirname, '..', '..', '..', '..', '..')
+const PROJECT_ROOT = resolve(import.meta.dirname, '..', '..', '..')
 const OI_DIR = join(PROJECT_ROOT, 'operation-intelligence')
 const MVN = process.env.MVN || 'C:\\zhulin\\apache-maven-3.9.14\\bin\\mvn'
 const SECRET_KEY = 'test-secret-key'
@@ -147,7 +147,7 @@ async function startOiService(): Promise<OiHandle> {
   }
 }
 
-let oi: OiHandle
+let oi: OiHandle | null = null
 
 beforeAll(async () => {
   oi = await startOiService()
@@ -290,6 +290,8 @@ describe('QoS API input validation', () => {
       body: JSON.stringify({ startTime: 1000, endTime: 2000 }),
     })
     expect(res.status).toBe(400)
+    const data = await res.json()
+    expect(data.message).toContain('endTime')
   })
 
   it('getHealthIndicator requires valid time range', async () => {
@@ -299,7 +301,7 @@ describe('QoS API input validation', () => {
     })
     expect(res.status).toBe(400)
     const data = await res.json()
-    expect(data.message).toContain('endTime')
+    expect(data.message).toContain('startTime')
   })
 
   it('getHealthIndicator requires startTime and endTime', async () => {

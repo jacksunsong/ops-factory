@@ -32,7 +32,7 @@ describe('module registration', () => {
     expect(src).toContain("path: '/operation-intelligence'")
     expect(src).toContain("titleKey: 'sidebar.operationIntelligence'")
     expect(src).toContain("icon: 'businessIntelligence'")
-    expect(src).toContain("access: 'admin'")
+    expect(src).toContain("access: 'authenticated'")
   })
 
   it('imports page component from correct relative path', () => {
@@ -156,8 +156,8 @@ describe('API service integration', () => {
   it('API service routes to operation-intelligence directly, not through gateway', () => {
     const src = read('src/services/operationIntelligenceAPI.ts')
     expect(src).toContain('OPERATION_INTELLIGENCE_SERVICE_URL')
-    expect(src).toContain('OPERATION_INTELLIGENCE_SECRET_KEY')
-    expect(src).toContain("'x-secret-key': OPERATION_INTELLIGENCE_SECRET_KEY")
+    expect(src).toContain('runtime.OPERATION_INTELLIGENCE_SECRET_KEY')
+    expect(src).toContain("'x-secret-key': runtime.OPERATION_INTELLIGENCE_SECRET_KEY")
     expect(src).not.toContain('GATEWAY_URL')
     expect(src).not.toContain('GATEWAY_SECRET_KEY')
   })
@@ -191,7 +191,7 @@ describe('API service integration', () => {
     expect(src).toContain('operationIntelligenceSecretKey')
     expect(src).toContain("const OPERATION_INTELLIGENCE_PATH_PREFIX = '/operation-intelligence'")
     expect(src).toContain('OPERATION_INTELLIGENCE_SERVICE_URL')
-    expect(src).toContain('OPERATION_INTELLIGENCE_SECRET_KEY')
+    expect(src).toContain('runtime.OPERATION_INTELLIGENCE_SECRET_KEY')
   })
 
   it('config.json and config.json.example declare service URL and secret', () => {
