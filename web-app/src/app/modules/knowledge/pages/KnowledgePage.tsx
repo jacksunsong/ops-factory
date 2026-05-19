@@ -46,9 +46,9 @@ interface SourceListResponse {
     total: number
 }
 
-function formatDate(value?: string | null): string {
+function formatDate(locale: string, value?: string | null): string {
     if (!value) return '—'
-    return new Date(value).toLocaleDateString(undefined, {
+    return new Date(value).toLocaleDateString(locale, {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -141,7 +141,7 @@ function CreateKnowledgeModal({
                     )}
 
                     <div className="form-group">
-                        <label className="form-label">{t('knowledge.name')}</label>
+                        <label className="form-label">{t('knowledge.name')} <span className="form-required">*</span></label>
                         <input
                             className="form-input"
                             type="text"
@@ -253,7 +253,7 @@ function DeleteKnowledgeModal({
 }
 
 export default function Knowledge() {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const navigate = useNavigate()
     const [sources, setSources] = useState<SourceSummary[]>([])
     const [stats, setStats] = useState<Record<string, SourceStats>>({})
@@ -417,7 +417,7 @@ export default function Knowledge() {
                                     metrics={[
                                         { label: t('knowledge.documents'), value: sourceStats?.documentCount ?? 0 },
                                         { label: t('knowledge.chunks'), value: sourceStats?.chunkCount ?? 0 },
-                                        { label: t('knowledge.updatedAt'), value: formatDate(source.updatedAt) },
+                                        { label: t('knowledge.updatedAt'), value: formatDate(i18n.language === 'en' ? 'en-US' : 'zh-CN', source.updatedAt) },
                                     ]}
                                     footer={(
                                         <ResourceCardActionGroup>

@@ -21,9 +21,9 @@ import ResourceCard, {
 import { useSkillMarket } from '../hooks/useSkillMarket'
 import '../styles/skill-market.css'
 
-function formatDate(value?: string | null): string {
+function formatDate(locale: string, value?: string | null): string {
     if (!value) return '-'
-    return new Date(value).toLocaleDateString(undefined, {
+    return new Date(value).toLocaleDateString(locale, {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -35,7 +35,7 @@ function getSkillStatusTone(skill: SkillMarketEntry): ResourceStatusTone {
 }
 
 export default function SkillMarketPage() {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const { agents, refreshAgents } = useGoosed()
     const { showToast } = useToast()
     const { skills, isLoading, error, fetchSkills, fetchSkill, createSkill, updateSkill, importSkill, deleteSkill, installSkill } = useSkillMarket()
@@ -195,7 +195,7 @@ export default function SkillMarketPage() {
                                     metrics={[
                                         { label: t('skillMarket.files'), value: skill.fileCount },
                                         { label: t('skillMarket.size'), value: formatSize(skill.sizeBytes, t) },
-                                        { label: t('skillMarket.updatedAt'), value: formatDate(skill.updatedAt) },
+                                        { label: t('skillMarket.updatedAt'), value: formatDate(i18n.language === 'en' ? 'en-US' : 'zh-CN', skill.updatedAt) },
                                     ]}
                                     footer={(
                                         <ResourceCardActionGroup>

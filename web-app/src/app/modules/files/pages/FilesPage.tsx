@@ -523,7 +523,7 @@ export default function FilesPage() {
                 <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => setDeleteTarget(null)}>
                     <div className="modal" onClick={(event) => event.stopPropagation()}>
                         <div className="modal-header">
-                            <h2 className="modal-title">删除文件</h2>
+                            <h2 className="modal-title">{t('files.deleteTitle')}</h2>
                             <button className="modal-close" onClick={() => setDeleteTarget(null)} aria-label={t('common.close')}>
                                 &times;
                             </button>
@@ -531,7 +531,7 @@ export default function FilesPage() {
 
                         <div className="modal-body">
                             <p style={{ fontSize: 'var(--font-size-base)', color: 'var(--color-text-primary)', marginBottom: 'var(--spacing-4)' }}>
-                                将永久删除 “{deleteTarget.name}”，此操作不可恢复。
+                                {t('files.deleteConfirm', { name: deleteTarget.name })}
                             </p>
                         </div>
 
@@ -542,7 +542,7 @@ export default function FilesPage() {
                                 onClick={() => setDeleteTarget(null)}
                                 disabled={deletingKey === getFileKey(deleteTarget)}
                             >
-                                取消
+                                {t('common.cancel')}
                             </button>
                             <button
                                 type="button"
@@ -550,7 +550,7 @@ export default function FilesPage() {
                                 onClick={() => handleDelete(deleteTarget)}
                                 disabled={deletingKey === getFileKey(deleteTarget)}
                             >
-                                {deletingKey === getFileKey(deleteTarget) ? '删除中...' : '确认删除'}
+                                {deletingKey === getFileKey(deleteTarget) ? t('common.deleting') : t('common.delete')}
                             </button>
                         </div>
                     </div>

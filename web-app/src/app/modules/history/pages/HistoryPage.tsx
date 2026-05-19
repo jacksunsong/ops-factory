@@ -84,7 +84,7 @@ async function getResponseError(response: Response): Promise<string> {
 }
 
 export default function HistoryPage() {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const navigate = useNavigate()
     const { showToast } = useToast()
     const { requestConfirm } = useConfirmDialog()
@@ -350,7 +350,7 @@ export default function HistoryPage() {
                         marginBottom: 'var(--spacing-6)',
                     }}
                 >
-                    {t('history.sessionDeleted')} • {new Date(lastDeletedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                    {t('history.sessionDeleted')} • {new Date(lastDeletedAt).toLocaleTimeString(i18n.language === 'en' ? 'en-US' : 'zh-CN', { hour: '2-digit', minute: '2-digit' })}
                 </div>
             )}
 

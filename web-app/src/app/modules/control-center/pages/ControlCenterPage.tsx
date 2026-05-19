@@ -51,14 +51,14 @@ function fmtCost(c: number): string {
   return `$${c.toFixed(2)}`
 }
 
-function fmtDate(iso: string): string {
+function fmtDate(iso: string, locale: string): string {
   const d = new Date(iso)
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
 }
 
-function fmtTime(iso: string | number): string {
+function fmtTime(iso: string | number, locale: string): string {
   const d = new Date(iso)
-  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function fmtIdleTime(ms: number): string {
@@ -454,11 +454,12 @@ function StatusCard({
  * The outer container controls the display size via CSS;
  * the SVG preserves its aspect ratio so circles stay round.
  */
-function Sparkline({ data, valueKey, color, formatter }: {
+function Sparkline({ data, valueKey, color, formatter, locale }: {
   data: DailyPoint[]
   valueKey: keyof DailyPoint
   color: string
   formatter?: (v: number) => string
+  locale: string
 }) {
   const fmt = formatter || String
   const values = data.map(d => d[valueKey] as number)
@@ -506,7 +507,7 @@ function Sparkline({ data, valueKey, color, formatter }: {
             {fmt(values[i])}
           </text>
           <text x={p.x} y={h - 4} textAnchor="middle" fontSize="10" fill="var(--color-text-muted)">
-            {fmtDate(data[i].date)}
+            {fmtDate(data[i].date, locale)}
           </text>
         </g>
       ))}
@@ -548,7 +549,7 @@ function ExternalLinkIcon({ size = 13 }: { size?: number }) {
 // --- Tab: Platform --------------------------------------------------------
 
 function PlatformTab() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { system, instances, services, isLoading, error, runtimeError, refresh } = useMonitoringPlatform()
   const { showToast } = useToast()
@@ -628,6 +629,7 @@ function PlatformTab() {
                 pendingAction={pendingServiceId === service.id ? pendingAction : null}
                 onAction={handleAction}
                 onConfigure={() => navigate(`/control-center/services/${service.id}`)}
+                locale={i18n.language === 'en' ? 'en-US' : 'zh-CN'}
               />
             ))}
           </CardGrid>
@@ -649,7 +651,7 @@ function PlatformTab() {
 }
 
 function EventsTab() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { events, isLoading, error } = useControlCenterEvents()
 
   if (isLoading && events.length === 0) {
@@ -681,7 +683,7 @@ function EventsTab() {
                 <strong>{event.serviceName}</strong>
                 <span className="control-center-event-message">{event.message}</span>
               </div>
-              <span className="control-center-event-time">{fmtTime(event.timestamp)}</span>
+              <span className="control-center-event-time">{fmtTime(event.timestamp, i18n.language === 'en' ? 'en-US' : 'zh-CN')}</span>
             </div>
             )
           })}
@@ -972,7 +974,7 @@ function PerformanceTab() {
 const RANGES: TimeRange[] = ['1h', '24h', '7d', '30d']
 
 function ObservabilityTab() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { status, overview, traces, observations, isLoading, error, range, setRange } = useMonitoring()
   const [traceFilter, setTraceFilter] = useState<'all' | 'errors'>('all')
   const filteredTraces = traceFilter === 'errors' ? traces.filter(tr => tr.hasError) : traces
@@ -1071,7 +1073,7 @@ function ObservabilityTab() {
             <div className="mon-section">
               <div className="mon-chart-block">
                 <span className="mon-chart-title">{t('monitoring.trendTraces')}</span>
-                <Sparkline data={overview.daily} valueKey="traces" color="var(--color-accent)" formatter={v => String(v)} />
+                <Sparkline data={overview.daily} valueKey="traces" color="var(--color-accent)" formatter={v => String(v)} locale={i18n.language === 'en' ? 'en-US' : 'zh-CN'} />
               </div>
             </div>
           )}
@@ -1127,7 +1129,7 @@ function ObservabilityTab() {
                   <span>{t('monitoring.status')}</span>
                 </div>
                 {filteredTraces.map(tr => (
-                  <TraceRowComp key={tr.id} trace={tr} langfuseHost={status?.host} />
+                  <TraceRowComp key={tr.id} trace={tr} langfuseHost={status?.host} locale={i18n.language === 'en' ? 'en-US' : 'zh-CN'} />
                 ))}
               </div>
             )}
@@ -1197,11 +1199,13 @@ function ServiceCard({
   pendingAction,
   onAction,
   onConfigure,
+  locale,
 }: {
   service: ManagedServiceStatus
   pendingAction: ControlCenterAction | null
   onAction: (service: ManagedServiceStatus, action: ControlCenterAction) => void
   onConfigure: () => void
+  locale: string
 }) {
   const { t } = useTranslation()
   const statusTone: ResourceStatusTone = (() => {
@@ -1229,7 +1233,7 @@ function ServiceCard({
           </span>
           <span className="control-center-service-checked">
             <span className="control-center-service-checked-label">{t('controlCenter.lastChecked')}</span>
-            <span className="control-center-service-checked-value">{fmtTime(service.checkedAt)}</span>
+            <span className="control-center-service-checked-value">{fmtTime(service.checkedAt, locale)}</span>
           </span>
         </div>
       )}
@@ -1328,7 +1332,7 @@ function ActionConfirmDialog({
 
 // --- Trace row sub-component (used by ObservabilityTab) --------------------
 
-function TraceRowComp({ trace: tr, langfuseHost }: { trace: TraceRow; langfuseHost?: string }) {
+function TraceRowComp({ trace: tr, langfuseHost, locale }: { trace: TraceRow; langfuseHost?: string; locale: string }) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const rowClass = `mon-traces-row ${tr.hasError ? 'mon-traces-row-error' : ''}`
@@ -1337,7 +1341,7 @@ function TraceRowComp({ trace: tr, langfuseHost }: { trace: TraceRow; langfuseHo
     <>
       <div className={rowClass} onClick={() => setExpanded(!expanded)}>
         <span className="mon-traces-chevron"><ChevronIcon expanded={expanded} /></span>
-        <span className="mon-traces-ts">{fmtTime(tr.timestamp)}</span>
+        <span className="mon-traces-ts">{fmtTime(tr.timestamp, locale)}</span>
         <span className="mon-traces-name">{tr.name}</span>
         <span className="mon-traces-input" title={tr.input}>{tr.input.slice(0, 60)}{tr.input.length > 60 ? '...' : ''}</span>
         <span className="mon-traces-latency">{fmtSec(tr.latency)}</span>

@@ -36,8 +36,9 @@ export default function SessionItem({
     isTracing = false,
     onMarkUnread,
 }: SessionItemProps) {
-    const { t } = useTranslation()
-    const formattedDate = new Date(session.created_at).toLocaleDateString(undefined, {
+    const { t, i18n } = useTranslation()
+    const locale = i18n.language === 'en' ? 'en-US' : 'zh-CN'
+    const formattedDate = new Date(session.created_at).toLocaleDateString(locale, {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
