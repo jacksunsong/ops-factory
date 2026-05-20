@@ -75,67 +75,66 @@ class BusinessIntelligenceServiceTest {
             return new BiRawData(
                 List.of(
                     Map.of(
-                        "Order Number", "INC-001",
-                        "Order Name", "Database unavailable",
-                        "Priority", "P1",
-                        "Order Status", "Open",
-                        "Resolver", "Alice",
-                        "Category", "Database",
+                        "ticket_id", "INC-001",
+                        "title", "Database unavailable",
+                        "priority", "P1",
+                        "status", "Open",
+                        "assigned_to", "Alice",
+                        "category", "Database",
                         "SLA Compliant", "No"
                     ),
                     Map.of(
-                        "Order Number", "INC-002",
-                        "Order Name", "Network alert",
-                        "Priority", "P2",
-                        "Order Status", "Resolved",
-                        "Resolver", "Bob",
-                        "Category", "Network",
+                        "ticket_id", "INC-002",
+                        "title", "Network alert",
+                        "priority", "P2",
+                        "status", "Resolved",
+                        "assigned_to", "Bob",
+                        "category", "Network",
                         "SLA Compliant", "Yes"
                     )
                 ),
                 List.of(
                     Map.of(
-                        "Priority", "P1",
-                        "Response (minutes)", "15",
-                        "Resolution (hours)", "4"
+                        "priority", "P1",
+                        "response_sla_min", "15",
+                        "resolution_sla_min", "240"
                     )
                 ),
                 List.of(
                     Map.of(
-                        "Change Number", "CHG-001",
-                        "Change Title", "Database patch",
-                        "Change Type", "Emergency",
-                        "Status", "Failed",
-                        "Success", "No",
-                        "Incident Caused", "Yes",
-                        "Backout Performed", "Yes",
-                        "Implementer", "Carol",
-                        "Related Incidents", "INC-001"
+                        "ticket_id", "CHG-001",
+                        "title", "Database patch",
+                        "change_type", "Emergency",
+                        "status", "Failed",
+                        "close_code", "Failed",
+                        "incident_ids", "INC-001",
+                        "assigned_to", "Carol"
                     )
                 ),
                 List.of(
                     Map.of(
-                        "Request Number", "REQ-001",
-                        "Request Type", "Access",
-                        "Status", "Fulfilled",
-                        "SLA Met", "Yes",
-                        "Assignee", "Dora",
-                        "Requester Dept", "Finance",
-                        "Satisfaction Score", "4.5"
+                        "ticket_id", "REQ-001",
+                        "catalog_item", "Access",
+                        "status", "Closed",
+                        "close_code", "Fulfilled",
+                        "assigned_to", "Dora",
+                        "requester_dept", "Finance",
+                        "satisfaction_score", "4.5"
                     )
                 ),
                 List.of(
                     Map.of(
-                        "Problem Number", "PRB-001",
-                        "Problem Title", "Recurring database saturation",
-                        "Status", "Under Investigation",
-                        "Known Error", "Yes",
-                        "Root Cause", "Capacity issue",
-                        "Root Cause Category", "Technical Defect",
-                        "Related Incidents", "3",
-                        "Resolver", "Evan"
+                        "ticket_id", "PRB-001",
+                        "title", "Recurring database saturation",
+                        "status", "Under Investigation",
+                        "known_error", "true",
+                        "root_cause", "Capacity issue",
+                        "cause_code", "Technical Defect",
+                        "related_incident_count", "3",
+                        "assigned_to", "Evan"
                     )
-                )
+                ),
+                List.of()
             );
         }
     }
