@@ -17,7 +17,8 @@ export type ImportType =
 
 export interface ImportError {
     row: number
-    message: string
+    code: string
+    params?: Record<string, string>
 }
 
 export interface ImportProgress {
@@ -69,95 +70,97 @@ export function useResourceImport(deps: ImportDeps) {
     const importCsv = useCallback(async (type: ImportType, csvText: string): Promise<ImportResult> => {
         const rows = csvToObjects(csvText)
             if (rows.length === 0) {
-                return { success: 0, failed: 0, errors: [{ row: 0, message: 'No data rows found' }] }
+                return { success: 0, failed: 0, errors: [{ row: 0, code: 'import.noDataRows' }] }
             }
 
-            // Validate CSV type matches selected import type
-            const firstRowKeys = new Set(Object.keys(rows[0]).map(k => k.toLowerCase()))
+        // Validate CSV type matches selected import type
+        const firstRowKeys = new Set(Object.keys(rows[0]).map(k => k.toLowerCase()))
 
-            // Required fields for each type
-            const typeRequiredFields: Record<ImportType, string[]> = {
-                ClusterTypes: ['name', 'code'],
-                BusinessTypes: ['name', 'code'],
-                HostGroups: ['name'],
-                Clusters: ['name', 'type'],
-                Hosts: ['name', 'ip', 'username'],
-                BusinessServices: ['name', 'code'],
-                Relations: ['sourcenode', 'destnode'],
-                SOPs: ['name'],
-                Whitelist: ['pattern'],
+        // Required fields for each type
+        const typeRequiredFields: Record<ImportType, string[]> = {
+            ClusterTypes: ['name', 'code'],
+            BusinessTypes: ['name', 'code'],
+            HostGroups: ['name'],
+            Clusters: ['name', 'type'],
+            Hosts: ['name', 'ip', 'username'],
+            BusinessServices: ['name', 'code'],
+            Relations: ['sourcenode', 'destnode'],
+            SOPs: ['name'],
+            Whitelist: ['pattern'],
+        }
+
+        // Unique fields to help distinguish types
+        const typeUniqueFields: Record<ImportType, string[]> = {
+            ClusterTypes: ['commandprefix', 'envvariables'],
+            BusinessTypes: [], // Distinguished from ClusterTypes by NOT having commandprefix/envvariables
+            HostGroups: ['parentgroup'],
+            Clusters: ['type', 'group'],
+            Hosts: ['ip', 'port', 'username', 'authtype', 'credential'],
+            BusinessServices: ['businesstype'],
+            Relations: ['sourcenode', 'destnode'],
+            SOPs: ['version', 'triggercondition', 'enabled', 'mode'],
+            Whitelist: ['pattern'],
+        }
+
+        // Check required fields
+        const required = typeRequiredFields[type]
+        const missingRequired = required.filter(field => !firstRowKeys.has(field.toLowerCase()))
+        if (missingRequired.length > 0) {
+            return {
+                success: 0,
+                failed: rows.length,
+                errors: [{
+                    row: 0,
+                    code: 'import.missingRequiredColumns',
+                    params: { type, columns: missingRequired.join(', ') }
+                }]
             }
+        }
 
-            // Unique fields to help distinguish types
-            const typeUniqueFields: Record<ImportType, string[]> = {
-                ClusterTypes: ['commandprefix', 'envvariables'],
-                BusinessTypes: [], // Distinguished from ClusterTypes by NOT having commandprefix/envvariables
-                HostGroups: ['parentgroup'],
-                Clusters: ['type', 'group'],
-                Hosts: ['ip', 'port', 'username', 'authtype', 'credential'],
-                BusinessServices: ['businesstype'],
-                Relations: ['sourcenode', 'destnode'],
-                SOPs: ['version', 'triggercondition', 'enabled', 'mode'],
-                Whitelist: ['pattern'],
+        // Special handling for ClusterTypes vs BusinessTypes (both have 'name' and 'code')
+        if (type === 'ClusterTypes') {
+            // ClusterTypes should NOT have businesstype
+            if (firstRowKeys.has('businesstype')) {
+                return {
+                    success: 0, failed: rows.length,
+                    errors: [{ row: 0, code: 'import.wrongFileType.suggestBusinessTypes' }]
+                }
             }
+            // ClusterTypes should have commandprefix (optional) or envvariables (optional)
+            if (!firstRowKeys.has('commandprefix') && !firstRowKeys.has('envvariables')) {
+                return {
+                    success: 0, failed: rows.length,
+                    errors: [{ row: 0, code: 'import.wrongFileType.suggestBusinessTypes' }]
+                }
+            }
+        } else if (type === 'BusinessTypes') {
+            // BusinessTypes should NOT have commandprefix, envvariables, or businesstype
+            if (firstRowKeys.has('commandprefix') || firstRowKeys.has('envvariables')) {
+                return {
+                    success: 0, failed: rows.length,
+                    errors: [{ row: 0, code: 'import.wrongFileType.suggestClusterTypes' }]
+                }
+            }
+        } else {
+            // For other types, check if file has unique fields of other types
+            const unexpectedFields = Object.entries(typeUniqueFields)
+                .filter(([checkType]) => checkType !== type)
+                .filter(([checkType]) => typeUniqueFields[checkType as ImportType].length > 0)
+                .filter(([, fields]) => fields.some(field => firstRowKeys.has(field.toLowerCase())))
 
-            // Check required fields
-            const required = typeRequiredFields[type]
-            const missingRequired = required.filter(field => !firstRowKeys.has(field.toLowerCase()))
-            if (missingRequired.length > 0) {
+            if (unexpectedFields.length > 0) {
+                const suggestions = unexpectedFields.map(([checkType]) => checkType).join(' or ')
                 return {
                     success: 0,
                     failed: rows.length,
                     errors: [{
                         row: 0,
-                        message: `Invalid CSV file for ${type}. Missing required columns: ${missingRequired.join(', ')}.`
+                        code: 'import.wrongFileType.suggestOther',
+                        params: { types: suggestions }
                     }]
                 }
             }
-
-            // Special handling for ClusterTypes vs BusinessTypes (both have 'name' and 'code')
-            if (type === 'ClusterTypes') {
-                // ClusterTypes should NOT have businesstype
-                if (firstRowKeys.has('businesstype')) {
-                    return {
-                        success: 0, failed: rows.length,
-                        errors: [{ row: 0, message: 'CSV file appears to be for: BusinessTypes. Please select the correct import type.' }]
-                    }
-                }
-                // ClusterTypes should have commandprefix (optional) or envvariables (optional)
-                if (!firstRowKeys.has('commandprefix') && !firstRowKeys.has('envvariables')) {
-                    return {
-                        success: 0, failed: rows.length,
-                        errors: [{ row: 0, message: 'CSV file appears to be for: BusinessTypes. Please select the correct import type.' }]
-                    }
-                }
-            } else if (type === 'BusinessTypes') {
-                // BusinessTypes should NOT have commandprefix, envvariables, or businesstype
-                if (firstRowKeys.has('commandprefix') || firstRowKeys.has('envvariables')) {
-                    return {
-                        success: 0, failed: rows.length,
-                        errors: [{ row: 0, message: 'CSV file appears to be for: ClusterTypes. Please select the correct import type.' }]
-                    }
-                }
-            } else {
-                // For other types, check if file has unique fields of other types
-                const unexpectedFields = Object.entries(typeUniqueFields)
-                    .filter(([checkType]) => checkType !== type)
-                    .filter(([checkType]) => typeUniqueFields[checkType as ImportType].length > 0)
-                    .filter(([, fields]) => fields.some(field => firstRowKeys.has(field.toLowerCase())))
-
-                if (unexpectedFields.length > 0) {
-                    const suggestions = unexpectedFields.map(([checkType]) => checkType).join(' or ')
-                    return {
-                        success: 0,
-                        failed: rows.length,
-                        errors: [{
-                            row: 0,
-                            message: `CSV file appears to be for: ${suggestions}. Please select the correct import type.`
-                        }]
-                    }
-                }
-            }
+        }
 
             setImporting(true)
             setProgress({ current: 0, total: rows.length, phase: type })
@@ -166,7 +169,7 @@ export function useResourceImport(deps: ImportDeps) {
                 const errors: ImportError[] = []
                 let success = 0
 
-                // Build lookup maps from current data
+        // Build lookup maps from current data
         const groupNameToId = new Map(deps.groups.map(g => [g.name, g.id]))
         const groupCodeToId = new Map(deps.groups.map(g => [g.code ?? '', g.id]))
         const clusterNameToId = new Map(deps.clusters.map(c => [c.name, c.id]))
@@ -232,7 +235,7 @@ export function useResourceImport(deps: ImportDeps) {
                             typeName = clusterTypeCodeToName.get(typeName) || typeName
                         }
                         if (!groupId && row.group) {
-                            errors.push({ row: i + 1, message: `Group "${row.group}" not found` })
+                            errors.push({ row: i + 1, code: 'import.groupNotFound', params: { group: row.group } })
                             continue
                         }
                         const created = await deps.createCluster({
@@ -252,7 +255,7 @@ export function useResourceImport(deps: ImportDeps) {
                             ? clusterNameToId.get(row.cluster)
                             : undefined
                         if (!clusterId && row.cluster) {
-                            errors.push({ row: i + 1, message: `Cluster "${row.cluster}" not found` })
+                            errors.push({ row: i + 1, code: 'import.clusterNotFound', params: { cluster: row.cluster } })
                             continue
                         }
                         const created = await deps.createHost({
@@ -285,7 +288,7 @@ export function useResourceImport(deps: ImportDeps) {
                             ? businessTypeNameToId.get(row.businesstype)
                             : undefined
                         if (!groupId && row.group) {
-                            errors.push({ row: i + 1, message: `Group "${row.group}" not found` })
+                            errors.push({ row: i + 1, code: 'import.groupNotFound', params: { group: row.group } })
                             continue
                         }
                         const created = await deps.createBusinessService({
@@ -308,11 +311,11 @@ export function useResourceImport(deps: ImportDeps) {
                         const sourceHostId = hostNameToId.get(row.sourcenode)
                         const destHostId = hostNameToId.get(row.destnode)
                         if (!destHostId) {
-                            errors.push({ row: i + 1, message: `Target host "${row.destnode}" not found` })
+                            errors.push({ row: i + 1, code: 'import.targetHostNotFound', params: { host: row.destnode } })
                             continue
                         }
                         if (!sourceBsId && !sourceHostId) {
-                            errors.push({ row: i + 1, message: `Source node "${row.sourcenode}" not found as host or business service` })
+                            errors.push({ row: i + 1, code: 'import.sourceNodeNotFound', params: { node: row.sourcenode } })
                             continue
                         }
                         await deps.createRelation({
@@ -357,7 +360,7 @@ export function useResourceImport(deps: ImportDeps) {
                 }
             } catch (err) {
                 const msg = err instanceof Error ? err.message : String(err)
-                errors.push({ row: i + 1, message: msg })
+                errors.push({ row: i + 1, code: 'import.rowError', params: { message: msg } })
             }
         }
 
@@ -372,7 +375,8 @@ export function useResourceImport(deps: ImportDeps) {
                     try {
                         await deps.updateGroup(groupId, { parentId })
                     } catch (err) {
-                        errors.push({ row: i + 1, message: `Failed to set parent: ${err instanceof Error ? err.message : String(err)}` })
+                        const msg = err instanceof Error ? err.message : String(err)
+                        errors.push({ row: i + 1, code: 'import.setParentFailed', params: { message: msg } })
                     }
                 }
             }
@@ -401,9 +405,9 @@ export function useResourceImport(deps: ImportDeps) {
             return {
                 success: 0,
                 failed: rows.length,
-                errors: [{ row: 0, message: `Import failed: ${msg}` }]
-            }
+                errors: [{ row: 0, code: 'import.importFailed', params: { message: msg } }]
         }
+    }
     }, [deps])
 
     return { importing, progress, importCsv }

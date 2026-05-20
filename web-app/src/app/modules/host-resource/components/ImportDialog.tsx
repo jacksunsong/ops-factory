@@ -118,6 +118,40 @@ export default function ImportDialog({ open, onClose, importing, progress, onImp
 
     const typeLabel = (type: ImportType) => t(`hostResource.importType_${type}`)
 
+    const translateError = (err: ImportResult['errors'][0]): string => {
+        switch (err.code) {
+            case 'import.noDataRows':
+                return t('hostResource.importErrorNoDataRows')
+            case 'import.missingRequiredColumns':
+                return t('hostResource.importErrorMissingRequiredColumns', {
+                    type: err.params?.type,
+                    columns: err.params?.columns,
+                })
+            case 'import.wrongFileType.suggestBusinessTypes':
+                return t('hostResource.importErrorSuggestBusinessTypes')
+            case 'import.wrongFileType.suggestClusterTypes':
+                return t('hostResource.importErrorSuggestClusterTypes')
+            case 'import.wrongFileType.suggestOther':
+                return t('hostResource.importErrorSuggestOther', { types: err.params?.types })
+            case 'import.groupNotFound':
+                return t('hostResource.importErrorGroupNotFound', { group: err.params?.group })
+            case 'import.clusterNotFound':
+                return t('hostResource.importErrorClusterNotFound', { cluster: err.params?.cluster })
+            case 'import.targetHostNotFound':
+                return t('hostResource.importErrorTargetHostNotFound', { host: err.params?.host })
+            case 'import.sourceNodeNotFound':
+                return t('hostResource.importErrorSourceNodeNotFound', { node: err.params?.node })
+            case 'import.rowError':
+                return t('hostResource.importErrorRowError', { message: err.params?.message })
+            case 'import.setParentFailed':
+                return t('hostResource.importErrorSetParentFailed', { message: err.params?.message })
+            case 'import.importFailed':
+                return t('hostResource.importErrorImportFailed', { message: err.params?.message })
+            default:
+                return err.code
+        }
+    }
+
     return (
         <DetailDialog
             title={t('hostResource.importDialogTitle')}
@@ -242,7 +276,7 @@ export default function ImportDialog({ open, onClose, importing, progress, onImp
                             <ul className="hr-import-error-list">
                                 {result.errors.map((err, idx) => (
                                     <li key={idx} className="hr-import-error-item">
-                                        <span className="hr-import-error-row">Row {err.row}:</span> {err.message}
+                                        <span className="hr-import-error-row">Row {err.row}:</span> {translateError(err)}
                                     </li>
                                 ))}
                             </ul>
