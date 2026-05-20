@@ -6,7 +6,6 @@ import { useToast } from '../../../platform/providers/ToastContext'
 import FilterInlineGroup from '../../../platform/ui/filters/FilterInlineGroup'
 import AnalyticsTableCard from '../../../platform/ui/primitives/AnalyticsTableCard'
 import Button from '../../../platform/ui/primitives/Button'
-import ChartHeaderLegend from '../../../platform/ui/primitives/ChartHeaderLegend'
 import PageHeader from '../../../platform/ui/primitives/PageHeader'
 import PieDistributionCard from '../../../platform/ui/primitives/PieDistributionCard'
 import SectionCard from '../../../platform/ui/primitives/SectionCard'
@@ -1543,41 +1542,6 @@ function splitAxisLabel(label: string, wrap: boolean): string[] {
     return [label]
 }
 
-function getChartLegendItems(chart: ChartSection, t: TranslateFn): Array<{ label: string; color: string; dashed?: boolean }> {
-    if (chart.type === 'line') {
-        const colors = chart.config?.colors || ['#5b8db8', '#10b981']
-        const seriesNames = chart.config?.series || [t('businessIntelligence.incidents.charts.volumeSeries')]
-        return seriesNames.map((label, idx) => ({
-            label,
-            color: colors[idx] || '#5b8db8',
-        }))
-    }
-
-    if (chart.type === 'combo') {
-        const colors = chart.config?.colors || ['#5b8db8', '#10b981']
-        const seriesNames = chart.config?.series || [
-            t('businessIntelligence.incidents.charts.volumeSeries'),
-            t('businessIntelligence.incidents.charts.slaSeries'),
-        ]
-        return seriesNames.map((label, idx) => ({
-            label,
-            color: colors[idx] || (idx === 2 ? '#ef4444' : '#5b8db8'),
-            dashed: idx === 2,
-        }))
-    }
-
-    if (chart.type === 'grouped-bar' || chart.type === 'stacked-bar') {
-        const colors = chart.config?.colors || ['#5b8db8', '#10b981']
-        const seriesNames = chart.config?.series?.length ? chart.config.series : []
-        return seriesNames.map((label, idx) => ({
-            label,
-            color: colors[idx] || '#5b8db8',
-        }))
-    }
-
-    return []
-}
-
 function IncidentBubbleChart({ chart, colors, t: _t }: { chart: ChartSection; colors: string[]; t: (key: string, options?: Record<string, unknown>) => string }) {
     const [hovered, setHovered] = useState(-1)
     const xAxisLabel = chart.config?.xAxisLabel || ''
@@ -3047,17 +3011,7 @@ function GenericTabPanel({
 
                     {trendCharts.length > 0 ? (
                         <div className="business-intelligence-section-stack">
-                            {trendCharts.map(chart => (
-                                <SectionCard
-                                    key={chart.id}
-                                    title={chart.title}
-                                    action={<ChartHeaderLegend items={getChartLegendItems(chart, _t)} />}
-                                >
-                                    <div className={`business-intelligence-chart-surface business-intelligence-chart-surface-${chart.type}`}>
-                                        {renderChartContent(chart, { hideLegend: true })}
-                                    </div>
-                                </SectionCard>
-                            ))}
+                            {trendCharts.map(chart => renderChart(chart))}
                         </div>
                     ) : null}
 
@@ -3126,17 +3080,7 @@ function GenericTabPanel({
                     ) : null}
                     {nonPieCharts.length > 0 ? (
                         <div className="business-intelligence-section-stack">
-                            {nonPieCharts.map(chart => (
-                                <SectionCard
-                                    key={chart.id}
-                                    title={chart.title}
-                                    action={chart.config?.series ? <ChartHeaderLegend items={getChartLegendItems(chart, _t)} /> : undefined}
-                                >
-                                    <div className={`business-intelligence-chart-surface business-intelligence-chart-surface-${chart.type}`}>
-                                        {renderChartContent(chart, { hideLegend: true })}
-                                    </div>
-                                </SectionCard>
-                            ))}
+                            {nonPieCharts.map(chart => renderChart(chart))}
                         </div>
                     ) : null}
                     {localizedTab.tables.length > 0 ? (
