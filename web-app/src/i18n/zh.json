@@ -101,7 +101,7 @@
     },
     "tabDescriptions": {
       "executiveSummary": "聚合四类 ITIL 数据的核心规模与风险摘要。",
-      "slaAnalysis": "多维度观察事件SLA履约情况，并进行违约情况分析。",
+      "slaAnalysis": "事件与请求SLA履约情况分析。",
       "eventAnalysis": "基于事件工单数据，分析事件管理的关键KPI、趋势变化以及类型分布。",
       "changeAnalysis": "展示变更成功率趋势、类型分布、风险等级和计划满足度。",
       "requestAnalysis": "展示请求趋势、SLA达标率、满意度和高频请求分布。",
@@ -439,13 +439,23 @@
       }
     },
     "sla": {
+      "sections": {
+        "incident": "事件 SLA",
+        "incidentDesc": "多维度观察事件SLA履约情况，并进行违约情况分析。",
+        "request": "请求 SLA",
+        "requestDesc": "请求SLA达成率与满意度关联分析，按服务目录和部门维度展开。"
+      },
       "cards": {
         "overall": "综合达成率",
         "response": "响应达成率",
         "resolution": "解决达成率",
         "highPriority": "P1/P2达成率",
         "responseBreached": "响应违约数",
-        "resolutionBreached": "解决违约数"
+        "resolutionBreached": "解决违约数",
+        "requestOverall": "请求SLA达成率",
+        "requestBreached": "请求违约数",
+        "requestAvgDelivery": "平均交付时长",
+        "requestBreachedCsat": "违约关联满意度"
       },
       "charts": {
         "trend": "SLA达成率趋势",
@@ -455,12 +465,19 @@
         "seriesResponse": "响应达成率",
         "seriesResolution": "解决达成率",
         "seriesP1p2": "P1/P2达成率",
+        "seriesSlaRate": "SLA达成率",
+        "seriesAvgCsat": "平均满意度",
         "axisTime": "时间",
         "axisPriority": "优先级",
-        "axisRate": "达成率(%)"
+        "axisRate": "达成率(%)",
+        "requestTrend": "请求SLA与满意度趋势",
+        "requestCatalogComparison": "服务目录SLA达成率对比",
+        "requestViolationByDept": "违约请求部门分布",
+        "requestViolationByCatalog": "违约服务目录分布"
       },
       "tables": {
-        "violationSamples": "违约样本"
+        "violationSamples": "违约样本",
+        "requestViolationSamples": "请求违约及低满意度样本"
       },
       "columns": {
         "id": "编号",
@@ -470,7 +487,10 @@
         "resolver": "处理人",
         "responseTime": "响应时长",
         "resolutionTime": "解决时长",
-        "violationType": "违约类型"
+        "violationType": "违约类型",
+        "catalogItem": "服务目录",
+        "requesterDept": "请求部门",
+        "satisfaction": "满意度"
       }
     },
     "correlation": {

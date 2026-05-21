@@ -110,6 +110,32 @@ public class BusinessIntelligenceService {
         }
     }
 
+    private record RequestSlaRecord(
+        String orderNumber,
+        String title,
+        String priority,
+        String category,
+        String catalogItem,
+        String requesterDept,
+        String assignee,
+        LocalDateTime openedAt,
+        double responseMinutes,
+        double resolutionMinutes,
+        boolean responseMet,
+        boolean resolutionMet,
+        double satisfactionScore
+    ) {
+        private boolean overallMet() { return responseMet && resolutionMet; }
+        private boolean anyBreached() { return !overallMet(); }
+        private String violationType() {
+            if (!responseMet && !resolutionMet) return "both_breached";
+            if (!responseMet) return "response_breached";
+            if (!resolutionMet) return "resolution_breached";
+            return "met";
+        }
+        private boolean isLowSatisfaction() { return satisfactionScore > 0 && satisfactionScore < 3.5; }
+    }
+
     public BusinessIntelligenceService(BiDataProvider dataProvider,
                                         BusinessIntelligenceRuntimeProperties runtimeProperties,
                                         BusinessIntelligenceMetricsService metricsService) {
@@ -347,66 +373,90 @@ public class BusinessIntelligenceService {
     }
 
     private TabContent buildSlaAnalysis(BiRawData rawData, String startDate, String endDate) {
+        // ── Incident SLA ──
         List<IncidentSlaRecord> slaRecords = buildIncidentSlaRecords(rawData);
         BiModels.SlaAnalysisSummary summary = buildSlaAnalysisSummary(slaRecords);
-        return new TabContent(
-            "sla-analysis",
-            "SLA分析",
-            "多维度观察事件SLA履约情况，并进行违约情况分析。",
-            null,
-            summary,
-            List.of(
-                card("sla-overall", "综合达成率", summary.hero().overallComplianceRate(), toneFromRate(summary.hero().overallComplianceRate())),
-                card("sla-response", "响应达成率", summary.hero().responseComplianceRate(), summary.response().tone()),
-                card("sla-resolution", "解决达成率", summary.hero().resolutionComplianceRate(), summary.resolution().tone()),
-                card("sla-high-priority", "P1/P2达成率", summary.hero().highPriorityComplianceRate(), toneFromRate(summary.hero().highPriorityComplianceRate())),
-                card("sla-response-breached", "响应违约数", summary.violationBreakdown().responseBreached(), summary.violationBreakdown().responseBreached() > 0 ? "warning" : "success"),
-                card("sla-resolution-breached", "解决违约数", summary.violationBreakdown().resolutionBreached(), summary.violationBreakdown().resolutionBreached() > 0 ? "warning" : "success")
-            ),
-            List.of(
-                lineChart("sla-trend", "SLA达成率趋势", buildSlaWeeklyTrendData(rawData, startDate, endDate),
-                    List.of("响应达成率", "解决达成率", "P1/P2达成率"),
-                    List.of("#10b981", "#5b8db8", "#f59e0b")),
-                new ChartSection("priority-comparison", "优先级SLA达成率对比", "grouped-bar",
-                    summary.priorityRows().stream()
-                        .map(row -> new ChartDatum(
-                            row.priority() + "|" + String.format("%.1f", parsePercentage(row.responseComplianceRate())) + "|" + String.format("%.1f", parsePercentage(row.resolutionComplianceRate())),
-                            parsePercentage(row.responseComplianceRate())))
-                        .toList(),
-                    new ChartConfig(List.of("响应达成率", "解决达成率"), null, List.of("#10b981", "#5b8db8"), "优先级", "达成率(%)")),
-                pieChart("violation-by-priority", "违约优先级分布",
-                    slaRecords.stream()
-                        .filter(IncidentSlaRecord::anyBreached)
-                        .collect(Collectors.groupingBy(IncidentSlaRecord::priority, LinkedHashMap::new, Collectors.counting()))
-                        .entrySet().stream()
-                        .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                        .map(e -> new ChartDatum(e.getKey(), e.getValue()))
-                        .toList(),
-                    List.of("#ef4444", "#f59e0b", "#eab308", "#10b981")),
-                pieChart("violation-by-category", "违约事件类型分布",
-                    slaRecords.stream()
-                        .filter(IncidentSlaRecord::anyBreached)
-                        .collect(Collectors.groupingBy(r -> defaultLabel(r.category(), "未标注"), LinkedHashMap::new, Collectors.counting()))
-                        .entrySet().stream()
-                        .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                        .limit(8)
+
+        List<MetricCard> incidentCards = List.of(
+            card("sla-overall", "综合达成率", summary.hero().overallComplianceRate(), toneFromRate(summary.hero().overallComplianceRate())),
+            card("sla-response", "响应达成率", summary.hero().responseComplianceRate(), summary.response().tone()),
+            card("sla-resolution", "解决达成率", summary.hero().resolutionComplianceRate(), summary.resolution().tone()),
+            card("sla-high-priority", "P1/P2达成率", summary.hero().highPriorityComplianceRate(), toneFromRate(summary.hero().highPriorityComplianceRate())),
+            card("sla-response-breached", "响应违约数", summary.violationBreakdown().responseBreached(), summary.violationBreakdown().responseBreached() > 0 ? "warning" : "success"),
+            card("sla-resolution-breached", "解决违约数", summary.violationBreakdown().resolutionBreached(), summary.violationBreakdown().resolutionBreached() > 0 ? "warning" : "success")
+        );
+
+        List<ChartSection> incidentCharts = List.of(
+            lineChart("sla-trend", "SLA达成率趋势", buildSlaWeeklyTrendData(rawData, startDate, endDate),
+                List.of("响应达成率", "解决达成率", "P1/P2达成率"),
+                List.of("#10b981", "#5b8db8", "#f59e0b")),
+            new ChartSection("priority-comparison", "优先级SLA达成率对比", "grouped-bar",
+                summary.priorityRows().stream()
+                    .map(row -> new ChartDatum(
+                        row.priority() + "|" + String.format("%.1f", parsePercentage(row.responseComplianceRate())) + "|" + String.format("%.1f", parsePercentage(row.resolutionComplianceRate())),
+                        parsePercentage(row.responseComplianceRate())))
+                    .toList(),
+                new ChartConfig(List.of("响应达成率", "解决达成率"), null, List.of("#10b981", "#5b8db8"), "优先级", "达成率(%)")),
+            pieChart("violation-by-priority", "违约优先级分布",
+                slaRecords.stream()
+                    .filter(IncidentSlaRecord::anyBreached)
+                    .collect(Collectors.groupingBy(IncidentSlaRecord::priority, LinkedHashMap::new, Collectors.counting()))
+                    .entrySet().stream()
+                    .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                    .map(e -> new ChartDatum(e.getKey(), e.getValue()))
+                    .toList(),
+                List.of("#ef4444", "#f59e0b", "#eab308", "#10b981")),
+            pieChart("violation-by-category", "违约事件类型分布",
+                slaRecords.stream()
+                    .filter(IncidentSlaRecord::anyBreached)
+                    .collect(Collectors.groupingBy(r -> defaultLabel(r.category(), "未标注"), LinkedHashMap::new, Collectors.counting()))
+                    .entrySet().stream()
+                    .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                    .limit(8)
                         .map(e -> new ChartDatum(e.getKey(), e.getValue()))
                         .toList(),
                     List.of("#5b8db8", "#10b981", "#f59e0b", "#ef4444", "#8b7fc7", "#c97082", "#5e9bb5", "#7ca65a"))
-            ),
-            List.of(
-                table("sla-violation-samples", "违约样本", List.of("编号", "标题", "优先级", "类别", "处理人", "响应时长", "解决时长", "违约类型"), summary.violationSamples().stream()
-                    .map(sample -> List.of(
-                        sample.orderNumber(),
-                        sample.orderName(),
-                        sample.priority(),
-                        sample.category(),
-                        sample.resolver(),
-                        sample.responseDuration(),
-                        sample.resolutionDuration(),
-                        sample.violationType()
-                    )).toList())
-            )
+        );
+
+        List<BiModels.TableSection> incidentTables = List.of(
+            table("sla-violation-samples", "违约样本", List.of("编号", "标题", "优先级", "类别", "处理人", "响应时长", "解决时长", "违约类型"), summary.violationSamples().stream()
+                .map(sample -> List.of(
+                    sample.orderNumber(),
+                    sample.orderName(),
+                    sample.priority(),
+                    sample.category(),
+                    sample.resolver(),
+                    sample.responseDuration(),
+                    sample.resolutionDuration(),
+                    sample.violationType()
+                )).toList())
+        );
+
+        // ── Request SLA ──
+        List<RequestSlaRecord> reqRecords = buildRequestSlaRecords(rawData);
+        List<MetricCard> requestCards = buildRequestSlaCards(reqRecords);
+        List<ChartSection> requestCharts = buildRequestSlaCharts(reqRecords, rawData, startDate, endDate);
+        List<BiModels.TableSection> requestTables = buildRequestSlaTables(reqRecords);
+
+        // ── Merge ──
+        List<MetricCard> allCards = new ArrayList<>(incidentCards);
+        allCards.addAll(requestCards);
+
+        List<ChartSection> allCharts = new ArrayList<>(incidentCharts);
+        allCharts.addAll(requestCharts);
+
+        List<BiModels.TableSection> allTables = new ArrayList<>(incidentTables);
+        allTables.addAll(requestTables);
+
+        return new TabContent(
+            "sla-analysis",
+            "SLA分析",
+            "事件与请求SLA履约情况分析。",
+            null,
+            summary,
+            allCards,
+            allCharts,
+            allTables
         );
     }
 
@@ -1712,6 +1762,38 @@ public class BusinessIntelligenceService {
             .toList();
     }
 
+    private List<RequestSlaRecord> buildRequestSlaRecords(BiRawData rawData) {
+        Map<String, Double> responseTargets = buildIncidentCriteriaMap(
+            rawData.requestSlaCriteria(), List.of("response_sla_min"));
+        Map<String, Double> resolutionTargets = buildIncidentCriteriaMap(
+            rawData.requestSlaCriteria(), List.of("resolution_sla_min"));
+        return rawData.requests().stream()
+            .map(row -> {
+                String priority = clean(row.get("priority"));
+                Double respTarget = responseTargets.get(priority);
+                Double resoTarget = resolutionTargets.get(priority);
+                if (priority.isBlank() || respTarget == null || resoTarget == null) return null;
+                double responseMinutes = parseDouble(row.get(BiColumns.RESPONSE_TIME_M));
+                double resolutionMinutes = parseDouble(row.get(BiColumns.REQUEST_RESOLUTION_TIME_M));
+                return new RequestSlaRecord(
+                    row.get(BiColumns.REQUEST_NUMBER),
+                    row.get(BiColumns.TITLE),
+                    priority,
+                    row.get(BiColumns.CATEGORY),
+                    row.get(BiColumns.REQUEST_TYPE),
+                    row.get(BiColumns.REQUESTER_DEPT),
+                    row.get(BiColumns.ASSIGNED_TO),
+                    parseDate(row.get(BiColumns.REQUESTED_DATE)),
+                    responseMinutes, resolutionMinutes,
+                    responseMinutes <= respTarget,
+                    resolutionMinutes <= resoTarget,
+                    parseDouble(row.get(BiColumns.SATISFACTION_SCORE))
+                );
+            })
+            .filter(Objects::nonNull)
+            .toList();
+    }
+
     private Map<String, Double> buildIncidentCriteriaMap(List<Map<String, String>> rows, List<String> candidateKeys) {
         return rows.stream()
             .filter(row -> !clean(row.get("priority")).isBlank())
@@ -1811,6 +1893,108 @@ public class BusinessIntelligenceService {
         TrendResult resolutionTrend = metricsService.getTrends(rawData, "incidents", "resolution_sla_rate", "week", null, startDate, endDate);
         TrendResult p12Trend = metricsService.getTrends(rawData, "incidents", "p12_sla_rate", "week", null, startDate, endDate);
         return mergeTrendSeries(List.of(responseTrend, resolutionTrend, p12Trend));
+    }
+
+    private List<MetricCard> buildRequestSlaCards(List<RequestSlaRecord> records) {
+        long total = records.size();
+        long overallMet = records.stream().filter(RequestSlaRecord::overallMet).count();
+        long breached = total - overallMet;
+        String overallRate = percentage(overallMet, total);
+
+        double avgDeliveryHours = records.stream()
+            .mapToDouble(RequestSlaRecord::resolutionMinutes).filter(v -> v > 0).average().orElse(0) / 60.0;
+
+        double breachedCsat = records.stream()
+            .filter(RequestSlaRecord::anyBreached)
+            .mapToDouble(RequestSlaRecord::satisfactionScore).filter(v -> v > 0).average().orElse(0);
+
+        return List.of(
+            card("req-sla-overall", "请求SLA达成率", overallRate, toneFromRate(overallRate)),
+            card("req-sla-breached", "请求违约数", String.valueOf(breached), breached > 0 ? "warning" : "success"),
+            card("req-sla-avg-delivery", "平均交付时长", String.format(Locale.ROOT, "%.1fh", avgDeliveryHours), "neutral"),
+            card("req-sla-breached-csat", "违约关联满意度", formatNumber(breachedCsat), breachedCsat > 0 && breachedCsat < 3.5 ? "danger" : "success")
+        );
+    }
+
+    private List<ChartSection> buildRequestSlaCharts(List<RequestSlaRecord> records, BiRawData rawData, String startDate, String endDate) {
+        // SLA + Satisfaction trend (combo)
+        TrendResult slaTrend = metricsService.getTrends(rawData, "requests", "sla_rate", "week", null, startDate, endDate);
+        TrendResult csatTrend = metricsService.getTrends(rawData, "requests", "csat", "week", null, startDate, endDate);
+        List<ChartDatum> trendData = mergeTrendSeries(List.of(slaTrend, csatTrend));
+
+        // Catalog comparison (grouped-bar): response vs resolution compliance per catalog_item
+        List<ChartDatum> catalogComparison = records.stream()
+            .collect(Collectors.groupingBy(r -> defaultLabel(r.catalogItem(), "未标注"), LinkedHashMap::new, Collectors.toList()))
+            .entrySet().stream()
+            .sorted((a, b) -> Integer.compare(b.getValue().size(), a.getValue().size()))
+            .limit(8)
+            .map(entry -> {
+                List<RequestSlaRecord> group = entry.getValue();
+                long respMet = group.stream().filter(RequestSlaRecord::responseMet).count();
+                long resoMet = group.stream().filter(RequestSlaRecord::resolutionMet).count();
+                double respRate = percentageValue(respMet, group.size()) * 100.0;
+                double resoRate = percentageValue(resoMet, group.size()) * 100.0;
+                return new ChartDatum(
+                    entry.getKey() + "|" + String.format(Locale.ROOT, "%.1f", respRate) + "|" + String.format(Locale.ROOT, "%.1f", resoRate),
+                    respRate);
+            }).toList();
+
+        // Violation by department (pie)
+        List<ChartDatum> violationByDept = records.stream()
+            .filter(RequestSlaRecord::anyBreached)
+            .collect(Collectors.groupingBy(r -> defaultLabel(r.requesterDept(), "未标注"), LinkedHashMap::new, Collectors.counting()))
+            .entrySet().stream()
+            .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+            .limit(8)
+            .map(e -> new ChartDatum(e.getKey(), e.getValue()))
+            .toList();
+
+        // Violation by catalog (pie)
+        List<ChartDatum> violationByCatalog = records.stream()
+            .filter(RequestSlaRecord::anyBreached)
+            .collect(Collectors.groupingBy(r -> defaultLabel(r.catalogItem(), "未标注"), LinkedHashMap::new, Collectors.counting()))
+            .entrySet().stream()
+            .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+            .limit(8)
+            .map(e -> new ChartDatum(e.getKey(), e.getValue()))
+            .toList();
+
+        return List.of(
+            comboChart("req-sla-trend", "请求SLA与满意度趋势", trendData,
+                List.of("SLA达成率", "平均满意度"),
+                List.of("#8b5cf6", "#10b981")),
+            new ChartSection("req-sla-catalog-comparison", "服务目录SLA达成率对比", "grouped-bar",
+                catalogComparison,
+                new ChartConfig(List.of("响应达成率", "解决达成率"), null, List.of("#10b981", "#5b8db8"), "服务目录", "达成率(%)")),
+            pieChart("req-sla-violation-by-dept", "违约请求部门分布", violationByDept,
+                List.of("#8b7fc7", "#10b981", "#f59e0b", "#ef4444", "#5b8db8", "#c97082", "#5e9bb5", "#7ca65a")),
+            pieChart("req-sla-violation-by-catalog", "违约服务目录分布", violationByCatalog,
+                List.of("#5b8db8", "#10b981", "#f59e0b", "#ef4444", "#8b7fc7", "#c97082", "#5e9bb5", "#7ca65a"))
+        );
+    }
+
+    private List<BiModels.TableSection> buildRequestSlaTables(List<RequestSlaRecord> records) {
+        return List.of(
+            table("req-sla-violation-samples", "请求违约及低满意度样本",
+                List.of("编号", "标题", "服务目录", "请求部门", "处理人", "响应时长", "解决时长", "违约类型", "满意度"),
+                records.stream()
+                    .filter(RequestSlaRecord::anyBreached)
+                    .sorted(Comparator
+                        .comparing((RequestSlaRecord r) -> priorityRank(r.priority()))
+                        .thenComparing(RequestSlaRecord::resolutionMinutes, Comparator.reverseOrder()))
+                    .limit(12)
+                    .map(r -> List.of(
+                        defaultLabel(r.orderNumber(), "—"),
+                        defaultLabel(r.title(), "—"),
+                        defaultLabel(r.catalogItem(), "未标注"),
+                        defaultLabel(r.requesterDept(), "未标注"),
+                        defaultLabel(r.assignee(), "未分配"),
+                        formatHours(r.responseMinutes() / 60.0),
+                        formatHours(r.resolutionMinutes() / 60.0),
+                        r.violationType(),
+                        r.satisfactionScore() > 0 ? String.format(Locale.ROOT, "%.1f", r.satisfactionScore()) : "—"
+                    )).toList())
+        );
     }
 
     private String buildSlaSummarySentence(double responseRate, double resolutionRate, List<BiModels.SlaPriorityRow> priorityRows, List<BiModels.SlaRiskRow> categoryRisks) {

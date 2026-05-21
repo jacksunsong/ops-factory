@@ -654,6 +654,10 @@ const SLA_CARD_LABEL_KEYS: Record<string, string> = {
     'sla-high-priority': 'businessIntelligence.sla.cards.highPriority',
     'sla-response-breached': 'businessIntelligence.sla.cards.responseBreached',
     'sla-resolution-breached': 'businessIntelligence.sla.cards.resolutionBreached',
+    'req-sla-overall': 'businessIntelligence.sla.cards.requestOverall',
+    'req-sla-breached': 'businessIntelligence.sla.cards.requestBreached',
+    'req-sla-avg-delivery': 'businessIntelligence.sla.cards.requestAvgDelivery',
+    'req-sla-breached-csat': 'businessIntelligence.sla.cards.requestBreachedCsat',
 }
 
 const SLA_CHART_TITLE_KEYS: Record<string, string> = {
@@ -661,6 +665,10 @@ const SLA_CHART_TITLE_KEYS: Record<string, string> = {
     'priority-comparison': 'businessIntelligence.sla.charts.priorityComparison',
     'violation-by-priority': 'businessIntelligence.sla.charts.violationByPriority',
     'violation-by-category': 'businessIntelligence.sla.charts.violationByCategory',
+    'req-sla-trend': 'businessIntelligence.sla.charts.requestTrend',
+    'req-sla-catalog-comparison': 'businessIntelligence.sla.charts.requestCatalogComparison',
+    'req-sla-violation-by-dept': 'businessIntelligence.sla.charts.requestViolationByDept',
+    'req-sla-violation-by-catalog': 'businessIntelligence.sla.charts.requestViolationByCatalog',
 }
 
 const SLA_CHART_SERIES_KEYS: Record<string, string[]> = {
@@ -673,10 +681,19 @@ const SLA_CHART_SERIES_KEYS: Record<string, string[]> = {
         'businessIntelligence.sla.charts.seriesResponse',
         'businessIntelligence.sla.charts.seriesResolution',
     ],
+    'req-sla-trend': [
+        'businessIntelligence.sla.charts.seriesSlaRate',
+        'businessIntelligence.sla.charts.seriesAvgCsat',
+    ],
+    'req-sla-catalog-comparison': [
+        'businessIntelligence.sla.charts.seriesResponse',
+        'businessIntelligence.sla.charts.seriesResolution',
+    ],
 }
 
 const SLA_TABLE_TITLE_KEYS: Record<string, string> = {
     'sla-violation-samples': 'businessIntelligence.sla.tables.violationSamples',
+    'req-sla-violation-samples': 'businessIntelligence.sla.tables.requestViolationSamples',
 }
 
 const SLA_TABLE_COLUMN_KEYS: Record<string, string> = {
@@ -688,6 +705,9 @@ const SLA_TABLE_COLUMN_KEYS: Record<string, string> = {
     '响应时长': 'businessIntelligence.sla.columns.responseTime',
     '解决时长': 'businessIntelligence.sla.columns.resolutionTime',
     '违约类型': 'businessIntelligence.sla.columns.violationType',
+    '服务目录': 'businessIntelligence.sla.columns.catalogItem',
+    '请求部门': 'businessIntelligence.sla.columns.requesterDept',
+    '满意度': 'businessIntelligence.sla.columns.satisfaction',
 }
 
 function localizeSlaTab(tab: TabContent, t: TranslateFn): TabContent {
@@ -3038,6 +3058,116 @@ function GenericTabPanel({
                             ))}
                         </div>
                     ) : null}
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    // ── SLA Analysis tab: dual content-card layout (Incident + Request) ──
+    if (SLA_TAB_IDS.has(localizedTab.id)) {
+        const incidentCards = localizedTab.cards.filter(c => c.id.startsWith('sla-'))
+        const requestCards = localizedTab.cards.filter(c => c.id.startsWith('req-sla-'))
+        const incidentCharts = localizedTab.charts.filter(c => !c.id.startsWith('req-sla-'))
+        const requestCharts = localizedTab.charts.filter(c => c.id.startsWith('req-sla-'))
+        const incidentTables = localizedTab.tables.filter(t => t.id === 'sla-violation-samples')
+        const requestTables = localizedTab.tables.filter(t => t.id === 'req-sla-violation-samples')
+
+        const renderCardSection = (cards: MetricCard[]) => {
+            if (cards.length === 0) return null
+            const gridCards = cards.filter(c => c.tone !== 'divider')
+            return (
+                <div
+                    className="business-intelligence-stat-grid business-intelligence-stat-grid-snapshot ui-metric-grid"
+                    style={{ gridTemplateColumns: `repeat(${gridCards.length % 3 === 0 ? 3 : 2}, minmax(0, 1fr))` }}
+                >
+                    {cards.map(card => {
+                        const tone = getMetricTone(card.tone)
+                        return (
+                            <StatCard
+                                key={card.id}
+                                label={card.label}
+                                value={card.value}
+                                tone={tone}
+                                icon={tone === 'neutral' ? null : <StatusIcon tone={tone} />}
+                            />
+                        )
+                    })}
+                </div>
+            )
+        }
+
+        const renderChartSection = (charts: ChartSection[]) => {
+            if (charts.length === 0) return null
+            const nonPie = charts.filter(c => c.type !== 'pie')
+            const pies = charts.filter(c => c.type === 'pie')
+            return (
+                <>
+                    {nonPie.map(chart => renderChart(chart))}
+                    {pies.length > 0 ? (
+                        <div className="business-intelligence-distribution-grid">
+                            {pies.map(chart => (
+                                <PieDistributionCard
+                                    key={chart.id}
+                                    title={chart.title}
+                                    items={chart.items}
+                                    colors={chart.config?.colors || ['#5b8db8', '#10b981', '#f59e0b', '#ef4444', '#8b7fc7', '#c97082']}
+                                    otherLabel={_t('common.other')}
+                                />
+                            ))}
+                        </div>
+                    ) : null}
+                </>
+            )
+        }
+
+        return (
+            <div className="business-intelligence-section-stack">
+                <div className="business-intelligence-content-card">
+                    <div className="business-intelligence-content-card-header">
+                        <div className="business-intelligence-content-card-copy">
+                            <h2 className="business-intelligence-content-card-title">{_t('businessIntelligence.sla.sections.incident')}</h2>
+                            <p className="business-intelligence-content-card-description">{_t('businessIntelligence.sla.sections.incidentDesc')}</p>
+                        </div>
+                    </div>
+                    <div className="business-intelligence-content-card-body">
+                        <div className="business-intelligence-section-stack">
+                            {renderCardSection(incidentCards)}
+                            {renderChartSection(incidentCharts)}
+                            {incidentTables.length > 0 ? (
+                                <div className="business-intelligence-section-stack">
+                                    {incidentTables.map(table => (
+                                        <AnalyticsTableCard key={table.id} title={table.title}>
+                                            {renderTable(table)}
+                                        </AnalyticsTableCard>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="business-intelligence-content-card">
+                    <div className="business-intelligence-content-card-header">
+                        <div className="business-intelligence-content-card-copy">
+                            <h2 className="business-intelligence-content-card-title">{_t('businessIntelligence.sla.sections.request')}</h2>
+                            <p className="business-intelligence-content-card-description">{_t('businessIntelligence.sla.sections.requestDesc')}</p>
+                        </div>
+                    </div>
+                    <div className="business-intelligence-content-card-body">
+                        <div className="business-intelligence-section-stack">
+                            {renderCardSection(requestCards)}
+                            {renderChartSection(requestCharts)}
+                            {requestTables.length > 0 ? (
+                                <div className="business-intelligence-section-stack">
+                                    {requestTables.map(table => (
+                                        <AnalyticsTableCard key={table.id} title={table.title}>
+                                            {renderTable(table)}
+                                        </AnalyticsTableCard>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
                     </div>
                 </div>
             </div>

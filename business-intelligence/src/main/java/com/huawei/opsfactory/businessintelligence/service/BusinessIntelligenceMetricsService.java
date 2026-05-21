@@ -252,7 +252,7 @@ public class BusinessIntelligenceMetricsService {
 
         List<RiskItem> risks = buildExecutiveRiskItems(
             incidentSlaBreached, changeFailures, requestOpen, problemOpen,
-            changeIncidentRate, requestCsat, problemClosureRate
+            changeIncidentRate, requestCsat, problemClosureRate, requestSlaRate
         );
 
         long criticalCount = risks.stream().filter(r -> "Critical".equals(r.priority())).count();
@@ -1719,7 +1719,7 @@ public class BusinessIntelligenceMetricsService {
     private List<RiskItem> buildExecutiveRiskItems(long incidentSlaBreached, long changeFailures,
                                                     long requestOpen, long problemOpen,
                                                     double changeIncidentRate, double requestCsat,
-                                                    double problemClosureRate) {
+                                                    double problemClosureRate, double requestSlaRate) {
         List<BiModels.ExecutiveRisk> risks = new ArrayList<>();
         if (changeFailures >= 5) {
             risks.add(new BiModels.ExecutiveRisk("change-failure", "Critical",
@@ -1755,6 +1755,15 @@ public class BusinessIntelligenceMetricsService {
             risks.add(new BiModels.ExecutiveRisk("problem-open", "Attention",
                 "未关闭问题偏多", "问题池持续扩大，会拖累稳定性治理。", "问题",
                 String.valueOf(problemOpen)));
+        }
+        if (requestSlaRate > 0 && requestSlaRate < 0.60) {
+            risks.add(new BiModels.ExecutiveRisk("request-sla-critical", "Critical",
+                "服务请求 SLA 达成率严重偏低", "履约流程存在系统性问题，需立即排查瓶颈环节。", "请求",
+                percentage(requestSlaRate)));
+        } else if (requestSlaRate > 0 && requestSlaRate < 0.75) {
+            risks.add(new BiModels.ExecutiveRisk("request-sla-breach", "Warning",
+                "服务请求 SLA 达成率不足", "部分请求类型履约超时，建议关注高频积压目录。", "请求",
+                percentage(requestSlaRate)));
         }
         return risks.stream()
             .sorted(Comparator.comparingInt(this::riskPriorityOrder))

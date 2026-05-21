@@ -76,12 +76,12 @@ class RequestLoggingFilterIntegrationTest {
 
     private static BiRawData sampleData() {
         return new BiRawData(
-            List.of(Map.of("ticket_id", "INC-001", "SLA Compliant", "Yes")),
+            List.of(Map.of("ticket_id", "INC-001", "SLA Compliant", "Yes", "priority", "P1")),
             List.of(Map.of("priority", "P1", "response_sla_min", "15", "resolution_sla_min", "240")),
             List.of(Map.of("ticket_id", "CHG-001", "close_code", "Successful", "incident_ids", "")),
-            List.of(Map.of("ticket_id", "REQ-001", "status", "Closed", "close_code", "Fulfilled")),
+            List.of(Map.of("ticket_id", "REQ-001", "status", "Closed", "close_code", "Fulfilled", "priority", "P2", "response_time_minutes", "30", "resolution_time_minutes", "120")),
             List.of(Map.of("ticket_id", "PRB-001", "status", "Resolved")),
-            List.of()
+            List.of(Map.of("priority", "P1", "response_sla_min", "180", "resolution_sla_min", "7200"))
         );
     }
 }

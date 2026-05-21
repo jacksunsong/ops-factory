@@ -11,7 +11,7 @@ Generate analytical reports from ITSM operations data (Incidents, Changes, Reque
 
 ## Risk Radar
 
-The system automatically identifies risk signals such as: Incident SLA Rate < 70%, P1/P2 MTTR > 24h, Change Success Rate < 80%, Emergency Change Ratio > 15%, Request CSAT < 3.0. When a risk is detected, call it out in your analysis with severity (CRITICAL / WARNING / ATTENTION).
+Risk items are pre-computed by the BI backend. Use `get_all_metrics` to retrieve `topRisks` from the `executive` domain. Each risk includes severity (Critical/Warning/Attention), title, and impact guidance. Surface these in analysis using the severity provided — do not apply custom thresholds.
 
 ## Data Sources
 

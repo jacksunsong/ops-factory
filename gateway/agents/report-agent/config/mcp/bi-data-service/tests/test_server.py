@@ -16,7 +16,7 @@ from server import (
     VALID_DOMAINS, VALID_METRICS_DOMAINS, VALID_METRICS, VALID_INTERVALS,
     handle_request, format_tool_result,
     _handle_query_tickets, _handle_compute_metric, _handle_trace_ticket_lineage,
-    _handle_get_all_metrics, _handle_analyze_sla_rate,
+    _handle_get_all_metrics, _handle_analyze_sla_rate, _handle_analyze_request_sla_rate,
 )
 
 
@@ -72,6 +72,11 @@ class TestToolValidation(unittest.TestCase):
             _handle_analyze_sla_rate({"interval": "decade"}, _config())
         self.assertIn("Invalid interval", str(ctx.exception))
 
+    def test_analyze_request_sla_rate_rejects_invalid_interval(self):
+        with self.assertRaises(ToolExecutionError) as ctx:
+            _handle_analyze_request_sla_rate({"interval": "quarter"}, _config())
+        self.assertIn("Invalid interval", str(ctx.exception))
+
 
 # ── JSON-RPC protocol ──────────────────────────────────────────────────
 
@@ -100,7 +105,8 @@ class TestJsonRpc(unittest.TestCase):
         tool_names = {t["name"] for t in tools}
         expected = {
             "get_all_metrics", "query_tickets", "compute_metric", "trace_ticket_lineage",
-            "analyze_sla_rate", "analyze_incident_volume", "analyze_mttr",
+            "analyze_sla_rate", "analyze_request_sla_rate",
+            "analyze_incident_volume", "analyze_mttr",
             "analyze_change_success_rate", "analyze_request_performance",
             "analyze_problem_metrics", "analyze_workforce_performance",
         }

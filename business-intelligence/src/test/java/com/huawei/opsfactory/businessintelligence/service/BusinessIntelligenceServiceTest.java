@@ -119,7 +119,10 @@ class BusinessIntelligenceServiceTest {
                         "close_code", "Fulfilled",
                         "assigned_to", "Dora",
                         "requester_dept", "Finance",
-                        "satisfaction_score", "4.5"
+                        "satisfaction_score", "4.5",
+                        "priority", "P2",
+                        "response_time_minutes", "30",
+                        "resolution_time_minutes", "120"
                     )
                 ),
                 List.of(
